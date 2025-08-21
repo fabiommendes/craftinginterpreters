@@ -24,19 +24,36 @@ interchangeable.
 </aside>
 
 Scanning is a good starting point for us too because the code isn't very hard --
-pretty much a `switch` statement with delusions of grandeur. It will help us
-warm up before we tackle some of the more interesting material later. By the end
-of this chapter, we'll have a full-featured, fast scanner that can take any
-string of Lox source code and produce the tokens that we'll feed into the parser
-in the next chapter.
+pretty much a `match` statement with delusions of grandeur. It will help us warm
+up before we tackle some of the more interesting material later. By the end of
+this chapter, we'll have a full-featured, fast scanner that can take any string
+of Lox source code and produce the tokens that we'll feed into the parser in the
+next chapter.
 
 ## The Interpreter Framework
 
 Since this is our first real chapter, before we get to actually scanning some
-code we need to sketch out the basic shape of our interpreter, jlox. Everything
-starts with a class in Java.
+code we need to sketch out the basic shape of our interpreter, pylox. Everything
+starts with a module in Python.
 
-^code lox-class
+```python
+# lox/lox.py
+import sys
+from pathlib import Path
+
+def main():
+    if len(sys.argv) > 2:
+        print("Usage: pylox [script]")
+        exit(64)
+    elif len(sys.argv) == 2:
+        path = Path(sys.argv[1])
+        run_file(path)
+    else:
+        run_prompt()
+
+if __name__ == "__main__":
+    main()
+```
 
 <aside name="64">
 
@@ -44,28 +61,60 @@ For exit codes, I'm using the conventions defined in the UNIX
 ["sysexits.h"][sysexits] header. It's the closest thing to a standard I could
 find.
 
-[sysexits]: https://www.freebsd.org/cgi/man.cgi?query=sysexits&amp;apropos=0&amp;sektion=0&amp;manpath=FreeBSD+4.3-RELEASE&amp;format=html
+[sysexits]:
+  https://www.freebsd.org/cgi/man.cgi?query=sysexits&apropos=0&sektion=0&manpath=FreeBSD+4.3-RELEASE&format=html
 
 </aside>
 
 Stick that in a text file, and go get your IDE or Makefile or whatever set up.
 I'll be right here when you're ready. Good? OK!
 
+<aside name="uv">
+
+I suggest using the excelent tool [uv](https://docs.astral.sh/uv/) to manage
+your project. If you have it installed, just stick the following
+`pyproject.toml` in the root of your project and uv will manage dependencies and
+the virtual environments for you:
+
+```toml
+[project]
+name = "lox"
+version = "0.1.0"
+requires-python = ">=3.12"
+
+[project.scripts]
+pylox = "lox.lox:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+```
+
+Once setup, you can run the Lox interpreter with the command `uv run pylox`.
+
+</aside>
+
 Lox is a scripting language, which means it executes directly from source. Our
-interpreter supports two ways of running code. If you start jlox from the
+interpreter supports two ways of running code. If you start pylox from the
 command line and give it a path to a file, it reads the file and executes it.
 
-^code run-file
+```python
+# lox/lox.py after main()
+def run_file(path: Path):
+    src = path.read_text(encoding=sys.getdefaultencoding())
+    lox = Lox()
+    lox.run(src)
+```
 
 If you want a more intimate conversation with your interpreter, you can also run
-it interactively. Fire up jlox without any arguments, and it drops you into a
+it interactively. Fire up pylox without any arguments, and it drops you into a
 prompt where you can enter and execute code one line at a time.
 
 <aside name="repl">
 
 An interactive prompt is also called a "REPL" (pronounced like "rebel" but with
-a "p"). The name comes from Lisp where implementing one is as simple as
-wrapping a loop around a few built-in functions:
+a "p"). The name comes from Lisp where implementing one is as simple as wrapping
+a loop around a few built-in functions:
 
 ```lisp
 (print (eval (read)))
@@ -76,17 +125,38 @@ Working outwards from the most nested call, you **R**ead a line of input,
 
 </aside>
 
-^code prompt
+```python
+# lox/lox.py after run_file()
+def run_prompt():
+    lox = Lox()
 
-The `readLine()` function, as the name so helpfully implies, reads a line of
-input from the user on the command line and returns the result. To kill an
-interactive command-line app, you usually type Control-D. Doing so signals an
-"end-of-file" condition to the program. When that happens `readLine()` returns
-`null`, so we check for that to exit the loop.
+    while True:
+        try:
+            line = input("> ")
+        except EOFError:
+            break
+        else:
+            lox.run(line)
+```
 
-Both the prompt and the file runner are thin wrappers around this core function:
+The `input()` function reads a line of input from the user on the command line
+and returns the result. To kill an interactive command-line app, you usually
+type Control-D. Doing so signals an "end-of-file" condition to the program. When
+that happens `input()` raises an `EOFError` exception, so we check for that to
+exit the loop.
 
-^code run
+Both the prompt and the file runner are thin wrappers around this core method:
+
+```python
+# lox/lox.py before the main() function
+class Lox:
+    def run(self, source: str):
+        tokens = tokenize(source)
+
+        # For now, just print the tokens.
+        for token in tokens:
+            print(token)
+```
 
 It's not super useful yet since we haven't written the interpreter, but baby
 steps, you know? Right now, it prints out the tokens our forthcoming scanner
@@ -94,14 +164,14 @@ will emit so that we can see if we're making progress.
 
 ### Error handling
 
-While we're setting things up, another key piece of infrastructure is *error
-handling*. Textbooks sometimes gloss over this because it's more a practical
+While we're setting things up, another key piece of infrastructure is _error
+handling_. Textbooks sometimes gloss over this because it's more a practical
 matter than a formal computer science-y problem. But if you care about making a
-language that's actually *usable*, then handling errors gracefully is vital.
+language that's actually _usable_, then handling errors gracefully is vital.
 
 The tools our language provides for dealing with errors make up a large portion
 of its user interface. When the user's code is working, they aren't thinking
-about our language at all -- their headspace is all about *their program*. It's
+about our language at all -- their headspace is all about _their program_. It's
 usually only when things go wrong that they notice our implementation.
 
 <span name="errors">When</span> that happens, it's up to us to give the user all
@@ -111,17 +181,32 @@ handling all through the implementation of our interpreter, starting now.
 
 <aside name="errors">
 
-Having said all that, for *this* interpreter, what we'll build is pretty bare
+Having said all that, for _this_ interpreter, what we'll build is pretty bare
 bones. I'd love to talk about interactive debuggers, static analyzers, and other
 fun stuff, but there's only so much ink in the pen.
 
 </aside>
 
-^code lox-error
+```python
+# lox/lox.py after the Lox class
+class LoxError(Exception):
+    def __init__(self, line: int, message: str, where: str | None = None):
+        super().__init__(line, message, where)
+        self.line = line
+        self.message = message
+        self.where = where
 
-This `error()` function and its `report()` helper tells the user some syntax
+    def __str__(self):
+        if self.where is None:
+            where = ""
+        else:
+            where = " " + where
+        return f"[line {self.line}] Error{where}: {self.message}"
+```
+
+This `LoxError` exception and its `__str__()` helper tells the user some syntax
 error occurred on a given line. That is really the bare minimum to be able to
-claim you even *have* error reporting. Imagine if you accidentally left a
+claim you even _have_ error reporting. Imagine if you accidentally left a
 dangling comma in some function call and the interpreter printed out:
 
 ```text
@@ -129,8 +214,8 @@ Error: Unexpected "," somewhere in your code. Good luck finding it!
 ```
 
 That's not very helpful. We need to at least point them to the right line. Even
-better would be the beginning and end column so they know *where* in the line.
-Even better than *that* is to *show* the user the offending line, like:
+better would be the beginning and end column so they know _where_ in the line.
+Even better than _that_ is to _show_ the user the offending line, like:
 
 ```text
 Error: Unexpected "," in argument list.
@@ -145,26 +230,11 @@ not super fun to read in a book and not very technically interesting. So we'll
 stick with just a line number. In your own interpreters, please do as I say and
 not as I do.
 
-The primary reason we're sticking this error reporting function in the main Lox
-class is because of that `hadError` field. It's defined here:
-
-^code had-error (1 before)
-
-We'll use this to ensure we don't try to execute code that has a known error.
-Also, it lets us exit with a non-zero exit code like a good command line citizen
-should.
-
-^code exit-code (1 before, 1 after)
-
-We need to reset this flag in the interactive loop. If the user makes a mistake,
-it shouldn't kill their entire session.
-
-^code reset-had-error (1 before, 1 after)
-
-The other reason I pulled the error reporting out here instead of stuffing it
-into the scanner and other phases where the error might occur is to remind you
-that it's good engineering practice to separate the code that *generates* the
-errors from the code that *reports* them.
+Notice our `LoxError` class receives the parameters necessary to construct the
+error message instead of a fully formed string with said message and its
+`__str__` method constructs the string message on the fly. This is to remind you
+that it's good engineering practice to separate the code that _generates_ the
+errors from the code that _reports_ them.
 
 Various phases of the front end will detect errors, but it's not really their
 job to know how to present that to a user. In a full-featured language
@@ -180,13 +250,14 @@ error reporting into a different class.
 
 <aside name="reporter">
 
-I had exactly that when I first implemented jlox. I ended up tearing it out
-because it felt over-engineered for the minimal interpreter in this book.
+I had exactly that when I first implemented the original jlox in Java. I ended
+up tearing it out because it felt over-engineered for the minimal interpreter in
+this book.
 
 </aside>
 
 With some rudimentary error handling in place, our application shell is ready.
-Once we have a Scanner class with a `scanTokens()` method, we can start running
+Once we have a Scanner class with a `scan_tokens()` method, we can start running
 it. Before we get to that, let's get more precise about what tokens are.
 
 ## Lexemes and Tokens
@@ -198,8 +269,8 @@ var language = "lox";
 ```
 
 Here, `var` is the keyword for declaring a variable. That three-character
-sequence "v-a-r" means something. But if we yank three letters out of the
-middle of `language`, like "g-u-a", those don't mean anything on their own.
+sequence "v-a-r" means something. But if we yank three letters out of the middle
+of `language`, like "g-u-a", those don't mean anything on their own.
 
 That's what lexical analysis is about. Our job is to scan through the list of
 characters and group them together into the smallest sequences that still
@@ -218,11 +289,11 @@ that other data, the result is a token. It includes useful stuff like:
 Keywords are part of the shape of the language's grammar, so the parser often
 has code like, "If the next token is `while` then do..." That means the parser
 wants to know not just that it has a lexeme for some identifier, but that it has
-a *reserved* word, and *which* keyword it is.
+a _reserved_ word, and _which_ keyword it is.
 
 The <span name="ugly">parser</span> could categorize tokens from the raw lexeme
 by comparing the strings, but that's slow and kind of ugly. Instead, at the
-point that we recognize a lexeme, we also remember which *kind* of lexeme it
+point that we recognize a lexeme, we also remember which _kind_ of lexeme it
 represents. We have a different type for each keyword, operator, bit of
 punctuation, and literal type.
 
@@ -233,7 +304,39 @@ that the scanner's job?
 
 </aside>
 
-^code token-type
+```python
+# lox/token.py
+from enum import IntEnum, auto
+
+
+class TokenType(IntEnum):
+    # Single-character tokens.
+    LEFT_PAREN = auto(); RIGHT_PAREN = auto()
+    LEFT_BRACE = auto(); RIGHT_BRACE = auto()
+    COMMA = auto(); DOT = auto(); SEMICOLON = auto()
+    MINUS = auto(); PLUS = auto(); SLASH = auto(); STAR = auto()
+
+
+    # One or two character tokens.
+    BANG = auto(); BANG_EQUAL = auto()
+    EQUAL= auto(); EQUAL_EQUAL = auto()
+    GREATER= auto(); GREATER_EQUAL = auto()
+    LESS= auto(); LESS_EQUAL = auto()
+
+    # Literals.
+    IDENTIFIER = auto(); STRING = auto(); NUMBER = auto()
+
+    # Keywords.
+    AND = auto(); CLASS = auto(); ELSE = auto(); FALSE = auto(); FUN = auto()
+    FOR = auto(); IF = auto(); NIL = auto(); OR = auto(); PRINT = auto()
+    RETURN = auto(); SUPER = auto(); THIS = auto(); TRUE = auto(); VAR = auto()
+    WHILE = auto()
+
+    # Special tokens.
+    EOF = auto()
+    INVALID = auto()
+    UNTERMINATED_STRING = auto()
+```
 
 ### Literal value
 
@@ -245,7 +348,7 @@ object that will be used by the interpreter later.
 ### Location information
 
 Back when I was preaching the gospel about error handling, we saw that we need
-to tell users *where* errors occurred. Tracking that starts here. In our simple
+to tell users _where_ errors occurred. Tracking that starts here. In our simple
 interpreter, we note only which line the token appears on, but more
 sophisticated implementations include the column and length too.
 
@@ -258,8 +361,8 @@ calculate them.
 
 An offset can be converted to line and column positions later by looking back at
 the source file and counting the preceding newlines. That sounds slow, and it
-is. However, you need to do it *only when you need to actually display a line
-and column to the user*. Most tokens never appear in an error message. For
+is. However, you need to do it _only when you need to actually display a line
+and column to the user_. Most tokens never appear in an error message. For
 those, the less time you spend calculating position information ahead of time,
 the better.
 
@@ -267,7 +370,22 @@ the better.
 
 We take all of this data and wrap it in a class.
 
-^code token-class
+```python
+# lox/token.py after the TokenType class
+from dataclasses import dataclass
+from typing import Any
+
+
+@dataclass
+class Token:
+    type: TokenType
+    lexeme: str
+    line: int
+    literal: Any = None
+
+    def __str__(self):
+        return f"{self.type.name} {self.lexeme!r} {self.literal}"
+```
 
 Now we have an object with enough structure to be useful for all of the later
 phases of the interpreter.
@@ -318,27 +436,28 @@ as in regular expressions.
 It pains me to gloss over the theory so much, especially when it's as
 interesting as I think the [Chomsky hierarchy][] and [finite-state machines][]
 are. But the honest truth is other books cover this better than I could.
-[*Compilers: Principles, Techniques, and Tools*][dragon] (universally known as
+[_Compilers: Principles, Techniques, and Tools_][dragon] (universally known as
 "the dragon book") is the canonical reference.
 
 [chomsky hierarchy]: https://en.wikipedia.org/wiki/Chomsky_hierarchy
-[dragon]: https://en.wikipedia.org/wiki/Compilers:_Principles,_Techniques,_and_Tools
+[dragon]:
+  https://en.wikipedia.org/wiki/Compilers:_Principles,_Techniques,_and_Tools
 [finite-state machines]: https://en.wikipedia.org/wiki/Finite-state_machine
 
 </aside>
 
-You very precisely *can* recognize all of the different lexemes for Lox using
+You very precisely _can_ recognize all of the different lexemes for Lox using
 regexes if you want to, and there's a pile of interesting theory underlying why
-that is and what it means. Tools like [Lex][] or
-[Flex][] are designed expressly to let you do this -- throw a handful of regexes
-at them, and they give you a complete scanner <span name="lex">back</span>.
+that is and what it means. Tools like [Lex][] or [Flex][] are designed expressly
+to let you do this -- throw a handful of regexes at them, and they give you a
+complete scanner <span name="lex">back</span>.
 
 <aside name="lex">
 
 Lex was created by Mike Lesk and Eric Schmidt. Yes, the same Eric Schmidt who
 was executive chairman of Google. I'm not saying programming languages are a
-surefire path to wealth and fame, but we *can* count at least one
-mega billionaire among us.
+surefire path to wealth and fame, ut we _can_ count at least one mega
+billionaire among us.
 
 </aside>
 
@@ -352,21 +471,41 @@ delegating that task. We're about handcrafted goods.
 
 Without further ado, let's make ourselves a scanner.
 
-^code scanner-class
+```python
+# lox/scanner.py
+from dataclasses import dataclass, field
+from typing import Any
+from .token import Token, TokenType as TT
 
-<aside name="static-import">
+@dataclass
+class Scanner:
+    source: str
+    tokens: list[Token] = field(default_factory=list)
 
-I know static imports are considered bad style by some, but they save me from
-having to sprinkle `TokenType.` all over the scanner and parser. Forgive me, but
-every character counts in a book.
+def tokenize(source: str) -> list[Token]:
+    scanner = Scanner(source)
+    return scanner.scan_tokens()
+```
 
-</aside>
+The `tokenize` function is the main entry point to the scanner module. It
+initializes a scanner, reads the tokens and thow away any intermediary state.
+That way we do not need to reset the scanner state manually in the Lox class
+every time we analyze a new piece of code.
 
 We store the raw source code as a simple string, and we have a list ready to
 fill with tokens we're going to generate. The aforementioned loop that does that
 looks like this:
 
-^code scan-tokens
+```python
+# lox/scanner.py method in class Scanner
+def scan_tokens(self) -> list[Token]:
+    while not self.is_at_end():
+        # We are at the beginning of the next lexeme.
+        self.start = self.current
+        self.scan_token()
+    self.tokens.append(Token(TT.EOF, "", self.line))
+    return self.tokens
+```
 
 The scanner works its way through the source code, adding tokens until it runs
 out of characters. Then it appends one final "end of file" token. That isn't
@@ -375,7 +514,12 @@ strictly needed, but it makes our parser a little cleaner.
 This loop depends on a couple of fields to keep track of where the scanner is in
 the source code.
 
-^code scan-state (1 before, 2 after)
+```python
+# lox/scanner.py in class Scanner after the `source: str` declaration
+    start: int = 0
+    current: int = 0
+    line: int = 1
+```
 
 The `start` and `current` fields are offsets that index into the string. The
 `start` field points to the first character in the lexeme being scanned, and
@@ -386,15 +530,19 @@ location.
 Then we have one little helper function that tells us if we've consumed all the
 characters.
 
-^code is-at-end
+```python
+# lox/scanner.py method of the Scanner class
+def is_at_end(self) -> bool:
+    return self.current >= len(self.source)
+```
 
 ## Recognizing Lexemes
 
 In each turn of the loop, we scan a single token. This is the real heart of the
-scanner. We'll start simple. Imagine if every lexeme were only a single character
-long. All you would need to do is consume the next character and pick a token type for
-it. Several lexemes *are* only a single character in Lox, so let's start with
-those.
+scanner. We'll start simple. Imagine if every lexeme were only a single
+character long. All you would need to do is consume the next character and pick
+a token type for it. Several lexemes _are_ only a single character in Lox, so
+let's start with those.
 
 ^code scan-token
 
@@ -404,14 +552,50 @@ Wondering why `/` isn't in here? Don't worry, we'll get to it.
 
 </aside>
 
+```python
+# lox/scanner.py method of Scanner class
+def scan_token(self):
+    match self.advance():
+        case "(":
+            self.add_token(TT.LEFT_PAREN)
+        case ")":
+            self.add_token(TT.RIGHT_PAREN)
+        case "{":
+            self.add_token(TT.LEFT_BRACE)
+        case "}":
+            self.add_token(TT.RIGHT_BRACE)
+        case ",":
+            self.add_token(TT.COMMA)
+        case ".":
+            self.add_token(TT.DOT)
+        case "-":
+            self.add_token(TT.MINUS)
+        case "+":
+            self.add_token(TT.PLUS)
+        case ";":
+            self.add_token(TT.SEMICOLON)
+        case "*":
+            self.add_token(TT.STAR)
+```
+
 Again, we need a couple of helper methods.
 
-^code advance-and-add-token
+```python
+# lox/scanner.py add methods to the Scanner class
+def advance(self) -> str:
+    char = self.source[self.current]
+    self.current += 1
+    return char
+
+def add_token(self, type: TT, literal: Any = None):
+    text = self.source[self.start:self.current]
+    self.tokens.append(Token(type, text, self.line, literal))
+```
 
 The `advance()` method consumes the next character in the source file and
-returns it. Where `advance()` is for input, `addToken()` is for output. It grabs
-the text of the current lexeme and creates a new token for it. We'll use the
-other overload to handle tokens with literal values soon.
+returns it. Where `advance()` is for input, `add_token()` is for output. It
+grabs the text of the current lexeme and creates a new token for it. We'll use
+the other overload to handle tokens with literal values soon.
 
 ### Lexical errors
 
@@ -420,21 +604,22 @@ lexical level. What happens if a user throws a source file containing some
 characters Lox doesn't use, like `@#^`, at our interpreter? Right now, those
 characters get silently discarded. They aren't used by the Lox language, but
 that doesn't mean the interpreter can pretend they aren't there. Instead, we
-report an error.
+collect them as an error token.
 
-^code char-error (1 before, 1 after)
+```python
+# lox/scanner.py at scan_token()'s match/case statement
+case _:
+    self.add_token(TT.INVALID)
+```
 
-Note that the erroneous character is still *consumed* by the earlier call to
+Note that the erroneous character is still _consumed_ by the earlier call to
 `advance()`. That's important so that we don't get stuck in an infinite loop.
 
-Note also that we <span name="shotgun">*keep scanning*</span>. There may be
+Note also that we <span name="shotgun">_keep scanning_</span>. There may be
 other errors later in the program. It gives our users a better experience if we
 detect as many of those as possible in one go. Otherwise, they see one tiny
 error and fix it, only to have the next error appear, and so on. Syntax error
 Whac-A-Mole is no fun.
-
-(Don't worry. Since `hadError` gets set, we'll never try to *execute* any of the
-code, even though we keep going and scan the rest of it.)
 
 <aside name="shotgun">
 
@@ -450,25 +635,49 @@ user experience.
 We have single-character lexemes working, but that doesn't cover all of Lox's
 operators. What about `!`? It's a single character, right? Sometimes, yes, but
 if the very next character is an equals sign, then we should instead create a
-`!=` lexeme. Note that the `!` and `=` are *not* two independent operators. You
-can't write `!   =` in Lox and have it behave like an inequality operator.
-That's why we need to scan `!=` as a single lexeme. Likewise, `<`, `>`, and `=`
-can all be followed by `=` to create the other equality and comparison
-operators.
+`!=` lexeme. Note that the `!` and `=` are _not_ two independent operators. You
+can't write `! =` in Lox and have it behave like an inequality operator. That's
+why we need to scan `!=` as a single lexeme. Likewise, `<`, `>`, and `=` can all
+be followed by `=` to create the other equality and comparison operators.
 
 For all of these, we need to look at the second character.
 
-^code two-char-tokens (1 before, 2 after)
+```python
+# lox/scanner.py at scan_token()'s match/case statement
+case "!" if self.match("="):
+    self.add_token(TT.BANG_EQUAL)
+case "!":
+    self.add_token(TT.BANG)
+case "=" if self.match("="):
+    self.add_token(TT.EQUAL_EQUAL)
+case "=":
+    self.add_token(TT.EQUAL)
+case "<" if self.match("="):
+    self.add_token(TT.LESS_EQUAL)
+case "<":
+    self.add_token(TT.LESS)
+case ">" if self.match("="):
+    self.add_token(TT.GREATER_EQUAL)
+case ">":
+    self.add_token(TT.GREATER)
+```
 
 Those cases use this new method:
 
-^code match
+```python
+# lox/scanner.py method of the Scanner class
+def match(self, expected: str) -> bool:
+    if self.is_at_end() or self.source[self.current] != expected:
+        return False
+    self.current += 1
+    return True
+```
 
 It's like a conditional `advance()`. We only consume the current character if
 it's what we're looking for.
 
 Using `match()`, we recognize these lexemes in two stages. When we reach, for
-example, `!`, we jump to its switch case. That means we know the lexeme *starts*
+example, `!`, we jump to its switch case. That means we know the lexeme _starts_
 with `!`. Then we look at the next character to determine if we're on a `!=` or
 merely a `!`.
 
@@ -477,7 +686,15 @@ merely a `!`.
 We're still missing one operator: `/` for division. That character needs a
 little special handling because comments begin with a slash too.
 
-^code slash (1 before, 2 after)
+```python
+# lox/scanner.py at scan_token()'s match/case statement
+case "/" if self.match("/"):
+    # A comment goes until the end of the line.
+    while self.peek() != '\n' and not self.is_at_end():
+        self.advance()
+case "/":
+    self.add_token(TT.SLASH)
+```
 
 This is similar to the other two-character operators, except that when we find a
 second `/`, we don't end the token yet. Instead, we keep consuming characters
@@ -489,11 +706,17 @@ characters until it sees the end.
 
 We've got another helper:
 
-^code peek
+```python
+# lox/scanner.py method of the Scanner class
+def peek(self) -> str:
+    if self.is_at_end():
+        return ""
+    return self.source[self.current]
+```
 
 It's sort of like `advance()`, but doesn't consume the character. This is called
 <span name="match">**lookahead**</span>. Since it only looks at the current
-unconsumed character, we have *one character of lookahead*. The smaller this
+unconsumed character, we have _one character of lookahead_. The smaller this
 number is, generally, the faster the scanner runs. The rules of the lexical
 grammar dictate how much lookahead we need. Fortunately, most languages in wide
 use peek only one or two characters ahead.
@@ -505,18 +728,25 @@ fundamental operators and `match()` combines them.
 
 </aside>
 
-Comments are lexemes, but they aren't meaningful, and the parser doesn't want
-to deal with them. So when we reach the end of the comment, we *don't* call
+Comments are lexemes, but they aren't meaningful, and the parser doesn't want to
+deal with them. So when we reach the end of the comment, we _don't_ call
 `addToken()`. When we loop back around to start the next lexeme, `start` gets
 reset and the comment's lexeme disappears in a puff of smoke.
 
 While we're at it, now's a good time to skip over those other meaningless
 characters: newlines and whitespace.
 
-^code whitespace (1 before, 3 after)
+```python
+# lox/scanner.py at scan_token()'s match/case statement
+...
+case " " | "\r" | "\t":
+    pass # Ignore whitespace.
+case "\n":
+    self.line += 1
+```
 
 When encountering whitespace, we simply go back to the beginning of the scan
-loop. That starts a new lexeme *after* the whitespace character. For newlines,
+loop. That starts a new lexeme _after_ the whitespace character. For newlines,
 we do the same thing, but we also increment the line counter. (This is why we
 used `peek()` to find the newline ending a comment instead of `match()`. We want
 that newline to get us here so we can update `line`.)
@@ -534,11 +764,33 @@ Our scanner is getting smarter. It can handle fairly free-form code like:
 Now that we're comfortable with longer lexemes, we're ready to tackle literals.
 We'll do strings first, since they always begin with a specific character, `"`.
 
-^code string-start (1 before, 2 after)
+```python
+# lox/scanner.py at scan_token()'s match/case statement
+case '"':
+    self.string()
+```
 
 That calls:
 
-^code string
+```python
+# lox/scanner.py method of the Scanner class
+def string(self):
+    while self.peek() != '"' and not self.is_at_end():
+        if self.peek() == '\n':
+            self.line += 1
+        self.advance()
+
+    if self.is_at_end():
+        self.add_token(TT.UNTERMINATED_STRING)
+        return
+
+    # The closing ".
+    self.advance()
+
+    # Trim the surrounding quotes.
+    value = self.source[self.start + 1 : self.current - 1]
+    self.add_token(TT.STRING, value)
+```
 
 Like with comments, we consume characters until we hit the `"` that ends the
 string. We also gracefully handle running out of input before the string is
@@ -550,7 +802,7 @@ so I left them in. That does mean we also need to update `line` when we hit a
 newline inside a string.
 
 Finally, the last interesting bit is that when we create the token, we also
-produce the actual string *value* that will be used later by the interpreter.
+produce the actual string _value_ that will be used later by the interpreter.
 Here, that conversion only requires a `substring()` to strip off the surrounding
 quotes. If Lox supported escape sequences like `\n`, we'd unescape those here.
 
@@ -564,7 +816,7 @@ digits.
 <aside name="minus">
 
 Since we look only for a digit to start a number, that means `-123` is not a
-number *literal*. Instead, `-123`, is an *expression* that applies `-` to the
+number _literal_. Instead, `-123`, is an _expression_ that applies `-` to the
 number literal `123`. In practice, the result is the same, though it has one
 interesting edge case if we were to add method calls on numbers. Consider:
 
@@ -600,30 +852,52 @@ We don't allow a leading or trailing decimal point, so these are both invalid:
 We could easily support the former, but I left it out to keep things simple. The
 latter gets weird if we ever want to allow methods on numbers like `123.sqrt()`.
 
-To recognize the beginning of a number lexeme, we look for any digit. It's kind
-of tedious to add cases for every decimal digit, so we'll stuff it in the
-default case instead.
+To recognize the beginning of a number lexeme, we look for any digit.
 
-^code digit-start (1 before, 1 after)
-
-This relies on this little utility:
-
-^code is-digit
-
-<aside name="is-digit">
-
-The Java standard library provides [`Character.isDigit()`][is-digit], which seems
-like a good fit. Alas, that method allows things like Devanagari digits,
-full-width numbers, and other funny stuff we don't want.
-
-[is-digit]: http://docs.oracle.com/javase/7/docs/api/java/lang/Character.html#isDigit(char)
-
-</aside>
+```python
+# lox/scanner.py at scan_token()'s match/case statement
+case "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9":
+    self.number()
+```
 
 Once we know we are in a number, we branch to a separate method to consume the
 rest of the literal, like we do with strings.
 
-^code number
+```python
+# lox/scanner.py method of the Scanner class
+def number(self):
+    while is_digit(self.peek()):
+        self.advance()
+
+    # Look for a fractional part.
+    if self.peek() == '.' and is_digit(self.peek_next()):
+        # Consume the "."
+        self.advance()
+
+    while (is_digit(self.peek())):
+        self.advance()
+
+    substring = self.source[self.start: self.current]
+    self.add_token(TT.NUMBER, float(substring))
+```
+
+This relies on this little utility:
+
+```python
+#lox/scanner.py after the Scanner class
+def is_digit(char: str) -> bool:
+    return char.isdigit() and char.isascii()
+```
+
+<aside name="is-digit">
+
+The Python standard library provides [`str.isdigit()`][is-digit], which seems
+like a good fit. Alas, that method allows things like Devanagari digits,
+full-width numbers, and other funny stuff we don't want.
+
+[is-digit]: https://docs.python.org/3/library/stdtypes.html#str.isdigit
+
+</aside>
 
 We consume as many digits as we find for the integer part of the literal. Then
 we look for a fractional part, which is a decimal point (`.`) followed by at
@@ -631,26 +905,31 @@ least one digit. If we do have a fractional part, again, we consume as many
 digits as we can find.
 
 Looking past the decimal point requires a second character of lookahead since we
-don't want to consume the `.` until we're sure there is a digit *after* it. So
+don't want to consume the `.` until we're sure there is a digit _after_ it. So
 we add:
 
-^code peek-next
+```python
+# lox/scanner.py method of the Scanner class
+def peek_next(self):
+    if self.current + 1 >= len(self.source):
+        return "\0"
+    return self.source[self.current + 1]
+```
 
 <aside name="peek-next">
 
 I could have made `peek()` take a parameter for the number of characters ahead
-to look instead of defining two functions, but that would allow *arbitrarily*
+to look instead of defining two functions, but that would allow _arbitrarily_
 far lookahead. Providing these two functions makes it clearer to a reader of the
 code that our scanner looks ahead at most two characters.
 
 </aside>
 
-
-Finally, we convert the lexeme to its numeric value. Our interpreter uses Java's
-`Double` type to represent numbers, so we produce a value of that type. We're
-using Java's own parsing method to convert the lexeme to a real Java double. We
-could implement that ourselves, but, honestly, unless you're trying to cram for
-an upcoming programming interview, it's not worth your time.
+Finally, we convert the lexeme to its numeric value. Our interpreter uses
+Python's `float` type to represent numbers, so we produce a value of that type.
+We're using Python's own parsing method to convert the lexeme to a real Python
+float. We could implement that ourselves, but, honestly, unless you're trying to
+cram for an upcoming programming interview, it's not worth your time.
 
 The remaining literals are Booleans and `nil`, but we handle those as keywords,
 which gets us to...
@@ -662,20 +941,18 @@ implement are identifiers and their close cousins, the reserved words. You might
 think we could match keywords like `or` in the same way we handle
 multiple-character operators like `<=`.
 
-```java
-case 'o':
-  if (match('r')) {
-    addToken(OR);
-  }
-  break;
+```python
+case "o":
+  if self.match("r"):
+    self.add_token(TT.OR)
 ```
 
 Consider what would happen if a user named a variable `orchid`. The scanner
 would see the first two letters, `or`, and immediately emit an `or` keyword
 token. This gets us to an important principle called <span
 name="maximal">**maximal munch**</span>. When two lexical grammar rules can both
-match a chunk of code that the scanner is looking at, *whichever one matches the
-most characters wins*.
+match a chunk of code that the scanner is looking at, _whichever one matches the
+most characters wins_.
 
 That rule states that if we can match `orchid` as an identifier and `or` as a
 keyword, then the former wins. This is also why we tacitly assumed, previously,
@@ -689,8 +966,8 @@ Consider this nasty bit of C code:
 ---a;
 ```
 
-Is it valid? That depends on how the scanner splits the lexemes. What if the scanner
-sees it like this:
+Is it valid? That depends on how the scanner splits the lexemes. What if the
+scanner sees it like this:
 
 ```c
 - --a;
@@ -698,7 +975,7 @@ sees it like this:
 
 Then it could be parsed. But that would require the scanner to know about the
 grammatical structure of the surrounding code, which entangles things more than
-we want. Instead, the maximal munch rule says that it is *always* scanned like:
+we want. Instead, the maximal munch rule says that it is _always_ scanned like:
 
 ```c
 -- -a;
@@ -710,33 +987,75 @@ parser.
 </aside>
 
 Maximal munch means we can't easily detect a reserved word until we've reached
-the end of what might instead be an identifier. After all, a reserved word *is*
+the end of what might instead be an identifier. After all, a reserved word _is_
 an identifier, it's just one that has been claimed by the language for its own
 use. That's where the term **reserved word** comes from.
 
 So we begin by assuming any lexeme starting with a letter or underscore is an
 identifier.
 
-^code identifier-start (3 before, 3 after)
+```python
+# lox/scanner.py at scan_token()'s match/case statement
+case c if is_alpha(c):
+    self.identifier()
+```
 
 The rest of the code lives over here:
 
-^code identifier
+```python
+# lox/scanner.py method of the Scanner class
+def identifier(self):
+    while is_alpha_numeric(self.peek()):
+        self.advance()
+    self.add_token(TT.IDENTIFIER)
+```
 
 We define that in terms of these helpers:
 
-^code is-alpha
+```python
+# lox/scanner.py after the Scanner class
+def is_alpha(char: str) -> bool:
+    return char == "_" or char.isalpha() and char.isascii()
+
+def is_alpha_numeric(char: str) -> bool:
+    return is_alpha(char) or is_digit(char)
+```
 
 That gets identifiers working. To handle keywords, we see if the identifier's
 lexeme is one of the reserved words. If so, we use a token type specific to that
 keyword. We define the set of reserved words in a map.
 
-^code keyword-map
+```python
+# lox/scanner.py after the imports
+KEYWORDS = {
+    "and": TT.AND,
+    "class": TT.CLASS,
+    "else": TT.ELSE,
+    "false": TT.FALSE,
+    "for": TT.FOR,
+    "fun": TT.FUN,
+    "if": TT.IF,
+    "nil": TT.NIL,
+    "or": TT.OR,
+    "print": TT.PRINT,
+    "return": TT.RETURN,
+    "super": TT.SUPER,
+    "this": TT.THIS,
+    "true": TT.TRUE,
+    "var": TT.VAR,
+    "while": TT.WHILE,
+}
+```
 
 Then, after we scan an identifier, we check to see if it matches anything in the
 map.
 
-^code keyword-type (2 before, 1 after)
+```python
+# lox/scanner.py replace the self.add_token(...) line
+    text = self.source[self.start: self.current]
+    kind = KEYWORDS.get(text, TT.IDENTIFIER)
+    self.add_token(kind)
+```
 
 If so, we use that keyword's token type. Otherwise, it's a regular user-defined
 identifier.
@@ -750,18 +1069,18 @@ and see if it handles them as it should.
 
 ## Challenges
 
-1.  The lexical grammars of Python and Haskell are not *regular*. What does that
+1.  The lexical grammars of Python and Haskell are not _regular_. What does that
     mean, and why aren't they?
 
 1.  Aside from separating tokens -- distinguishing `print foo` from `printfoo`
     -- spaces aren't used for much in most languages. However, in a couple of
-    dark corners, a space *does* affect how code is parsed in CoffeeScript,
+    dark corners, a space _does_ affect how code is parsed in CoffeeScript,
     Ruby, and the C preprocessor. Where and what effect does it have in each of
     those languages?
 
 1.  Our scanner here, like most, discards comments and whitespace since those
     aren't needed by the parser. Why might you want to write a scanner that does
-    *not* discard those? What would it be useful for?
+    _not_ discard those? What would it be useful for?
 
 1.  Add support to Lox's scanner for C-style `/* ... */` block comments. Make
     sure to handle newlines in them. Consider allowing them to nest. Is adding
@@ -779,7 +1098,7 @@ syntactic lichen that almost every new language scrapes off (and some ancient
 ones like BASIC never had) is `;` as an explicit statement terminator.
 
 Instead, they treat a newline as a statement terminator where it makes sense to
-do so. The "where it makes sense" part is the challenging bit. While *most*
+do so. The "where it makes sense" part is the challenging bit. While _most_
 statements are on their own line, sometimes you need to spread a single
 statement across a couple of lines. Those intermingled newlines should not be
 treated as terminators.
@@ -787,87 +1106,85 @@ treated as terminators.
 Most of the obvious cases where the newline should be ignored are easy to
 detect, but there are a handful of nasty ones:
 
-* A return value on the next line:
+- A return value on the next line:
 
-    ```js
-    if (condition) return
-    "value"
-    ```
+  ```js
+  if (condition) return;
+  ("value");
+  ```
 
-    Is "value" the value being returned, or do we have a `return` statement with
-    no value followed by an expression statement containing a string literal?
+  Is "value" the value being returned, or do we have a `return` statement with
+  no value followed by an expression statement containing a string literal?
 
-* A parenthesized expression on the next line:
+- A parenthesized expression on the next line:
 
-    ```js
-    func
-    (parenthesized)
-    ```
+  ```js
+  func(parenthesized);
+  ```
 
-    Is this a call to `func(parenthesized)`, or two expression statements, one
-    for `func` and one for a parenthesized expression?
+  Is this a call to `func(parenthesized)`, or two expression statements, one for
+  `func` and one for a parenthesized expression?
 
-* A `-` on the next line:
+- A `-` on the next line:
 
-    ```js
-    first
-    -second
-    ```
+  ```js
+  first - second;
+  ```
 
-    Is this `first - second` -- an infix subtraction -- or two expression
-    statements, one for `first` and one to negate `second`?
+  Is this `first - second` -- an infix subtraction -- or two expression
+  statements, one for `first` and one to negate `second`?
 
 In all of these, either treating the newline as a separator or not would both
 produce valid code, but possibly not the code the user wants. Across languages,
 there is an unsettling variety of rules used to decide which newlines are
 separators. Here are a couple:
 
-*   [Lua][] completely ignores newlines, but carefully controls its grammar such
-    that no separator between statements is needed at all in most cases. This is
-    perfectly legit:
+- [Lua][] completely ignores newlines, but carefully controls its grammar such
+  that no separator between statements is needed at all in most cases. This is
+  perfectly legit:
 
-    ```lua
-    a = 1 b = 2
-    ```
+  ```lua
+  a = 1 b = 2
+  ```
 
-    Lua avoids the `return` problem by requiring a `return` statement to be the
-    very last statement in a block. If there is a value after `return` before
-    the keyword `end`, it *must* be for the `return`. For the other two cases,
-    they allow an explicit `;` and expect users to use that. In practice, that
-    almost never happens because there's no point in a parenthesized or unary
-    negation expression statement.
+  Lua avoids the `return` problem by requiring a `return` statement to be the
+  very last statement in a block. If there is a value after `return` before the
+  keyword `end`, it _must_ be for the `return`. For the other two cases, they
+  allow an explicit `;` and expect users to use that. In practice, that almost
+  never happens because there's no point in a parenthesized or unary negation
+  expression statement.
 
-*   [Go][] handles newlines in the scanner. If a newline appears following one
-    of a handful of token types that are known to potentially end a statement,
-    the newline is treated like a semicolon. Otherwise it is ignored. The Go
-    team provides a canonical code formatter, [gofmt][], and the ecosystem is
-    fervent about its use, which ensures that idiomatic styled code works well
-    with this simple rule.
+- [Go][] handles newlines in the scanner. If a newline appears following one of
+  a handful of token types that are known to potentially end a statement, the
+  newline is treated like a semicolon. Otherwise it is ignored. The Go team
+  provides a canonical code formatter, [gofmt][], and the ecosystem is fervent
+  about its use, which ensures that idiomatic styled code works well with this
+  simple rule.
 
-*   [Python][] treats all newlines as significant unless an explicit backslash
-    is used at the end of a line to continue it to the next line. However,
-    newlines anywhere inside a pair of brackets (`()`, `[]`, or `{}`) are
-    ignored. Idiomatic style strongly prefers the latter.
+- [Python][] treats all newlines as significant unless an explicit backslash is
+  used at the end of a line to continue it to the next line. However, newlines
+  anywhere inside a pair of brackets (`()`, `[]`, or `{}`) are ignored.
+  Idiomatic style strongly prefers the latter.
 
-    This rule works well for Python because it is a highly statement-oriented
-    language. In particular, Python's grammar ensures a statement never appears
-    inside an expression. C does the same, but many other languages which have a
-    "lambda" or function literal syntax do not.
+  This rule works well for Python because it is a highly statement-oriented
+  language. In particular, Python's grammar ensures a statement never appears
+  inside an expression. C does the same, but many other languages which have a
+  "lambda" or function literal syntax do not.
 
-    An example in JavaScript:
+  An example in JavaScript:
 
-    ```js
-    console.log(function() {
-      statement();
-    });
-    ```
+  ```js
+  console.log(function () {
+    statement();
+  });
+  ```
 
-    Here, the `console.log()` *expression* contains a function literal which
-    in turn contains the *statement* `statement();`.
+  Here, the `console.log()` _expression_ contains a function literal which in
+  turn contains the _statement_ `statement();`.
 
-    Python would need a different set of rules for implicitly joining lines if
-    you could get back *into* a <span name="lambda">statement</span> where
-    newlines should become meaningful while still nested inside brackets.
+  Python would need a different set of rules for implicitly joining lines if you
+  could get back _into_ a <span name="lambda">statement</span> where newlines
+  should become meaningful while still nested inside brackets.
 
 <aside name="lambda">
 
@@ -875,23 +1192,23 @@ And now you know why Python's `lambda` allows only a single expression body.
 
 </aside>
 
-*   JavaScript's "[automatic semicolon insertion][asi]" rule is the real odd
-    one. Where other languages assume most newlines *are* meaningful and only a
-    few should be ignored in multi-line statements, JS assumes the opposite. It
-    treats all of your newlines as meaningless whitespace *unless* it encounters
-    a parse error. If it does, it goes back and tries turning the previous
-    newline into a semicolon to get something grammatically valid.
+- JavaScript's "[automatic semicolon insertion][asi]" rule is the real odd one.
+  Where other languages assume most newlines _are_ meaningful and only a few
+  should be ignored in multi-line statements, JS assumes the opposite. It treats
+  all of your newlines as meaningless whitespace _unless_ it encounters a parse
+  error. If it does, it goes back and tries turning the previous newline into a
+  semicolon to get something grammatically valid.
 
-    This design note would turn into a design diatribe if I went into complete
-    detail about how that even *works*, much less all the various ways that
-    JavaScript's "solution" is a bad idea. It's a mess. JavaScript is the only
-    language I know where many style guides demand explicit semicolons after
-    every statement even though the language theoretically lets you elide them.
+  This design note would turn into a design diatribe if I went into complete
+  detail about how that even _works_, much less all the various ways that
+  JavaScript's "solution" is a bad idea. It's a mess. JavaScript is the only
+  language I know where many style guides demand explicit semicolons after every
+  statement even though the language theoretically lets you elide them.
 
-If you're designing a new language, you almost surely *should* avoid an explicit
-statement terminator. Programmers are creatures of fashion like other humans, and
-semicolons are as passé as ALL CAPS KEYWORDS. Just make sure you pick a set of
-rules that make sense for your language's particular grammar and idioms. And
+If you're designing a new language, you almost surely _should_ avoid an explicit
+statement terminator. Programmers are creatures of fashion like other humans,
+and semicolons are as passé as ALL CAPS KEYWORDS. Just make sure you pick a set
+of rules that make sense for your language's particular grammar and idioms. And
 don't do what JavaScript did.
 
 </div>
@@ -899,5 +1216,6 @@ don't do what JavaScript did.
 [lua]: https://www.lua.org/pil/1.1.html
 [go]: https://golang.org/ref/spec#Semicolons
 [gofmt]: https://golang.org/cmd/gofmt/
-[python]: https://docs.python.org/3.5/reference/lexical_analysis.html#implicit-line-joining
+[python]:
+  https://docs.python.org/3.5/reference/lexical_analysis.html#implicit-line-joining
 [asi]: https://www.ecma-international.org/ecma-262/5.1/#sec-7.9

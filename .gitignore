@@ -6,6 +6,7 @@ clox
 *.class
 exercises/chapter01_introduction/3/linked_list
 .idea/
+__pycache__/
 
 # I keep a scratch file at the top level to try stuff out.
 temp.lox

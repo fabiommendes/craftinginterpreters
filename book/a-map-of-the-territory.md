@@ -232,14 +232,14 @@ A simple example is **constant folding**: if some expression always evaluates to
 the exact same value, we can do the evaluation at compile time and replace the
 code for the expression with its result. If the user typed in this:
 
-```java
-pennyArea = 3.14159 * (0.75 / 2) * (0.75 / 2);
+```python
+penny_area = 3.14159 * (0.75 / 2) * (0.75 / 2)
 ```
 
 we could do all of that arithmetic in the compiler and change the code to:
 
-```java
-pennyArea = 0.4417860938;
+```python
+penny_area = 0.4417860938
 ```
 
 Optimization is a huge part of the programming language business. Many language
@@ -343,7 +343,7 @@ at runtime. Running bytecode in a VM is slower than translating it to native
 code ahead of time because every instruction must be simulated at runtime each
 time it executes. In return, you get simplicity and portability. Implement your
 VM in, say, C, and you can run your language on any platform that has a C
-compiler. This is how the second interpreter we build in this book works.
+compiler. This is how the second interpreter we build in this book works. #TODO
 
 <aside name="vm">
 

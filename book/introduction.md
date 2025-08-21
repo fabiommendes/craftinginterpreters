@@ -40,7 +40,7 @@ precisely and <span name="formal">formally</span> about syntax and semantics is
 a vital skill when working on a language. But, personally, I learn best by
 doing. It's hard for me to wade through paragraphs full of abstract concepts and
 really absorb them. But if I've coded something, run it, and debugged it, then I
-*get* it.
+_get_ it.
 
 <aside name="formal">
 
@@ -51,7 +51,8 @@ It turns out this is no coincidence. In the early half of last century, Haskell
 Curry and William Alvin Howard showed that they are two sides of the same coin:
 [the Curry-Howard isomorphism][].
 
-[the curry-howard isomorphism]: https://en.wikipedia.org/wiki/Curry%E2%80%93Howard_correspondence
+[the curry-howard isomorphism]:
+  https://en.wikipedia.org/wiki/Curry%E2%80%93Howard_correspondence
 
 </aside>
 
@@ -71,7 +72,7 @@ But programming languages are a little different. I suppose it is true that the
 odds of any of us creating a broadly successful, general-purpose programming
 language are slim. The designers of the world's widely used languages could fit
 in a Volkswagen bus, even without putting the pop-top camper up. If joining that
-elite group was the *only* reason to learn languages, it would be hard to
+elite group was the _only_ reason to learn languages, it would be hard to
 justify. Fortunately, it isn't.
 
 ### Little languages are everywhere
@@ -110,7 +111,7 @@ them to run farther and faster.
 Implementing a language is a real test of programming skill. The code is complex
 and performance critical. You must master recursion, dynamic arrays, trees,
 graphs, and hash tables. You probably use hash tables at least in your
-day-to-day programming, but do you *really* understand them? Well, after we've
+day-to-day programming, but do you _really_ understand them? Well, after we've
 crafted our own from scratch, I guarantee you will.
 
 While I intend to show you that an interpreter isn't as daunting as you might
@@ -123,19 +124,19 @@ algorithms in your day job.
 This last reason is hard for me to admit, because it's so close to my heart.
 Ever since I learned to program as a kid, I felt there was something magical
 about languages. When I first tapped out BASIC programs one key at a time I
-couldn't conceive how BASIC *itself* was made.
+couldn't conceive how BASIC _itself_ was made.
 
 Later, the mixture of awe and terror on my college friends' faces when talking
 about their compilers class was enough to convince me language hackers were a
 different breed of human -- some sort of wizards granted privileged access to
 arcane arts.
 
-It's a charming <span name="image">image</span>, but it has a darker side. *I*
+It's a charming <span name="image">image</span>, but it has a darker side. _I_
 didn't feel like a wizard, so I was left thinking I lacked some inborn quality
 necessary to join the cabal. Though I've been fascinated by languages ever since
 I doodled made-up keywords in my school notebook, it took me decades to muster
 the courage to try to really learn them. That "magical" quality, that sense of
-exclusivity, excluded *me*.
+exclusivity, excluded _me_.
 
 <aside name="image">
 
@@ -143,7 +144,8 @@ And its practitioners don't hesitate to play up this image. Two of the seminal
 texts on programming languages feature a [dragon][] and a [wizard][] on their
 covers.
 
-[dragon]: https://en.wikipedia.org/wiki/Compilers:_Principles,_Techniques,_and_Tools
+[dragon]:
+  https://en.wikipedia.org/wiki/Compilers:_Principles,_Techniques,_and_Tools
 [wizard]: https://mitpress.mit.edu/sites/default/files/sicp/index.html
 
 </aside>
@@ -152,13 +154,13 @@ When I did finally start cobbling together my own little interpreters, I quickly
 learned that, of course, there is no magic at all. It's just code, and the
 people who hack on languages are just people.
 
-There *are* a few techniques you don't often encounter outside of languages, and
+There _are_ a few techniques you don't often encounter outside of languages, and
 some parts are a little difficult. But not more difficult than other obstacles
 you've overcome. My hope is that if you've felt intimidated by languages and
 this book helps you overcome that fear, maybe I'll leave you just a tiny bit
 braver than you were before.
 
-And, who knows, maybe you *will* make the next great language. Someone has to.
+And, who knows, maybe you _will_ make the next great language. Someone has to.
 
 ## How the Book Is Organized
 
@@ -183,7 +185,7 @@ delightful facets:
 
 ### The code
 
-We're about *crafting* interpreters, so this book contains real code. Every
+We're about _crafting_ interpreters, so this book contains real code. Every
 single line of code needed is included, and each snippet tells you where to
 insert it in your ever-growing implementation.
 
@@ -199,8 +201,8 @@ Yacc is a tool that takes in a grammar file and produces a source file for a
 compiler, so it's sort of like a "compiler" that outputs a compiler, which is
 where we get the term "compiler-compiler".
 
-Yacc wasn't the first of its ilk, which is why it's named "Yacc" -- *Yet
-Another* Compiler-Compiler. A later similar tool is [Bison][], named as a pun on
+Yacc wasn't the first of its ilk, which is why it's named "Yacc" -- _Yet
+Another_ Compiler-Compiler. A later similar tool is [Bison][], named as a pun on
 the pronunciation of Yacc like "yak".
 
 <img src="image/introduction/yak.png" alt="A yak." />
@@ -223,20 +225,20 @@ line of code and how both interpreters work.
 
 A book has different constraints from the "real world" and so the coding style
 here might not always reflect the best way to write maintainable production
-software. If I seem a little cavalier about, say, omitting `private` or
+software. If I seem a little cavalier about, say, omitting a type declaration or
 declaring a global variable, understand I do so to keep the code easier on your
 eyes. The pages here aren't as wide as your IDE and every character counts.
 
 Also, the code doesn't have many comments. That's because each handful of lines
 is surrounded by several paragraphs of honest-to-God prose explaining it. When
 you write a book to accompany your program, you are welcome to omit comments
-too. Otherwise, you should probably use `//` a little more than I do.
+too. Otherwise, you should probably use `#` a little more than I do.
 
 While the book contains every line of code and teaches what each means, it does
 not describe the machinery needed to compile and run the interpreter. I assume
 you can slap together a makefile or a project in your IDE of choice in order to
-get the code to run. Those kinds of instructions get out of date quickly, and
-I want this book to age like XO brandy, not backyard hooch.
+get the code to run. Those kinds of instructions get out of date quickly, and I
+want this book to age like XO brandy, not backyard hooch.
 
 ### Snippets
 
@@ -249,31 +251,30 @@ A snippet with all the bells and whistles looks like this:
 
 <div class="codehilite"><pre class="insert-before">
       default:
-</pre><div class="source-file"><em>lox/Scanner.java</em><br>
-in <em>scanToken</em>()<br>
+</pre><div class="source-file"><em>lox/scanner.py</em><br>
+in <em>scan_token</em>()<br>
 replace 1 line</div>
 <pre class="insert">
-        <span class="k">if</span> (<span class="i">isDigit</span>(<span class="i">c</span>)) {
-          <span class="i">number</span>();
-        } <span class="k">else</span> {
-          <span class="t">Lox</span>.<span class="i">error</span>(<span class="i">line</span>, <span class="s">&quot;Unexpected character.&quot;</span>);
-        }
+        <span class="k">if</span> <span class="i">c</span>.<span class="i">isDigit</span>():
+          <span class="i">self.number</span>()
+        <span class="k">else</span>:
+          <span class="t">Lox</span>.<span class="i">error</span>(<span class="i">line</span>, <span class="s">&quot;Unexpected character.&quot;</span>)
 </pre><pre class="insert-after">
         break;
 </pre></div>
-<div class="source-file-narrow"><em>lox/Scanner.java</em>, in <em>scanToken</em>(), replace 1 line</div>
+<div class="source-file-narrow"><em>lox/scanner.py</em>, in <em>scan_token</em>(), replace 1 line</div>
 
 In the center, you have the new code to add. It may have a few faded out lines
 above or below to show where it goes in the existing surrounding code. There is
 also a little blurb telling you in which file and where to place the snippet. If
-that blurb says "replace _ lines", there is some existing code between the faded
-lines that you need to remove and replace with the new snippet.
+that blurb says "replace \_ lines", there is some existing code between the
+faded lines that you need to remove and replace with the new snippet.
 
 ### Asides
 
 <span name="joke">Asides</span> contain biographical sketches, historical
 background, references to related topics, and suggestions of other areas to
-explore. There's nothing that you *need* to know in them to understand later
+explore. There's nothing that you _need_ to know in them to understand later
 parts of the book, so you can skip them if you want. I won't judge you, but I
 might be a little sad.
 
@@ -287,7 +288,7 @@ drawings.
 ### Challenges
 
 Each chapter ends with a few exercises. Unlike textbook problem sets, which tend
-to review material you already covered, these are to help you learn *more* than
+to review material you already covered, these are to help you learn _more_ than
 what's in the chapter. They force you to step off the guided path and explore on
 your own. They will make you research other languages, figure out how to
 implement features, or otherwise get you out of your comfort zone.
@@ -308,7 +309,7 @@ code. The later chapters assume your interpreter is in a pristine
 ### Design notes
 
 Most "programming language" books are strictly programming language
-*implementation* books. They rarely discuss how one might happen to *design* the
+_implementation_ books. They rarely discuss how one might happen to _design_ the
 language being implemented. Implementation is fun because it is so <span
 name="benchmark">precisely defined</span>. We programmers seem to have an
 affinity for things that are black and white, ones and zeroes.
@@ -323,7 +324,7 @@ results come out.
 
 Personally, I think the world needs only so many implementations of <span
 name="fortran">FORTRAN 77</span>. At some point, you find yourself designing a
-*new* language. Once you start playing *that* game, then the softer, human side
+_new_ language. Once you start playing _that_ game, then the softer, human side
 of the equation becomes paramount. Things like which features are easy to learn,
 how to balance innovation and familiarity, what syntax is more readable and to
 whom.
@@ -344,39 +345,41 @@ aim.
 
 ## The First Interpreter
 
-We'll write our first interpreter, jlox, in <span name="lang">Java</span>. The
-focus is on *concepts*. We'll write the simplest, cleanest code we can to
+We'll write our first interpreter, pylox, in <span name="lang">Python</span>.
+The focus is on _concepts_. We'll write the simplest, cleanest code we can to
 correctly implement the semantics of the language. This will get us comfortable
 with the basic techniques and also hone our understanding of exactly how the
 language is supposed to behave.
 
 <aside name="lang">
 
-The book uses Java and C, but readers have ported the code to [many other
-languages][port]. If the languages I picked aren't your bag, take a look at
-those.
+The book uses Python and Rust. The original version of this book, for instance,
+uses Java, and C and readers have ported the code to [many other
+languages][port].  
+If the languages I picked aren't your bag, take a look at those.
 
-[port]: https://github.com/munificent/craftinginterpreters/wiki/Lox-implementations
+[port]:
+  https://github.com/munificent/craftinginterpreters/wiki/Lox-implementations
 
 </aside>
 
-Java is a great language for this. It's high level enough that we don't get
+Python is a great language for this. It's high level enough that we don't get
 overwhelmed by fiddly implementation details, but it's still pretty explicit.
-Unlike in scripting languages, there tends to be less complex machinery hiding
-under the hood, and you've got static types to see what data structures you're
-working with.
+Python supports optional typing declarations that help making the intent a
+little more explicit and have the extra benefit of helping with auto-complete,
+code navigation and other niceties that your IDE might provide.
 
-I also chose Java specifically because it is an object-oriented language. That
-paradigm swept the programming world in the '90s and is now the dominant way of
-thinking for millions of programmers. Odds are good you're already used to
-organizing code into classes and methods, so we'll keep you in that comfort
-zone.
+I also chose Python specifically because it is a multi-paradigm language. We
+will gravitate between object oriented programming and simple procedural code,
+as that is now the dominant way of thinking for millions of programmers. Odds
+are good you're already used to organizing code into classes, methods and
+functions, so we'll keep you in that comfort zone.
 
 While academic language folks sometimes look down on object-oriented languages,
 the reality is that they are widely used even for language work. GCC and LLVM
 are written in C++, as are most JavaScript virtual machines. Object-oriented
-languages are ubiquitous, and the tools and compilers *for* a language are often
-written *in* the <span name="host">same language</span>.
+languages are ubiquitous, and the tools and compilers _for_ a language are often
+written _in_ the <span name="host">same language</span>.
 
 <aside name="host">
 
@@ -385,48 +388,49 @@ another language. You can implement a compiler in any language, including the
 same language it compiles, a process called **self-hosting**.
 
 You can't compile your compiler using itself yet, but if you have another
-compiler for your language written in some other language, you use *that* one to
+compiler for your language written in some other language, you use _that_ one to
 compile your compiler once. Now you can use the compiled version of your own
 compiler to compile future versions of itself, and you can discard the original
-one compiled from the other compiler. This is called **bootstrapping**, from
-the image of pulling yourself up by your own bootstraps.
+one compiled from the other compiler. This is called **bootstrapping**, from the
+image of pulling yourself up by your own bootstraps.
 
 <img src="image/introduction/bootstrap.png" alt="Fact: This is the primary mode of transportation of the American cowboy." />
 
 </aside>
 
-And, finally, Java is hugely popular. That means there's a good chance you
+And, finally, Python is hugely popular. That means there's a good chance you
 already know it, so there's less for you to learn to get going in the book. If
-you aren't that familiar with Java, don't freak out. I try to stick to a fairly
-minimal subset of it. I use the diamond operator from Java 7 to make things a
-little more terse, but that's about it as far as "advanced" features go. If you
-know another object-oriented language, like C# or C++, you can muddle through.
+you aren't that familiar with Python, don't freak out. I try to stick to a
+fairly minimal subset of it. Whenever I use some slighly more advanced feature,
+I'll make a small introduction explaining that concept. But don't worry, Python
+is a straightforward programming language that is often compared with
+pseudocode. Even "advaced" Python tends to read pretty easily.
 
 By the end of part II, we'll have a simple, readable implementation. It's not
 very fast, but it's correct. However, we are only able to accomplish that by
-building on the Java virtual machine's own runtime facilities. We want to learn
-how Java *itself* implements those things.
+building on the Python interpreter's own runtime facilities. We want to learn
+how Python _itself_ implements those things.
 
 ## The Second Interpreter
 
-So in the next part, we start all over again, but this time in C. C is the
-perfect language for understanding how an implementation *really* works, all the
+So in the next part, we start all over again, but this time in Rust. Rust is the
+perfect language for understanding how an implementation _really_ works, all the
 way down to the bytes in memory and the code flowing through the CPU.
 
-A big reason that we're using C is so I can show you things C is particularly
-good at, but that *does* mean you'll need to be pretty comfortable with it. You
-don't have to be the reincarnation of Dennis Ritchie, but you shouldn't be
-spooked by pointers either.
+#TODO: A big reason that we're using Rust is so I can show you things Rust is
+particularly good at, but that _does_ mean you'll need to be pretty comfortable
+with it. You don't have to be the reincarnation of Dennis Ritchie, but you
+shouldn't be spooked by pointers either.
 
 If you aren't there yet, pick up an introductory book on C and chew through it,
 then come back here when you're done. In return, you'll come away from this book
 an even stronger C programmer. That's useful given how many language
 implementations are written in C: Lua, CPython, and Ruby's MRI, to name a few.
 
-In our C interpreter, <span name="clox">clox</span>, we are forced to implement
-for ourselves all the things Java gave us for free. We'll write our own dynamic
-array and hash table. We'll decide how objects are represented in memory, and
-build a garbage collector to reclaim them.
+In our C interpreter, <span name="clox">rslox</span>, we are forced to implement
+for ourselves all the things Python gave us for free. We'll write our own
+dynamic array and hash table. We'll decide how objects are represented in
+memory, and build a garbage collector to reclaim them.
 
 <aside name="clox">
 
@@ -435,8 +439,8 @@ I pronounce the name like "sea-locks", but you can say it "clocks" or even
 
 </aside>
 
-Our Java implementation was focused on being correct. Now that we have that
-down, we'll turn to also being *fast*. Our C interpreter will contain a <span
+Our Python implementation was focused on being correct. Now that we have that
+down, we'll turn to also being _fast_. Our Rust interpreter will contain a <span
 name="compiler">compiler</span> that translates Lox to an efficient bytecode
 representation (don't worry, I'll get into what that means soon), which it then
 executes. This is the same technique used by implementations of Lua, Python,
@@ -461,13 +465,14 @@ few thousand lines of code.
 1.  There are at least six domain-specific languages used in the [little system
     I cobbled together][repo] to write and publish this book. What are they?
 
-1.  Get a "Hello, world!" program written and running in Java. Set up whatever
-    makefiles or IDE projects you need to get it working. If you have a
-    debugger, get comfortable with it and step through your program as it runs.
+1.  Get a "Hello, world!" program written and running in Python. Set up whatever
+    configuration files or IDE projects you need to get it working. If you have
+    a debugger, get comfortable with it and step through your program as it
+    runs.
 
-1.  Do the same thing for C. To get some practice with pointers, define a
-    [doubly linked list][] of heap-allocated strings. Write functions to insert,
-    find, and delete items from it. Test them.
+1.  #TODO: Do the same thing for Rust. To get some practice with pointers,
+    define a [doubly linked list][] of heap-allocated strings. Write functions
+    to insert, find, and delete items from it. Test them.
 
 [repo]: https://github.com/munificent/craftinginterpreters
 [doubly linked list]: https://en.wikipedia.org/wiki/Doubly_linked_list
@@ -479,7 +484,7 @@ few thousand lines of code.
 ## Design Note: What's in a Name?
 
 One of the hardest challenges in writing this book was coming up with a name for
-the language it implements. I went through *pages* of candidates before I found
+the language it implements. I went through _pages_ of candidates before I found
 one that worked. As you'll discover on the first day you start building your own
 language, naming is deviously hard. A good name satisfies a few criteria:
 

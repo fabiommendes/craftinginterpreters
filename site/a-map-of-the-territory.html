@@ -268,10 +268,10 @@ efficiently<span class="em">&mdash;</span>we can <strong>optimize</strong> it.</
 <p>A simple example is <strong>constant folding</strong>: if some expression always evaluates to
 the exact same value, we can do the evaluation at compile time and replace the
 code for the expression with its result. If the user typed in this:</p>
-<div class="codehilite"><pre><span class="i">pennyArea</span> = <span class="n">3.14159</span> * (<span class="n">0.75</span> / <span class="n">2</span>) * (<span class="n">0.75</span> / <span class="n">2</span>);
+<div class="codehilite"><pre><span class="i">penny_area</span> = <span class="n">3.14159</span> * (<span class="n">0.75</span> / <span class="n">2</span>) * (<span class="n">0.75</span> / <span class="n">2</span>)
 </pre></div>
 <p>we could do all of that arithmetic in the compiler and change the code to:</p>
-<div class="codehilite"><pre><span class="i">pennyArea</span> = <span class="n">0.4417860938</span>;
+<div class="codehilite"><pre><span class="i">penny_area</span> = <span class="n">0.4417860938</span>
 </pre></div>
 <p>Optimization is a huge part of the programming language business. Many language
 hackers spend their entire careers here, squeezing every drop of performance
@@ -348,7 +348,7 @@ at runtime. Running bytecode in a VM is slower than translating it to native
 code ahead of time because every instruction must be simulated at runtime each
 time it executes. In return, you get simplicity and portability. Implement your
 VM in, say, C, and you can run your language on any platform that has a C
-compiler. This is how the second interpreter we build in this book works.</p>
+compiler. This is how the second interpreter we build in this book works. #TODO</p>
 <aside name="vm">
 <p>The term &ldquo;virtual machine&rdquo; also refers to a different kind of abstraction. A
 <strong>system virtual machine</strong> emulates an entire hardware platform and operating

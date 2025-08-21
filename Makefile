@@ -2,6 +2,7 @@ BUILD_DIR := build
 TOOL_SOURCES := tool/pubspec.lock $(shell find tool -name '*.dart')
 BUILD_SNAPSHOT := $(BUILD_DIR)/build.dart.snapshot
 TEST_SNAPSHOT := $(BUILD_DIR)/test.dart.snapshot
+DART := dart
 
 default: book clox jlox
 
