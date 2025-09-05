@@ -251,18 +251,18 @@ see, it&rsquo;s not as bad as it sounds, and it means you really will understand
 line of code and how both interpreters work.</p>
 <p>A book has different constraints from the &ldquo;real world&rdquo; and so the coding style
 here might not always reflect the best way to write maintainable production
-software. If I seem a little cavalier about, say, omitting <code>private</code> or
+software. If I seem a little cavalier about, say, omitting a type declaration or
 declaring a global variable, understand I do so to keep the code easier on your
 eyes. The pages here aren&rsquo;t as wide as your IDE and every character counts.</p>
 <p>Also, the code doesn&rsquo;t have many comments. That&rsquo;s because each handful of lines
 is surrounded by several paragraphs of honest-to-God prose explaining it. When
 you write a book to accompany your program, you are welcome to omit comments
-too. Otherwise, you should probably use <code>//</code> a little more than I do.</p>
+too. Otherwise, you should probably use <code>#</code> a little more than I do.</p>
 <p>While the book contains every line of code and teaches what each means, it does
 not describe the machinery needed to compile and run the interpreter. I assume
 you can slap together a makefile or a project in your IDE of choice in order to
-get the code to run. Those kinds of instructions get out of date quickly, and
-I want this book to age like XO brandy, not backyard hooch.</p>
+get the code to run. Those kinds of instructions get out of date quickly, and I
+want this book to age like XO brandy, not backyard hooch.</p>
 <h3><a href="#snippets" id="snippets"><small>1&#8202;.&#8202;2&#8202;.&#8202;2</small>Snippets</a></h3>
 <p>Since the book contains literally every line of code needed for the
 implementations, the snippets are quite precise. Also, because I try to keep the
@@ -271,24 +271,23 @@ add temporary code that gets replaced in later snippets.</p>
 <p>A snippet with all the bells and whistles looks like this:</p>
 <div class="codehilite"><pre class="insert-before">
       default:
-</pre><div class="source-file"><em>lox/Scanner.java</em><br>
-in <em>scanToken</em>()<br>
+</pre><div class="source-file"><em>lox/scanner.py</em><br>
+in <em>scan_token</em>()<br>
 replace 1 line</div>
 <pre class="insert">
-        <span class="k">if</span> (<span class="i">isDigit</span>(<span class="i">c</span>)) {
-          <span class="i">number</span>();
-        } <span class="k">else</span> {
-          <span class="t">Lox</span>.<span class="i">error</span>(<span class="i">line</span>, <span class="s">&quot;Unexpected character.&quot;</span>);
-        }
+        <span class="k">if</span> <span class="i">c</span>.<span class="i">isDigit</span>():
+          <span class="i">self.number</span>()
+        <span class="k">else</span>:
+          <span class="t">Lox</span>.<span class="i">error</span>(<span class="i">line</span>, <span class="s">&quot;Unexpected character.&quot;</span>)
 </pre><pre class="insert-after">
         break;
 </pre></div>
-<div class="source-file-narrow"><em>lox/Scanner.java</em>, in <em>scanToken</em>(), replace 1 line</div>
+<div class="source-file-narrow"><em>lox/scanner.py</em>, in <em>scan_token</em>(), replace 1 line</div>
 <p>In the center, you have the new code to add. It may have a few faded out lines
 above or below to show where it goes in the existing surrounding code. There is
 also a little blurb telling you in which file and where to place the snippet. If
-that blurb says &ldquo;replace _ lines&rdquo;, there is some existing code between the faded
-lines that you need to remove and replace with the new snippet.</p>
+that blurb says &ldquo;replace _ lines&rdquo;, there is some existing code between the
+faded lines that you need to remove and replace with the new snippet.</p>
 <h3><a href="#asides" id="asides"><small>1&#8202;.&#8202;2&#8202;.&#8202;3</small>Asides</a></h3>
 <p><span name="joke">Asides</span> contain biographical sketches, historical
 background, references to related topics, and suggestions of other areas to
@@ -342,26 +341,27 @@ expert on this<span class="em">&mdash;</span>I don&rsquo;t know if anyone really
 pinch of salt. That should make them tastier food for thought, which is my main
 aim.</p>
 <h2><a href="#the-first-interpreter" id="the-first-interpreter"><small>1&#8202;.&#8202;3</small>The First Interpreter</a></h2>
-<p>We&rsquo;ll write our first interpreter, jlox, in <span name="lang">Java</span>. The
-focus is on <em>concepts</em>. We&rsquo;ll write the simplest, cleanest code we can to
+<p>We&rsquo;ll write our first interpreter, pylox, in <span name="lang">Python</span>.
+The focus is on <em>concepts</em>. We&rsquo;ll write the simplest, cleanest code we can to
 correctly implement the semantics of the language. This will get us comfortable
 with the basic techniques and also hone our understanding of exactly how the
 language is supposed to behave.</p>
 <aside name="lang">
-<p>The book uses Java and C, but readers have ported the code to <a href="https://github.com/munificent/craftinginterpreters/wiki/Lox-implementations">many other
-languages</a>. If the languages I picked aren&rsquo;t your bag, take a look at
-those.</p>
+<p>The book uses Python and Rust. The original version of this book, for instance,
+uses Java, and C and readers have ported the code to <a href="https://github.com/munificent/craftinginterpreters/wiki/Lox-implementations">many other
+languages</a>.<br />
+If the languages I picked aren&rsquo;t your bag, take a look at those.</p>
 </aside>
-<p>Java is a great language for this. It&rsquo;s high level enough that we don&rsquo;t get
+<p>Python is a great language for this. It&rsquo;s high level enough that we don&rsquo;t get
 overwhelmed by fiddly implementation details, but it&rsquo;s still pretty explicit.
-Unlike in scripting languages, there tends to be less complex machinery hiding
-under the hood, and you&rsquo;ve got static types to see what data structures you&rsquo;re
-working with.</p>
-<p>I also chose Java specifically because it is an object-oriented language. That
-paradigm swept the programming world in the &rsquo;90s and is now the dominant way of
-thinking for millions of programmers. Odds are good you&rsquo;re already used to
-organizing code into classes and methods, so we&rsquo;ll keep you in that comfort
-zone.</p>
+Python supports optional typing declarations that help making the intent a
+little more explicit and have the extra benefit of helping with auto-complete,
+code navigation and other niceties that your IDE might provide.</p>
+<p>I also chose Python specifically because it is a multi-paradigm language. We
+will gravitate between object oriented programming and simple procedural code,
+as that is now the dominant way of thinking for millions of programmers. Odds
+are good you&rsquo;re already used to organizing code into classes, methods and
+functions, so we&rsquo;ll keep you in that comfort zone.</p>
 <p>While academic language folks sometimes look down on object-oriented languages,
 the reality is that they are widely used even for language work. GCC and LLVM
 are written in C++, as are most JavaScript virtual machines. Object-oriented
@@ -375,41 +375,42 @@ same language it compiles, a process called <strong>self-hosting</strong>.</p>
 compiler for your language written in some other language, you use <em>that</em> one to
 compile your compiler once. Now you can use the compiled version of your own
 compiler to compile future versions of itself, and you can discard the original
-one compiled from the other compiler. This is called <strong>bootstrapping</strong>, from
-the image of pulling yourself up by your own bootstraps.</p><img src="image/introduction/bootstrap.png" alt="Fact: This is the primary mode of transportation of the American cowboy." />
+one compiled from the other compiler. This is called <strong>bootstrapping</strong>, from the
+image of pulling yourself up by your own bootstraps.</p><img src="image/introduction/bootstrap.png" alt="Fact: This is the primary mode of transportation of the American cowboy." />
 </aside>
-<p>And, finally, Java is hugely popular. That means there&rsquo;s a good chance you
+<p>And, finally, Python is hugely popular. That means there&rsquo;s a good chance you
 already know it, so there&rsquo;s less for you to learn to get going in the book. If
-you aren&rsquo;t that familiar with Java, don&rsquo;t freak out. I try to stick to a fairly
-minimal subset of it. I use the diamond operator from Java 7 to make things a
-little more terse, but that&rsquo;s about it as far as &ldquo;advanced&rdquo; features go. If you
-know another object-oriented language, like C# or C++, you can muddle through.</p>
+you aren&rsquo;t that familiar with Python, don&rsquo;t freak out. I try to stick to a
+fairly minimal subset of it. Whenever I use some slighly more advanced feature,
+I&rsquo;ll make a small introduction explaining that concept. But don&rsquo;t worry, Python
+is a straightforward programming language that is often compared with
+pseudocode. Even &ldquo;advaced&rdquo; Python tends to read pretty easily.</p>
 <p>By the end of part II, we&rsquo;ll have a simple, readable implementation. It&rsquo;s not
 very fast, but it&rsquo;s correct. However, we are only able to accomplish that by
-building on the Java virtual machine&rsquo;s own runtime facilities. We want to learn
-how Java <em>itself</em> implements those things.</p>
+building on the Python interpreter&rsquo;s own runtime facilities. We want to learn
+how Python <em>itself</em> implements those things.</p>
 <h2><a href="#the-second-interpreter" id="the-second-interpreter"><small>1&#8202;.&#8202;4</small>The Second Interpreter</a></h2>
-<p>So in the next part, we start all over again, but this time in C. C is the
+<p>So in the next part, we start all over again, but this time in Rust. Rust is the
 perfect language for understanding how an implementation <em>really</em> works, all the
 way down to the bytes in memory and the code flowing through the CPU.</p>
-<p>A big reason that we&rsquo;re using C is so I can show you things C is particularly
-good at, but that <em>does</em> mean you&rsquo;ll need to be pretty comfortable with it. You
-don&rsquo;t have to be the reincarnation of Dennis Ritchie, but you shouldn&rsquo;t be
-spooked by pointers either.</p>
+<p>#TODO: A big reason that we&rsquo;re using Rust is so I can show you things Rust is
+particularly good at, but that <em>does</em> mean you&rsquo;ll need to be pretty comfortable
+with it. You don&rsquo;t have to be the reincarnation of Dennis Ritchie, but you
+shouldn&rsquo;t be spooked by pointers either.</p>
 <p>If you aren&rsquo;t there yet, pick up an introductory book on C and chew through it,
 then come back here when you&rsquo;re done. In return, you&rsquo;ll come away from this book
 an even stronger C programmer. That&rsquo;s useful given how many language
 implementations are written in C: Lua, CPython, and Ruby&rsquo;s MRI, to name a few.</p>
-<p>In our C interpreter, <span name="clox">clox</span>, we are forced to implement
-for ourselves all the things Java gave us for free. We&rsquo;ll write our own dynamic
-array and hash table. We&rsquo;ll decide how objects are represented in memory, and
-build a garbage collector to reclaim them.</p>
+<p>In our C interpreter, <span name="clox">rslox</span>, we are forced to implement
+for ourselves all the things Python gave us for free. We&rsquo;ll write our own
+dynamic array and hash table. We&rsquo;ll decide how objects are represented in
+memory, and build a garbage collector to reclaim them.</p>
 <aside name="clox">
 <p>I pronounce the name like &ldquo;sea-locks&rdquo;, but you can say it &ldquo;clocks&rdquo; or even
 &ldquo;cloch&rdquo;, where you pronounce the &ldquo;x&rdquo; like the Greeks do if it makes you happy.</p>
 </aside>
-<p>Our Java implementation was focused on being correct. Now that we have that
-down, we&rsquo;ll turn to also being <em>fast</em>. Our C interpreter will contain a <span
+<p>Our Python implementation was focused on being correct. Now that we have that
+down, we&rsquo;ll turn to also being <em>fast</em>. Our Rust interpreter will contain a <span
 name="compiler">compiler</span> that translates Lox to an efficient bytecode
 representation (don&rsquo;t worry, I&rsquo;ll get into what that means soon), which it then
 executes. This is the same technique used by implementations of Lua, Python,
@@ -430,14 +431,15 @@ few thousand lines of code.</p>
 I cobbled together</a> to write and publish this book. What are they?</p>
 </li>
 <li>
-<p>Get a &ldquo;Hello, world!&rdquo; program written and running in Java. Set up whatever
-makefiles or IDE projects you need to get it working. If you have a
-debugger, get comfortable with it and step through your program as it runs.</p>
+<p>Get a &ldquo;Hello, world!&rdquo; program written and running in Python. Set up whatever
+configuration files or IDE projects you need to get it working. If you have
+a debugger, get comfortable with it and step through your program as it
+runs.</p>
 </li>
 <li>
-<p>Do the same thing for C. To get some practice with pointers, define a
-<a href="https://en.wikipedia.org/wiki/Doubly_linked_list">doubly linked list</a> of heap-allocated strings. Write functions to insert,
-find, and delete items from it. Test them.</p>
+<p>#TODO: Do the same thing for Rust. To get some practice with pointers,
+define a <a href="https://en.wikipedia.org/wiki/Doubly_linked_list">doubly linked list</a> of heap-allocated strings. Write functions
+to insert, find, and delete items from it. Test them.</p>
 </li>
 </ol>
 </div>

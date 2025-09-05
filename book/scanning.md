@@ -190,7 +190,8 @@ fun stuff, but there's only so much ink in the pen.
 ```python
 # lox/lox.py after the Lox class
 class LoxError(Exception):
-    def __init__(self, line: int, message: str, where: str | None = None):
+    def __init__(self, line: int, message: str,
+                 where: str | None = None):
         super().__init__(line, message, where)
         self.line = line
         self.message = message
@@ -305,7 +306,7 @@ that the scanner's job?
 </aside>
 
 ```python
-# lox/token.py
+# lox/tokens.py
 from enum import IntEnum, auto
 
 
@@ -327,10 +328,10 @@ class TokenType(IntEnum):
     IDENTIFIER = auto(); STRING = auto(); NUMBER = auto()
 
     # Keywords.
-    AND = auto(); CLASS = auto(); ELSE = auto(); FALSE = auto(); FUN = auto()
-    FOR = auto(); IF = auto(); NIL = auto(); OR = auto(); PRINT = auto()
-    RETURN = auto(); SUPER = auto(); THIS = auto(); TRUE = auto(); VAR = auto()
-    WHILE = auto()
+    AND = auto(); CLASS = auto(); ELSE = auto(); FALSE = auto()
+    FUN = auto(); FOR = auto(); IF = auto(); NIL = auto()
+    OR = auto(); PRINT = auto(); RETURN = auto(); SUPER = auto()
+    THIS = auto(); TRUE = auto(); VAR = auto(); WHILE = auto()
 
     # Special tokens.
     EOF = auto()
@@ -371,7 +372,7 @@ the better.
 We take all of this data and wrap it in a class.
 
 ```python
-# lox/token.py after the TokenType class
+# lox/tokens.py after the TokenType class
 from dataclasses import dataclass
 from typing import Any
 
@@ -475,7 +476,7 @@ Without further ado, let's make ourselves a scanner.
 # lox/scanner.py
 from dataclasses import dataclass, field
 from typing import Any
-from .token import Token, TokenType as TT
+from .tokens import Token, TokenType as TT
 
 @dataclass
 class Scanner:
@@ -515,7 +516,7 @@ This loop depends on a couple of fields to keep track of where the scanner is in
 the source code.
 
 ```python
-# lox/scanner.py in class Scanner after the `source: str` declaration
+# lox/scanner.py attributes of Scanner class
     start: int = 0
     current: int = 0
     line: int = 1

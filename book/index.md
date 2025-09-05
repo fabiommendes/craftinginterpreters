@@ -13,10 +13,10 @@ This text is not used. All of the content is in the index.md
 
 ## [a-tree-walk-interpreter.md] ✅
 
-- [scanning.md] ⚠️
-- [representing-code.md]
-- [parsing-expressions.md]
-- [evaluating-expressions.md]
+- [scanning.md] ✅
+- [representing-code.md] ✅
+- [parsing-expressions.md] ⚠️
+- [evaluating-expressions.md] ⚠️
 - [statements-and-state.md]
 - [control-flow.md]
 - [control-flow.md]

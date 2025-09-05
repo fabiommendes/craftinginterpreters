@@ -92,8 +92,7 @@
 
 <blockquote>
 <p>To dwellers in a wood, almost every species of tree has its voice as well as
-its feature.
-<cite>Thomas Hardy, <em>Under the Greenwood Tree</em></cite></p>
+its feature. <cite>Thomas Hardy, <em>Under the Greenwood Tree</em></cite></p>
 </blockquote>
 <p>In the <a href="scanning.html">last chapter</a>, we took the raw source code as a string and
 transformed it into a slightly higher-level representation: a series of tokens.
@@ -109,11 +108,11 @@ metaprogramming.</p>
 that I kept stuffing more fun ideas into it until I ran out of room.</p>
 </aside>
 <p>Before we do all that, let&rsquo;s focus on the main goal<span class="em">&mdash;</span>a representation for
-code. It should be simple for the parser to produce and easy for the
-interpreter to consume. If you haven&rsquo;t written a parser or interpreter yet,
-those requirements aren&rsquo;t exactly illuminating. Maybe your intuition can help.
-What is your brain doing when you play the part of a <em>human</em> interpreter? How do
-you mentally evaluate an arithmetic expression like this:</p>
+code. It should be simple for the parser to produce and easy for the interpreter
+to consume. If you haven&rsquo;t written a parser or interpreter yet, those
+requirements aren&rsquo;t exactly illuminating. Maybe your intuition can help. What is
+your brain doing when you play the part of a <em>human</em> interpreter? How do you
+mentally evaluate an arithmetic expression like this:</p>
 <div class="codehilite"><pre><span class="n">1</span> + <span class="n">2</span> * <span class="n">3</span> - <span class="n">4</span>
 </pre></div>
 <p>Because you understand the order of operations<span class="em">&mdash;</span>the old &ldquo;<a href="https://en.wikipedia.org/wiki/Order_of_operations#Mnemonics">Please Excuse My
@@ -144,18 +143,18 @@ human friendly but is closer to the machine.</p>
 <p>We need to get more precise about what that grammar is then. Like lexical
 grammars in the last chapter, there is a long ton of theory around syntactic
 grammars. We&rsquo;re going into that theory a little more than we did when scanning
-because it turns out to be a useful tool throughout much of the interpreter.
-We start by moving one level up the <a href="https://en.wikipedia.org/wiki/Chomsky_hierarchy">Chomsky hierarchy</a><span class="ellipse">&thinsp;.&thinsp;.&thinsp;.&nbsp;</span></p>
+because it turns out to be a useful tool throughout much of the interpreter. We
+start by moving one level up the <a href="https://en.wikipedia.org/wiki/Chomsky_hierarchy">Chomsky hierarchy</a><span class="ellipse">&thinsp;.&thinsp;.&thinsp;.&nbsp;</span></p>
 <h2><a href="#context-free-grammars" id="context-free-grammars"><small>5&#8202;.&#8202;1</small>Context-Free Grammars</a></h2>
 <p>In the last chapter, the formalism we used for defining the lexical grammar<span class="em">&mdash;</span>the rules for how characters get grouped into tokens<span class="em">&mdash;</span>was called a <em>regular
 language</em>. That was fine for our scanner, which emits a flat sequence of tokens.
 But regular languages aren&rsquo;t powerful enough to handle expressions which can
 nest arbitrarily deeply.</p>
 <p>We need a bigger hammer, and that hammer is a <strong>context-free grammar</strong>
-(<strong>CFG</strong>). It&rsquo;s the next heaviest tool in the toolbox of
-<strong><a href="https://en.wikipedia.org/wiki/Formal_grammar">formal grammars</a></strong>. A formal grammar takes a set of atomic pieces it calls
-its &ldquo;alphabet&rdquo;. Then it defines a (usually infinite) set of &ldquo;strings&rdquo; that are
-&ldquo;in&rdquo; the grammar. Each string is a sequence of &ldquo;letters&rdquo; in the alphabet.</p>
+(<strong>CFG</strong>). It&rsquo;s the next heaviest tool in the toolbox of <strong>[formal
+grammars][]</strong>. A formal grammar takes a set of atomic pieces it calls its
+&ldquo;alphabet&rdquo;. Then it defines a (usually infinite) set of &ldquo;strings&rdquo; that are &ldquo;in&rdquo;
+the grammar. Each string is a sequence of &ldquo;letters&rdquo; in the alphabet.</p>
 <p>I&rsquo;m using all those quotes because the terms get a little confusing as you move
 from lexical to syntactic grammars. In our scanner&rsquo;s grammar, the alphabet
 consists of individual characters and the strings are the valid lexemes<span class="em">&mdash;</span>roughly &ldquo;words&rdquo;. In the syntactic grammar we&rsquo;re talking about now, we&rsquo;re at a
@@ -219,16 +218,15 @@ sequence of symbols in the head as well as in the body.</p>
 <li>
 <p>A <strong>terminal</strong> is a letter from the grammar&rsquo;s alphabet. You can think of it
 like a literal value. In the syntactic grammar we&rsquo;re defining, the terminals
-are individual lexemes<span class="em">&mdash;</span>tokens coming from the scanner like <code>if</code> or
-<code>1234</code>.</p>
+are individual lexemes<span class="em">&mdash;</span>tokens coming from the scanner like <code>if</code> or <code>1234</code>.</p>
 <p>These are called &ldquo;terminals&rdquo;, in the sense of an &ldquo;end point&rdquo; because they
 don&rsquo;t lead to any further &ldquo;moves&rdquo; in the game. You simply produce that one
 symbol.</p>
 </li>
 <li>
 <p>A <strong>nonterminal</strong> is a named reference to another rule in the grammar. It
-means &ldquo;play that rule and insert whatever it produces here&rdquo;. In this way,
-the grammar composes.</p>
+means &ldquo;play that rule and insert whatever it produces here&rdquo;. In this way, the
+grammar composes.</p>
 </li>
 </ul>
 <p>There is one last refinement: you may have multiple rules with the same name.
@@ -324,9 +322,8 @@ extra convenience notation. In addition to terminals and nonterminals, we&rsquo;
 allow a few other kinds of expressions in the body of a rule:</p>
 <ul>
 <li>
-<p>Instead of repeating the rule name each time we want to add another
-production for it, we&rsquo;ll allow a series of productions separated by a pipe
-(<code>|</code>).</p>
+<p>Instead of repeating the rule name each time we want to add another production
+for it, we&rsquo;ll allow a series of productions separated by a pipe (<code>|</code>).</p>
 <div class="codehilite"><pre><span class="i">bread</span> → <span class="s">&quot;toast&quot;</span> | <span class="s">&quot;biscuits&quot;</span> | <span class="s">&quot;English muffin&quot;</span> ;
 </pre></div>
 </li>
@@ -338,10 +335,9 @@ to select one from a series of options within the middle of a production.</p>
 </li>
 <li>
 <p>Using recursion to support repeated sequences of symbols has a certain
-appealing <span name="purity">purity</span>, but it&rsquo;s kind of a chore to
-make a separate named sub-rule each time we want to loop. So, we also use a
-postfix <code>*</code> to allow the previous symbol or group to be repeated zero or
-more times.</p>
+appealing <span name="purity">purity</span>, but it&rsquo;s kind of a chore to make
+a separate named sub-rule each time we want to loop. So, we also use a postfix
+<code>*</code> to allow the previous symbol or group to be repeated zero or more times.</p>
 <div class="codehilite"><pre><span class="i">crispiness</span> → <span class="s">&quot;really&quot;</span> <span class="s">&quot;really&quot;</span>* ;
 </pre></div>
 </li>
@@ -353,8 +349,8 @@ recursion.</p>
 </aside>
 <ul>
 <li>
-<p>A postfix <code>+</code> is similar, but requires the preceding production to appear
-at least once.</p>
+<p>A postfix <code>+</code> is similar, but requires the preceding production to appear at
+least once.</p>
 <div class="codehilite"><pre><span class="i">crispiness</span> → <span class="s">&quot;really&quot;</span>+ ;
 </pre></div>
 </li>
@@ -471,36 +467,43 @@ different classes for literals and other kinds of lexemes, but I figured I&rsquo
 keep things simpler.</p>
 </aside>
 <p>Something like this:</p>
-<div class="codehilite"><pre><span class="k">package</span> <span class="i">com.craftinginterpreters.lox</span>;
+<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">expr</span>.<span class="i">py</span>
+<span class="k">from</span> <span class="i">dataclasses</span> <span class="k">import</span> <span class="i">dataclass</span>
+<span class="k">from</span> <span class="i">typing</span> <span class="k">import</span> <span class="t">Any</span>
+<span class="k">from</span> .<span class="i">tokens</span> <span class="k">import</span> <span class="t">Token</span>
 
-<span class="k">abstract</span> <span class="k">class</span> <span class="t">Expr</span> {<span name="expr"> </span>
-  <span class="k">static</span> <span class="k">class</span> <span class="t">Binary</span> <span class="k">extends</span> <span class="t">Expr</span> {
-    <span class="t">Binary</span>(<span class="t">Expr</span> <span class="i">left</span>, <span class="t">Token</span> <span class="i">operator</span>, <span class="t">Expr</span> <span class="i">right</span>) {
-      <span class="k">this</span>.<span class="i">left</span> = <span class="i">left</span>;
-      <span class="k">this</span>.<span class="i">operator</span> = <span class="i">operator</span>;
-      <span class="k">this</span>.<span class="i">right</span> = <span class="i">right</span>;
-    }
+<span class="k">class</span> <span class="t">Expr</span>:
+    <span class="s">&quot;&quot;</span><span class="s">&quot;Abstract Base Class for expressions&quot;</span><span class="s">&quot;&quot;</span>
 
-    <span class="k">final</span> <span class="t">Expr</span> <span class="i">left</span>;
-    <span class="k">final</span> <span class="t">Token</span> <span class="i">operator</span>;
-    <span class="k">final</span> <span class="t">Expr</span> <span class="i">right</span>;
-  }
+@<span class="i">dataclass</span>
+<span class="k">class</span> <span class="t">Binary</span>(<span class="t">Expr</span>):
+    <span class="i">left</span>: <span class="t">Expr</span>
+    <span class="i">operator</span>: <span class="t">Token</span>
+    <span class="i">right</span>: <span class="t">Expr</span>
 
-  <span class="c">// Other expressions...</span>
-}
+@<span class="i">dataclass</span>
+<span class="k">class</span> <span class="t">Grouping</span>(<span class="t">Expr</span>):
+    <span class="i">expression</span>: <span class="t">Expr</span>
+
+@<span class="i">dataclass</span>
+<span class="k">class</span> <span class="t">Literal</span>(<span class="t">Expr</span>):
+    <span class="i">value</span>: <span class="t">Any</span>
+
+@<span class="i">dataclass</span>
+<span class="k">class</span> <span class="t">Unary</span>(<span class="t">Expr</span>):
+    <span class="i">operator</span>: <span class="t">Token</span>
+    <span class="i">right</span>: <span class="t">Expr</span>
 </pre></div>
 <aside name="expr">
 <p>I avoid abbreviations in my code because they trip up a reader who doesn&rsquo;t know
 what they stand for. But in compilers I&rsquo;ve looked at, &ldquo;Expr&rdquo; and &ldquo;Stmt&rdquo; are so
 ubiquitous that I may as well start getting you used to them now.</p>
 </aside>
-<p>Expr is the base class that all expression classes inherit from. As you can see
-from <code>Binary</code>, the subclasses are nested inside of it. There&rsquo;s no technical need
-for this, but it lets us cram all of the classes into a single Java file.</p>
+<p>Expr is the base class that all expression classes inherit from.</p>
 <h3><a href="#disoriented-objects" id="disoriented-objects"><small>5&#8202;.&#8202;2&#8202;.&#8202;1</small>Disoriented objects</a></h3>
 <p>You&rsquo;ll note that, much like the Token class, there aren&rsquo;t any methods here. It&rsquo;s
 a dumb structure. Nicely typed, but merely a bag of data. This feels strange in
-an object-oriented language like Java. Shouldn&rsquo;t the class <em>do stuff</em>?</p>
+an object-oriented architecture. Shouldn&rsquo;t the class <em>do stuff</em>?</p>
 <p>The problem is that these tree classes aren&rsquo;t owned by any single domain. Should
 they have methods for parsing since that&rsquo;s where the trees are created? Or
 interpreting since that&rsquo;s where they are consumed? Trees span the border between
@@ -514,190 +517,36 @@ Java.</p>
 Object-oriented languages are a bad fit for an interpreter!&rdquo; I won&rsquo;t go that
 far. You&rsquo;ll recall that the scanner itself was admirably suited to
 object-orientation. It had all of the mutable state to keep track of where it
-was in the source code, a well-defined set of public methods, and a handful of
-private helpers.</p>
+was in the source code, a well-defined set of public methods, and a of private
+helpers.</p>
 <p>My feeling is that each phase or part of the interpreter works fine in an
 object-oriented style. It is the data structures that flow between them that are
 stripped of behavior.</p>
-<h3><a href="#metaprogramming-the-trees" id="metaprogramming-the-trees"><small>5&#8202;.&#8202;2&#8202;.&#8202;2</small>Metaprogramming the trees</a></h3>
-<p>Java can express behavior-less classes, but I wouldn&rsquo;t say that it&rsquo;s
-particularly great at it. Eleven lines of code to stuff three fields in an
-object is pretty tedious, and when we&rsquo;re all done, we&rsquo;re going to have 21 of
-these classes.</p>
-<p>I don&rsquo;t want to waste your time or my ink writing all that down. Really, what is
-the essence of each subclass? A name, and a list of typed fields. That&rsquo;s it.
-We&rsquo;re smart language hackers, right? Let&rsquo;s <span
-name="automate">automate</span>.</p>
-<aside name="automate">
-<p>Picture me doing an awkward robot dance when you read that. &ldquo;AU-TO-MATE.&rdquo;</p>
-</aside>
-<p>Instead of tediously handwriting each class definition, field declaration,
-constructor, and initializer, we&rsquo;ll hack together a <span
-name="python">script</span> that does it for us. It has a description of each
-tree type<span class="em">&mdash;</span>its name and fields<span class="em">&mdash;</span>and it prints out the Java code needed to
-define a class with that name and state.</p>
-<p>This script is a tiny Java command-line app that generates a file named
-&ldquo;Expr.java&rdquo;:</p>
-<aside name="python">
-<p>I got the idea of scripting the syntax tree classes from Jim Hugunin, creator of
-Jython and IronPython.</p>
-<p>An actual scripting language would be a better fit for this than Java, but I&rsquo;m
-trying not to throw too many languages at you.</p>
-</aside>
-<div class="codehilite"><div class="source-file"><em>tool/GenerateAst.java</em><br>
-create new file</div>
-<pre><span class="k">package</span> <span class="i">com.craftinginterpreters.tool</span>;
-
-<span class="k">import</span> <span class="i">java.io.IOException</span>;
-<span class="k">import</span> <span class="i">java.io.PrintWriter</span>;
-<span class="k">import</span> <span class="i">java.util.Arrays</span>;
-<span class="k">import</span> <span class="i">java.util.List</span>;
-
-<span class="k">public</span> <span class="k">class</span> <span class="t">GenerateAst</span> {
-  <span class="k">public</span> <span class="k">static</span> <span class="t">void</span> <span class="i">main</span>(<span class="t">String</span>[] <span class="i">args</span>) <span class="k">throws</span> <span class="t">IOException</span> {
-    <span class="k">if</span> (<span class="i">args</span>.<span class="i">length</span> != <span class="n">1</span>) {
-      <span class="t">System</span>.<span class="i">err</span>.<span class="i">println</span>(<span class="s">&quot;Usage: generate_ast &lt;output directory&gt;&quot;</span>);
-      <span class="t">System</span>.<span class="i">exit</span>(<span class="n">64</span>);
-    }
-    <span class="t">String</span> <span class="i">outputDir</span> = <span class="i">args</span>[<span class="n">0</span>];
-  }
-}
-</pre></div>
-<div class="source-file-narrow"><em>tool/GenerateAst.java</em>, create new file</div>
-
-<p>Note that this file is in a different package, <code>.tool</code> instead of <code>.lox</code>. This
-script isn&rsquo;t part of the interpreter itself. It&rsquo;s a tool <em>we</em>, the people
-hacking on the interpreter, run ourselves to generate the syntax tree classes.
-When it&rsquo;s done, we treat &ldquo;Expr.java&rdquo; like any other file in the implementation.
-We are merely automating how that file gets authored.</p>
-<p>To generate the classes, it needs to have some description of each type and its
-fields.</p>
-<div class="codehilite"><pre class="insert-before">    String outputDir = args[0];
-</pre><div class="source-file"><em>tool/GenerateAst.java</em><br>
-in <em>main</em>()</div>
-<pre class="insert">    <span class="i">defineAst</span>(<span class="i">outputDir</span>, <span class="s">&quot;Expr&quot;</span>, <span class="t">Arrays</span>.<span class="i">asList</span>(
-      <span class="s">&quot;Binary   : Expr left, Token operator, Expr right&quot;</span>,
-      <span class="s">&quot;Grouping : Expr expression&quot;</span>,
-      <span class="s">&quot;Literal  : Object value&quot;</span>,
-      <span class="s">&quot;Unary    : Token operator, Expr right&quot;</span>
-    ));
-</pre><pre class="insert-after">  }
-</pre></div>
-<div class="source-file-narrow"><em>tool/GenerateAst.java</em>, in <em>main</em>()</div>
-
-<p>For brevity&rsquo;s sake, I jammed the descriptions of the expression types into
-strings. Each is the name of the class followed by <code>:</code> and the list of fields,
-separated by commas. Each field has a type and a name.</p>
-<p>The first thing <code>defineAst()</code> needs to do is output the base Expr class.</p>
-<div class="codehilite"><div class="source-file"><em>tool/GenerateAst.java</em><br>
-add after <em>main</em>()</div>
-<pre>  <span class="k">private</span> <span class="k">static</span> <span class="t">void</span> <span class="i">defineAst</span>(
-      <span class="t">String</span> <span class="i">outputDir</span>, <span class="t">String</span> <span class="i">baseName</span>, <span class="t">List</span>&lt;<span class="t">String</span>&gt; <span class="i">types</span>)
-      <span class="k">throws</span> <span class="t">IOException</span> {
-    <span class="t">String</span> <span class="i">path</span> = <span class="i">outputDir</span> + <span class="s">&quot;/&quot;</span> + <span class="i">baseName</span> + <span class="s">&quot;.java&quot;</span>;
-    <span class="t">PrintWriter</span> <span class="i">writer</span> = <span class="k">new</span> <span class="t">PrintWriter</span>(<span class="i">path</span>, <span class="s">&quot;UTF-8&quot;</span>);
-
-    <span class="i">writer</span>.<span class="i">println</span>(<span class="s">&quot;package com.craftinginterpreters.lox;&quot;</span>);
-    <span class="i">writer</span>.<span class="i">println</span>();
-    <span class="i">writer</span>.<span class="i">println</span>(<span class="s">&quot;import java.util.List;&quot;</span>);
-    <span class="i">writer</span>.<span class="i">println</span>();
-    <span class="i">writer</span>.<span class="i">println</span>(<span class="s">&quot;abstract class &quot;</span> + <span class="i">baseName</span> + <span class="s">&quot; {&quot;</span>);
-
-    <span class="i">writer</span>.<span class="i">println</span>(<span class="s">&quot;}&quot;</span>);
-    <span class="i">writer</span>.<span class="i">close</span>();
-  }
-</pre></div>
-<div class="source-file-narrow"><em>tool/GenerateAst.java</em>, add after <em>main</em>()</div>
-
-<p>When we call this, <code>baseName</code> is &ldquo;Expr&rdquo;, which is both the name of the class and
-the name of the file it outputs. We pass this as an argument instead of
-hardcoding the name because we&rsquo;ll add a separate family of classes later for
-statements.</p>
-<p>Inside the base class, we define each subclass.</p>
-<div class="codehilite"><pre class="insert-before">    writer.println(&quot;abstract class &quot; + baseName + &quot; {&quot;);
-
-</pre><div class="source-file"><em>tool/GenerateAst.java</em><br>
-in <em>defineAst</em>()</div>
-<pre class="insert">    <span class="c">// The AST classes.</span>
-    <span class="k">for</span> (<span class="t">String</span> <span class="i">type</span> : <span class="i">types</span>) {
-      <span class="t">String</span> <span class="i">className</span> = <span class="i">type</span>.<span class="i">split</span>(<span class="s">&quot;:&quot;</span>)[<span class="n">0</span>].<span class="i">trim</span>();
-      <span class="t">String</span> <span class="i">fields</span> = <span class="i">type</span>.<span class="i">split</span>(<span class="s">&quot;:&quot;</span>)[<span class="n">1</span>].<span class="i">trim</span>();<span name="robust"> </span>
-      <span class="i">defineType</span>(<span class="i">writer</span>, <span class="i">baseName</span>, <span class="i">className</span>, <span class="i">fields</span>);
-    }
-</pre><pre class="insert-after">    writer.println(&quot;}&quot;);
-</pre></div>
-<div class="source-file-narrow"><em>tool/GenerateAst.java</em>, in <em>defineAst</em>()</div>
-
-<aside name="robust">
-<p>This isn&rsquo;t the world&rsquo;s most elegant string manipulation code, but that&rsquo;s fine.
-It only runs on the exact set of class definitions we give it. Robustness ain&rsquo;t
-a priority.</p>
-</aside>
-<p>That code, in turn, calls:</p>
-<div class="codehilite"><div class="source-file"><em>tool/GenerateAst.java</em><br>
-add after <em>defineAst</em>()</div>
-<pre>  <span class="k">private</span> <span class="k">static</span> <span class="t">void</span> <span class="i">defineType</span>(
-      <span class="t">PrintWriter</span> <span class="i">writer</span>, <span class="t">String</span> <span class="i">baseName</span>,
-      <span class="t">String</span> <span class="i">className</span>, <span class="t">String</span> <span class="i">fieldList</span>) {
-    <span class="i">writer</span>.<span class="i">println</span>(<span class="s">&quot;  static class &quot;</span> + <span class="i">className</span> + <span class="s">&quot; extends &quot;</span> +
-        <span class="i">baseName</span> + <span class="s">&quot; {&quot;</span>);
-
-    <span class="c">// Constructor.</span>
-    <span class="i">writer</span>.<span class="i">println</span>(<span class="s">&quot;    &quot;</span> + <span class="i">className</span> + <span class="s">&quot;(&quot;</span> + <span class="i">fieldList</span> + <span class="s">&quot;) {&quot;</span>);
-
-    <span class="c">// Store parameters in fields.</span>
-    <span class="t">String</span>[] <span class="i">fields</span> = <span class="i">fieldList</span>.<span class="i">split</span>(<span class="s">&quot;, &quot;</span>);
-    <span class="k">for</span> (<span class="t">String</span> <span class="i">field</span> : <span class="i">fields</span>) {
-      <span class="t">String</span> <span class="i">name</span> = <span class="i">field</span>.<span class="i">split</span>(<span class="s">&quot; &quot;</span>)[<span class="n">1</span>];
-      <span class="i">writer</span>.<span class="i">println</span>(<span class="s">&quot;      this.&quot;</span> + <span class="i">name</span> + <span class="s">&quot; = &quot;</span> + <span class="i">name</span> + <span class="s">&quot;;&quot;</span>);
-    }
-
-    <span class="i">writer</span>.<span class="i">println</span>(<span class="s">&quot;    }&quot;</span>);
-
-    <span class="c">// Fields.</span>
-    <span class="i">writer</span>.<span class="i">println</span>();
-    <span class="k">for</span> (<span class="t">String</span> <span class="i">field</span> : <span class="i">fields</span>) {
-      <span class="i">writer</span>.<span class="i">println</span>(<span class="s">&quot;    final &quot;</span> + <span class="i">field</span> + <span class="s">&quot;;&quot;</span>);
-    }
-
-    <span class="i">writer</span>.<span class="i">println</span>(<span class="s">&quot;  }&quot;</span>);
-  }
-</pre></div>
-<div class="source-file-narrow"><em>tool/GenerateAst.java</em>, add after <em>defineAst</em>()</div>
-
-<p>There we go. All of that glorious Java boilerplate is done. It declares each
-field in the class body. It defines a constructor for the class with parameters
-for each field and initializes them in the body.</p>
-<p>Compile and run this Java program now and it <span name="longer">blasts</span>
-out a new &ldquo;.java&rdquo; file containing a few dozen lines of code. That file&rsquo;s
-about to get even longer.</p>
-<aside name="longer">
-<p><a href="appendix-ii.html">Appendix II</a> contains the code generated by this script once we&rsquo;ve finished
-implementing jlox and defined all of its syntax tree nodes.</p>
-</aside>
 <h2><a href="#working-with-trees" id="working-with-trees"><small>5&#8202;.&#8202;3</small>Working with Trees</a></h2>
 <p>Put on your imagination hat for a moment. Even though we aren&rsquo;t there yet,
 consider what the interpreter will do with the syntax trees. Each kind of
 expression in Lox behaves differently at runtime. That means the interpreter
 needs to select a different chunk of code to handle each expression type. With
-tokens, we can simply switch on the TokenType. But we don&rsquo;t have a &ldquo;type&rdquo; enum
-for the syntax trees, just a separate Java class for each one.</p>
-<p>We could write a long chain of type tests:</p>
-<div class="codehilite"><pre><span class="k">if</span> (<span class="i">expr</span> <span class="k">instanceof</span> <span class="t">Expr</span>.<span class="t">Binary</span>) {
-  <span class="c">// ...</span>
-} <span class="k">else</span> <span class="k">if</span> (<span class="i">expr</span> <span class="k">instanceof</span> <span class="t">Expr</span>.<span class="t">Grouping</span>) {
-  <span class="c">// ...</span>
-} <span class="k">else</span> <span class="c">// ...</span>
+tokens, we simply matched on the TokenType.</p>
+<p>Similarly, we can use the match statement to match and deconstruct each node of
+the tree:</p>
+<div class="codehilite"><pre><span class="i">match</span> <span class="i">expr</span>:
+    <span class="i">case</span> <span class="t">Binary</span>(<span class="i">left</span>, <span class="i">operator</span>, <span class="i">right</span>):
+        ...
+    <span class="i">case</span> <span class="t">Grouping</span>(<span class="i">expr</span>):
+        ...
+    # ...
 </pre></div>
-<p>But all of those sequential type tests are slow. Expression types whose names
-are alphabetically later would take longer to execute because they&rsquo;d fall
-through more <code>if</code> cases before finding the right type. That&rsquo;s not my idea of an
-elegant solution.</p>
+<p>Unfortunally, Python treats each cases sequentially, as if it was a chain of
+if/else statements. But all of those sequential tests are slow. Expression types
+whose names are alphabetically later would take longer to execute because they&rsquo;d
+fall through more <code>case</code> tests before finding the right type. That&rsquo;s not my idea
+of an elegant solution.</p>
 <p>We have a family of classes and we need to associate a chunk of behavior with
-each one. The natural solution in an object-oriented language like Java is to
-put those behaviors into methods on the classes themselves. We could add an
-abstract <span name="interpreter-pattern"><code>interpret()</code></span> method on Expr
-which each subclass would then implement to interpret itself.</p>
+each one. The natural solution in an object-oriented language would be to put
+those behaviors into methods on the classes themselves. We could add an abstract
+<span name="interpreter-pattern"><code>interpret()</code></span> method on Expr which each
+subclass would then implement to interpret itself.</p>
 <aside name="interpreter-pattern">
 <p>This exact thing is literally called the <a href="https://en.wikipedia.org/wiki/Interpreter_pattern">&ldquo;Interpreter pattern&rdquo;</a> in
 <em>Design Patterns: Elements of Reusable Object-Oriented Software</em>, by Erich
@@ -723,8 +572,8 @@ likely related to each other, and the language makes it easy to define them
 together as methods inside the same class.</p><img src="image/representing-code/rows.png" alt="The table split into rows for each class." />
 <p>This makes it easy to extend the table by adding new rows. Simply define a new
 class. No existing code has to be touched. But imagine if you want to add a new
-<em>operation</em><span class="em">&mdash;</span>a new column. In Java, that means cracking open each of those
-existing classes and adding a method to it.</p>
+<em>operation</em><span class="em">&mdash;</span>a new column. In pure object oriented designs, that means
+cracking open each of those existing classes and adding a method to it.</p>
 <p>Functional paradigm languages in the <span name="ml">ML</span> family flip that
 around. There, you don&rsquo;t have classes with methods. Types and functions are
 totally distinct. To implement an operation for a number of different types, you
@@ -763,25 +612,36 @@ finished it off yet. In the meantime, the best we can do is try to pick a
 language whose orientation matches the natural architectural seams in the
 program we&rsquo;re writing.</p>
 <p>Object-orientation works fine for many parts of our interpreter, but these tree
-classes rub against the grain of Java. Fortunately, there&rsquo;s a design pattern we
-can bring to bear on it.</p>
-<h3><a href="#the-visitor-pattern" id="the-visitor-pattern"><small>5&#8202;.&#8202;3&#8202;.&#8202;2</small>The Visitor pattern</a></h3>
-<p>The <strong>Visitor pattern</strong> is the most widely misunderstood pattern in all of
-<em>Design Patterns</em>, which is really saying something when you look at the
-software architecture excesses of the past couple of decades.</p>
-<p>The trouble starts with terminology. The pattern isn&rsquo;t about &ldquo;visiting&rdquo;, and the
-&ldquo;accept&rdquo; method in it doesn&rsquo;t conjure up any helpful imagery either. Many think
-the pattern has to do with traversing trees, which isn&rsquo;t the case at all. We
-<em>are</em> going to use it on a set of classes that are tree-like, but that&rsquo;s a
-coincidence. As you&rsquo;ll see, the pattern works as well on a single object.</p>
-<p>The Visitor pattern is really about approximating the functional style within an
-OOP language. It lets us add new columns to that table easily. We can define all
-of the behavior for a new operation on a set of types in one place, without
-having to touch the types themselves. It does this the same way we solve almost
-every problem in computer science: by adding a layer of indirection.</p>
-<p>Before we apply it to our auto-generated Expr classes, let&rsquo;s walk through a
-simpler example. Say we have two kinds of pastries: <span
-name="beignet">beignets</span> and crullers.</p>
+classes rub against the grain of object-orientation. Fortunately, Python also
+supports functional programming and we can choose the paradigm that best fits
+each sittuation.</p>
+<h3><a href="#single-dispatch" id="single-dispatch"><small>5&#8202;.&#8202;3&#8202;.&#8202;2</small>Single dispatch</a></h3>
+<p>The naive approach to our problem would be to implement an <code>interpret</code>
+standalone function using a match/case as hinted before:</p>
+<div class="codehilite"><pre><span class="k">def</span> <span class="i">interpret</span>(<span class="i">expr</span>: <span class="t">Expr</span>) -&gt; <span class="t">Any</span>:
+    <span class="i">match</span> <span class="i">expr</span>:
+        <span class="i">case</span> <span class="t">Binary</span>(<span class="i">left</span>, <span class="i">operator</span>, <span class="i">right</span>):
+            <span class="k">return</span> ...
+        <span class="i">case</span> <span class="t">Grouping</span>(<span class="i">expr</span>):
+            <span class="k">return</span> ...
+        # ...
+</pre></div>
+<p>As I mentioned before, this approach suffers from a serious performance problem:
+each case is tested sequentially. This means that as the number of cases grows,
+the cost of interpretation grows proportionally.</p>
+<p>The scanner loop has exactly the same problem, however we generally expect much
+tighter loops during <em>interpretation</em> than during <em>parsing</em>. A small piece file
+with only a few lines of code may easily implement a loop that repeat millions
+of times. On the other hand, it is not so common to bump into Lox files with
+millions bytes.</p>
+<p>The Python standard library has a neat solution to this problem using
+<code>functools.singledispatch</code>. Single dispatch works similarly to the method
+dispatch for classes. It associates an implementation function to each class and
+its descendants and, but each implementation does not have to live in the class
+body.</p>
+<p>Before we apply it to our Expr classes, let&rsquo;s walk through a simpler example.
+Say we have two kinds of pastries: <span name="beignet">beignets</span> and
+crullers.</p>
 <aside name="beignet">
 <p>A beignet (pronounced &ldquo;ben-yay&rdquo;, with equal emphasis on both syllables) is a
 deep-fried pastry in the same family as doughnuts. When the French colonized
@@ -792,161 +652,50 @@ piled high in powdered sugar, and washed down with a cup of café au lait while 
 watch tourists staggering around trying to shake off their hangover from the
 previous night&rsquo;s revelry.</p>
 </aside>
-<div class="codehilite"><pre>  <span class="k">abstract</span> <span class="k">class</span> <span class="t">Pastry</span> {
-  }
+<div class="codehilite"><pre>
 
-  <span class="k">class</span> <span class="t">Beignet</span> <span class="k">extends</span> <span class="t">Pastry</span> {
-  }
+<span class="k">class</span> <span class="t">Pastry</span>:
+    ...
 
-  <span class="k">class</span> <span class="t">Cruller</span> <span class="k">extends</span> <span class="t">Pastry</span> {
-  }
+<span class="k">class</span> <span class="t">Beignet</span>(<span class="t">Pastry</span>):
+    ...
+
+<span class="k">class</span> <span class="t">Cruller</span>(<span class="t">Pastry</span>):
+    ...
 </pre></div>
-
 <p>We want to be able to define new pastry operations<span class="em">&mdash;</span>cooking them, eating them,
 decorating them, etc.<span class="em">&mdash;</span>without having to add a new method to each class every
-time. Here&rsquo;s how we do it. First, we define a separate interface.</p>
-<div class="codehilite"><pre>  <span class="k">interface</span> <span class="t">PastryVisitor</span> {
-    <span class="t">void</span> <span class="i">visitBeignet</span>(<span class="t">Beignet</span> <span class="i">beignet</span>);<span name="overload"> </span>
-    <span class="t">void</span> <span class="i">visitCruller</span>(<span class="t">Cruller</span> <span class="i">cruller</span>);
-  }
-</pre></div>
+time. Here&rsquo;s how we do it. First, we define the fallback for the desired
+operation. If there is no universal fallback, we simply raise a TypeError.</p>
+<div class="codehilite"><pre><span class="k">from</span> <span class="i">functools</span> <span class="k">import</span> <span class="i">singledispatch</span>
 
-<aside name="overload">
-<p>In <em>Design Patterns</em>, both of these methods are confusingly named <code>visit()</code>, and
-they rely on overloading to distinguish them. This leads some readers to think
-that the correct visit method is chosen <em>at runtime</em> based on its parameter
-type. That isn&rsquo;t the case. Unlike over<em>riding</em>, over<em>loading</em> is statically
-dispatched at compile time.</p>
-<p>Using distinct names for each method makes the dispatch more obvious, and also
-shows you how to apply this pattern in languages that don&rsquo;t support overloading.</p>
+@<span class="i">singledispatch</span>
+<span class="k">def</span> <span class="i">cook</span>(<span class="i">obj</span>: <span class="t">Pastry</span>):
+    <span class="i">msg</span> = <span class="i">f</span><span class="s">&quot;cannot cook {obj.__class__.__name__} objects&quot;</span>
+    <span class="k">raise</span> <span class="t">TypeError</span>(<span class="i">msg</span>)
+</pre></div>
+<p>Then we provide a separate implementatation for each of the supported types:</p>
+<div class="codehilite"><pre>@<span class="i">cook</span>.<span class="i">register</span>:
+<span class="k">def</span> <span class="i">_</span>(<span class="i">obj</span>: <span class="t">Beignet</span>):
+    <span class="k">print</span>(<span class="s">&quot;Cooking a Beignet&quot;</span>)
+
+@<span class="i">cook</span>.<span class="i">register</span>:
+<span class="k">def</span> <span class="i">_</span>(<span class="i">obj</span>: <span class="t">Cruller</span>):
+    <span class="k">print</span>(<span class="s">&quot;Cooking a Cruller&quot;</span>)
+</pre></div>
+<p>Each operation that can be performed on pastries is a new <span
+name="multimethods">single-dispatch</span> function that register an
+implementation for each Pastry subclass. To perform an operation on a pastry, we
+simply call the function with the desired pastry object.</p>
+<aside name="multimethods">
+<p>Another common refinement is passing additional parameters to the dispatch
+methods. Python&rsquo;s <code>singledispatch</code> accept additional parameters but it only
+dispatch based on the first one. Some programming languages have the concept of
+multimethods, which allow us to specify different implementations based on a
+combination of argument types. Python has external libraries that implement
+this, but fortunately it is not necessary in our case, as all operations
+dispatch only on expression types.</p>
 </aside>
-<p>Each operation that can be performed on pastries is a new class that implements
-that interface. It has a concrete method for each type of pastry. That keeps the
-code for the operation on both types all nestled snugly together in one class.</p>
-<p>Given some pastry, how do we route it to the correct method on the visitor based
-on its type? Polymorphism to the rescue! We add this method to Pastry:</p>
-<div class="codehilite"><pre class="insert-before">  abstract class Pastry {
-</pre><pre class="insert">    <span class="k">abstract</span> <span class="t">void</span> <span class="i">accept</span>(<span class="t">PastryVisitor</span> <span class="i">visitor</span>);
-</pre><pre class="insert-after">  }
-</pre></div>
-
-<p>Each subclass implements it.</p>
-<div class="codehilite"><pre class="insert-before">  class Beignet extends Pastry {
-</pre><pre class="insert">    <span class="a">@Override</span>
-    <span class="t">void</span> <span class="i">accept</span>(<span class="t">PastryVisitor</span> <span class="i">visitor</span>) {
-      <span class="i">visitor</span>.<span class="i">visitBeignet</span>(<span class="k">this</span>);
-    }
-</pre><pre class="insert-after">  }
-</pre></div>
-
-<p>And:</p>
-<div class="codehilite"><pre class="insert-before">  class Cruller extends Pastry {
-</pre><pre class="insert">    <span class="a">@Override</span>
-    <span class="t">void</span> <span class="i">accept</span>(<span class="t">PastryVisitor</span> <span class="i">visitor</span>) {
-      <span class="i">visitor</span>.<span class="i">visitCruller</span>(<span class="k">this</span>);
-    }
-</pre><pre class="insert-after">  }
-</pre></div>
-
-<p>To perform an operation on a pastry, we call its <code>accept()</code> method and pass in
-the visitor for the operation we want to execute. The pastry<span class="em">&mdash;</span>the specific
-subclass&rsquo;s overriding implementation of <code>accept()</code><span class="em">&mdash;</span>turns around and calls the
-appropriate visit method on the visitor and passes <em>itself</em> to it.</p>
-<p>That&rsquo;s the heart of the trick right there. It lets us use polymorphic dispatch
-on the <em>pastry</em> classes to select the appropriate method on the <em>visitor</em> class.
-In the table, each pastry class is a row, but if you look at all of the methods
-for a single visitor, they form a <em>column</em>.</p><img src="image/representing-code/visitor.png" alt="Now all of the cells for one operation are part of the same class, the visitor." />
-<p>We added one <code>accept()</code> method to each class, and we can use it for as many
-visitors as we want without ever having to touch the pastry classes again. It&rsquo;s
-a clever pattern.</p>
-<h3><a href="#visitors-for-expressions" id="visitors-for-expressions"><small>5&#8202;.&#8202;3&#8202;.&#8202;3</small>Visitors for expressions</a></h3>
-<p>OK, let&rsquo;s weave it into our expression classes. We&rsquo;ll also <span
-name="context">refine</span> the pattern a little. In the pastry example, the
-visit and <code>accept()</code> methods don&rsquo;t return anything. In practice, visitors often
-want to define operations that produce values. But what return type should
-<code>accept()</code> have? We can&rsquo;t assume every visitor class wants to produce the same
-type, so we&rsquo;ll use generics to let each implementation fill in a return type.</p>
-<aside name="context">
-<p>Another common refinement is an additional &ldquo;context&rdquo; parameter that is passed to
-the visit methods and then sent back through as a parameter to <code>accept()</code>. That
-lets operations take an additional parameter. The visitors we&rsquo;ll define in the
-book don&rsquo;t need that, so I omitted it.</p>
-</aside>
-<p>First, we define the visitor interface. Again, we nest it inside the base class
-so that we can keep everything in one file.</p>
-<div class="codehilite"><pre class="insert-before">    writer.println(&quot;abstract class &quot; + baseName + &quot; {&quot;);
-
-</pre><div class="source-file"><em>tool/GenerateAst.java</em><br>
-in <em>defineAst</em>()</div>
-<pre class="insert">    <span class="i">defineVisitor</span>(<span class="i">writer</span>, <span class="i">baseName</span>, <span class="i">types</span>);
-
-</pre><pre class="insert-after">    // The AST classes.
-</pre></div>
-<div class="source-file-narrow"><em>tool/GenerateAst.java</em>, in <em>defineAst</em>()</div>
-
-<p>That function generates the visitor interface.</p>
-<div class="codehilite"><div class="source-file"><em>tool/GenerateAst.java</em><br>
-add after <em>defineAst</em>()</div>
-<pre>  <span class="k">private</span> <span class="k">static</span> <span class="t">void</span> <span class="i">defineVisitor</span>(
-      <span class="t">PrintWriter</span> <span class="i">writer</span>, <span class="t">String</span> <span class="i">baseName</span>, <span class="t">List</span>&lt;<span class="t">String</span>&gt; <span class="i">types</span>) {
-    <span class="i">writer</span>.<span class="i">println</span>(<span class="s">&quot;  interface Visitor&lt;R&gt; {&quot;</span>);
-
-    <span class="k">for</span> (<span class="t">String</span> <span class="i">type</span> : <span class="i">types</span>) {
-      <span class="t">String</span> <span class="i">typeName</span> = <span class="i">type</span>.<span class="i">split</span>(<span class="s">&quot;:&quot;</span>)[<span class="n">0</span>].<span class="i">trim</span>();
-      <span class="i">writer</span>.<span class="i">println</span>(<span class="s">&quot;    R visit&quot;</span> + <span class="i">typeName</span> + <span class="i">baseName</span> + <span class="s">&quot;(&quot;</span> +
-          <span class="i">typeName</span> + <span class="s">&quot; &quot;</span> + <span class="i">baseName</span>.<span class="i">toLowerCase</span>() + <span class="s">&quot;);&quot;</span>);
-    }
-
-    <span class="i">writer</span>.<span class="i">println</span>(<span class="s">&quot;  }&quot;</span>);
-  }
-</pre></div>
-<div class="source-file-narrow"><em>tool/GenerateAst.java</em>, add after <em>defineAst</em>()</div>
-
-<p>Here, we iterate through all of the subclasses and declare a visit method for
-each one. When we define new expression types later, this will automatically
-include them.</p>
-<p>Inside the base class, we define the abstract <code>accept()</code> method.</p>
-<div class="codehilite"><pre class="insert-before">      defineType(writer, baseName, className, fields);
-    }
-</pre><div class="source-file"><em>tool/GenerateAst.java</em><br>
-in <em>defineAst</em>()</div>
-<pre class="insert">
-
-    <span class="c">// The base accept() method.</span>
-    <span class="i">writer</span>.<span class="i">println</span>();
-    <span class="i">writer</span>.<span class="i">println</span>(<span class="s">&quot;  abstract &lt;R&gt; R accept(Visitor&lt;R&gt; visitor);&quot;</span>);
-
-</pre><pre class="insert-after">    writer.println(&quot;}&quot;);
-</pre></div>
-<div class="source-file-narrow"><em>tool/GenerateAst.java</em>, in <em>defineAst</em>()</div>
-
-<p>Finally, each subclass implements that and calls the right visit method for its
-own type.</p>
-<div class="codehilite"><pre class="insert-before">    writer.println(&quot;    }&quot;);
-</pre><div class="source-file"><em>tool/GenerateAst.java</em><br>
-in <em>defineType</em>()</div>
-<pre class="insert">
-
-    <span class="c">// Visitor pattern.</span>
-    <span class="i">writer</span>.<span class="i">println</span>();
-    <span class="i">writer</span>.<span class="i">println</span>(<span class="s">&quot;    @Override&quot;</span>);
-    <span class="i">writer</span>.<span class="i">println</span>(<span class="s">&quot;    &lt;R&gt; R accept(Visitor&lt;R&gt; visitor) {&quot;</span>);
-    <span class="i">writer</span>.<span class="i">println</span>(<span class="s">&quot;      return visitor.visit&quot;</span> +
-        <span class="i">className</span> + <span class="i">baseName</span> + <span class="s">&quot;(this);&quot;</span>);
-    <span class="i">writer</span>.<span class="i">println</span>(<span class="s">&quot;    }&quot;</span>);
-</pre><pre class="insert-after">
-
-    // Fields.
-</pre></div>
-<div class="source-file-narrow"><em>tool/GenerateAst.java</em>, in <em>defineType</em>()</div>
-
-<p>There we go. Now we can define operations on expressions without having to muck
-with the classes or our generator script. Compile and run this generator script
-to output an updated &ldquo;Expr.java&rdquo; file. It contains a generated Visitor
-interface and a set of expression node classes that support the Visitor pattern
-using it.</p>
-<p>Before we end this rambling chapter, let&rsquo;s implement that Visitor interface and
-see the pattern in action.</p>
 <h2><a href="#a-not-very-pretty-printer" id="a-not-very-pretty-printer"><small>5&#8202;.&#8202;4</small>A (Not Very) Pretty Printer</a></h2>
 <p>When we debug our parser and interpreter, it&rsquo;s often useful to look at a parsed
 syntax tree and make sure it has the structure we expect. We could inspect it in
@@ -967,111 +716,86 @@ parenthesized, and all of its subexpressions and tokens are contained in that.</
 <div class="codehilite"><pre>(* (- 123) (group 45.67))
 </pre></div>
 <p>Not exactly &ldquo;pretty&rdquo;, but it does show the nesting and grouping explicitly. To
-implement this, we define a new class.</p>
-<div class="codehilite"><div class="source-file"><em>lox/AstPrinter.java</em><br>
-create new file</div>
-<pre><span class="k">package</span> <span class="i">com.craftinginterpreters.lox</span>;
+implement this, we define a new single dispatch method.</p>
+<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">printer</span>.<span class="i">py</span>
+<span class="k">from</span> <span class="i">functools</span> <span class="k">import</span> <span class="i">singledispatch</span>
+<span class="k">from</span> .<span class="i">expr</span> <span class="k">import</span> *
 
-<span class="k">class</span> <span class="t">AstPrinter</span> <span class="k">implements</span> <span class="t">Expr</span>.<span class="t">Visitor</span>&lt;<span class="t">String</span>&gt; {
-  <span class="t">String</span> <span class="i">print</span>(<span class="t">Expr</span> <span class="i">expr</span>) {
-    <span class="k">return</span> <span class="i">expr</span>.<span class="i">accept</span>(<span class="k">this</span>);
-  }
-}
+@<span class="i">singledispatch</span>
+<span class="k">def</span> <span class="i">pretty</span>(<span class="i">expr</span>: <span class="t">Expr</span>) -&gt; <span class="i">str</span>:
+    <span class="i">name</span> = <span class="i">expr</span>.<span class="i">__class__</span>.<span class="i">__name__</span>
+    <span class="k">raise</span> <span class="t">TypeError</span>(<span class="i">f</span><span class="s">&quot;cannot display {name} objects&quot;</span>)
 </pre></div>
-<div class="source-file-narrow"><em>lox/AstPrinter.java</em>, create new file</div>
+<p>We now need to provide the implementation for each expression type</p>
+<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">printer</span>.<span class="i">py</span> <span class="i">after</span> <span class="i">the</span> <span class="i">pretty</span>() <span class="i">definition</span>
+@<span class="i">pretty</span>.<span class="i">register</span>
+<span class="k">def</span> <span class="i">_</span>(<span class="i">expr</span>: <span class="t">Binary</span>):
+    <span class="i">symbol</span> = <span class="i">expr</span>.<span class="i">operator</span>.<span class="i">lexeme</span>
+    <span class="k">return</span> <span class="i">parenthesize</span>(<span class="i">symbol</span>, <span class="i">expr</span>.<span class="i">left</span>, <span class="i">expr</span>.<span class="i">right</span>)
 
-<p>As you can see, it implements the visitor interface. That means we need visit
-methods for each of the expression types we have so far.</p>
-<div class="codehilite"><pre class="insert-before">    return expr.accept(this);
-  }
-</pre><div class="source-file"><em>lox/AstPrinter.java</em><br>
-add after <em>print</em>()</div>
-<pre class="insert">
+@<span class="i">pretty</span>.<span class="i">register</span>
+<span class="k">def</span> <span class="i">_</span>(<span class="i">expr</span>: <span class="t">Grouping</span>):
+  <span class="k">return</span> <span class="i">parenthesize</span>(<span class="s">&quot;group&quot;</span>, <span class="i">expr</span>.<span class="i">expression</span>)
 
-  <span class="a">@Override</span>
-  <span class="k">public</span> <span class="t">String</span> <span class="i">visitBinaryExpr</span>(<span class="t">Expr</span>.<span class="t">Binary</span> <span class="i">expr</span>) {
-    <span class="k">return</span> <span class="i">parenthesize</span>(<span class="i">expr</span>.<span class="i">operator</span>.<span class="i">lexeme</span>,
-                        <span class="i">expr</span>.<span class="i">left</span>, <span class="i">expr</span>.<span class="i">right</span>);
-  }
+@<span class="i">pretty</span>.<span class="i">register</span>
+<span class="k">def</span> <span class="i">_</span>(<span class="i">expr</span>: <span class="t">Literal</span>):
+    <span class="k">if</span> <span class="i">expr</span>.<span class="i">value</span> <span class="k">is</span> <span class="t">None</span>:
+        <span class="k">return</span> <span class="s">&quot;nil&quot;</span>
+    <span class="k">elif</span> <span class="i">expr</span>.<span class="i">value</span> <span class="k">is</span> <span class="t">True</span>:
+        <span class="k">return</span> <span class="s">&quot;true&quot;</span>
+    <span class="k">elif</span> <span class="i">expr</span>.<span class="i">value</span> <span class="k">is</span> <span class="t">False</span>:
+        <span class="k">return</span> <span class="s">&quot;false&quot;</span>
+    <span class="k">return</span> <span class="i">str</span>(<span class="i">expr</span>.<span class="i">value</span>)
 
-  <span class="a">@Override</span>
-  <span class="k">public</span> <span class="t">String</span> <span class="i">visitGroupingExpr</span>(<span class="t">Expr</span>.<span class="t">Grouping</span> <span class="i">expr</span>) {
-    <span class="k">return</span> <span class="i">parenthesize</span>(<span class="s">&quot;group&quot;</span>, <span class="i">expr</span>.<span class="i">expression</span>);
-  }
-
-  <span class="a">@Override</span>
-  <span class="k">public</span> <span class="t">String</span> <span class="i">visitLiteralExpr</span>(<span class="t">Expr</span>.<span class="t">Literal</span> <span class="i">expr</span>) {
-    <span class="k">if</span> (<span class="i">expr</span>.<span class="i">value</span> == <span class="k">null</span>) <span class="k">return</span> <span class="s">&quot;nil&quot;</span>;
-    <span class="k">return</span> <span class="i">expr</span>.<span class="i">value</span>.<span class="i">toString</span>();
-  }
-
-  <span class="a">@Override</span>
-  <span class="k">public</span> <span class="t">String</span> <span class="i">visitUnaryExpr</span>(<span class="t">Expr</span>.<span class="t">Unary</span> <span class="i">expr</span>) {
-    <span class="k">return</span> <span class="i">parenthesize</span>(<span class="i">expr</span>.<span class="i">operator</span>.<span class="i">lexeme</span>, <span class="i">expr</span>.<span class="i">right</span>);
-  }
-</pre><pre class="insert-after">}
+@<span class="i">pretty</span>.<span class="i">register</span>
+<span class="k">def</span> <span class="i">_</span>(<span class="i">expr</span>: <span class="t">Unary</span>):
+    <span class="i">symbol</span> = <span class="i">expr</span>.<span class="i">operator</span>.<span class="i">lexeme</span>
+    <span class="k">return</span> <span class="i">parenthesize</span>(<span class="i">symbol</span>, <span class="i">expr</span>.<span class="i">right</span>)
 </pre></div>
-<div class="source-file-narrow"><em>lox/AstPrinter.java</em>, add after <em>print</em>()</div>
-
 <p>Literal expressions are easy<span class="em">&mdash;</span>they convert the value to a string with a little
-check to handle Java&rsquo;s <code>null</code> standing in for Lox&rsquo;s <code>nil</code>. The other expressions
-have subexpressions, so they use this <code>parenthesize()</code> helper method:</p>
-<div class="codehilite"><div class="source-file"><em>lox/AstPrinter.java</em><br>
-add after <em>visitUnaryExpr</em>()</div>
-<pre>  <span class="k">private</span> <span class="t">String</span> <span class="i">parenthesize</span>(<span class="t">String</span> <span class="i">name</span>, <span class="t">Expr</span>... <span class="i">exprs</span>) {
-    <span class="t">StringBuilder</span> <span class="i">builder</span> = <span class="k">new</span> <span class="t">StringBuilder</span>();
-
-    <span class="i">builder</span>.<span class="i">append</span>(<span class="s">&quot;(&quot;</span>).<span class="i">append</span>(<span class="i">name</span>);
-    <span class="k">for</span> (<span class="t">Expr</span> <span class="i">expr</span> : <span class="i">exprs</span>) {
-      <span class="i">builder</span>.<span class="i">append</span>(<span class="s">&quot; &quot;</span>);
-      <span class="i">builder</span>.<span class="i">append</span>(<span class="i">expr</span>.<span class="i">accept</span>(<span class="k">this</span>));
-    }
-    <span class="i">builder</span>.<span class="i">append</span>(<span class="s">&quot;)&quot;</span>);
-
-    <span class="k">return</span> <span class="i">builder</span>.<span class="i">toString</span>();
-  }
+check to handle Python&rsquo;s <code>None</code> standing in for Lox&rsquo;s <code>nil</code>. The other
+expressions have subexpressions, so they use this <code>parenthesize()</code> helper
+method:</p>
+<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">printer</span>.<span class="i">py</span>
+<span class="k">def</span> <span class="i">parenthesize</span>(<span class="i">name</span>: <span class="i">str</span>, *<span class="i">exprs</span>: <span class="t">Expr</span>) -&gt; <span class="i">str</span>:
+    <span class="i">parts</span> = [<span class="i">name</span>, *<span class="i">map</span>(<span class="i">pretty</span>, <span class="i">exprs</span>)]
+    <span class="k">return</span> <span class="s">&quot;(&quot;</span> + <span class="s">&quot; &quot;</span>.<span class="i">join</span>(<span class="i">parts</span>) + <span class="s">&quot;)&quot;</span>
 </pre></div>
-<div class="source-file-narrow"><em>lox/AstPrinter.java</em>, add after <em>visitUnaryExpr</em>()</div>
-
 <p>It takes a name and a list of subexpressions and wraps them all up in
 parentheses, yielding a string like:</p>
 <div class="codehilite"><pre>(+ 1 2)
 </pre></div>
-<p>Note that it calls <code>accept()</code> on each subexpression and passes in itself. This
+<p>Note that it calls <code>pretty()</code> on each subexpression and passes in itself. This
 is the <span name="tree">recursive</span> step that lets us print an entire
 tree.</p>
-<aside name="tree">
-<p>This recursion is also why people think the Visitor pattern itself has to do
-with trees.</p>
-</aside>
 <p>We don&rsquo;t have a parser yet, so it&rsquo;s hard to see this in action. For now, we&rsquo;ll
 hack together a little <code>main()</code> method that manually instantiates a tree and
 prints it.</p>
-<div class="codehilite"><div class="source-file"><em>lox/AstPrinter.java</em><br>
-add after <em>parenthesize</em>()</div>
-<pre>  <span class="k">public</span> <span class="k">static</span> <span class="t">void</span> <span class="i">main</span>(<span class="t">String</span>[] <span class="i">args</span>) {
-    <span class="t">Expr</span> <span class="i">expression</span> = <span class="k">new</span> <span class="t">Expr</span>.<span class="t">Binary</span>(
-        <span class="k">new</span> <span class="t">Expr</span>.<span class="t">Unary</span>(
-            <span class="k">new</span> <span class="t">Token</span>(<span class="t">TokenType</span>.<span class="i">MINUS</span>, <span class="s">&quot;-&quot;</span>, <span class="k">null</span>, <span class="n">1</span>),
-            <span class="k">new</span> <span class="t">Expr</span>.<span class="t">Literal</span>(<span class="n">123</span>)),
-        <span class="k">new</span> <span class="t">Token</span>(<span class="t">TokenType</span>.<span class="i">STAR</span>, <span class="s">&quot;*&quot;</span>, <span class="k">null</span>, <span class="n">1</span>),
-        <span class="k">new</span> <span class="t">Expr</span>.<span class="t">Grouping</span>(
-            <span class="k">new</span> <span class="t">Expr</span>.<span class="t">Literal</span>(<span class="n">45.67</span>)));
+<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">printer</span>.<span class="i">py</span> <span class="i">at</span> <span class="i">the</span> <span class="i">end</span> <span class="i">of</span> <span class="i">file</span>
+<span class="k">from</span> .<span class="i">tokens</span> <span class="k">import</span> <span class="t">Token</span>, <span class="t">TokenType</span> <span class="k">as</span> <span class="t">TT</span>
 
-    <span class="t">System</span>.<span class="i">out</span>.<span class="i">println</span>(<span class="k">new</span> <span class="t">AstPrinter</span>().<span class="i">print</span>(<span class="i">expression</span>));
-  }
+<span class="k">def</span> <span class="i">main</span>():
+    <span class="i">minus</span> = <span class="t">Token</span>(<span class="t">TT</span>.<span class="t">MINUS</span>, <span class="s">&quot;-&quot;</span>, <span class="n">1</span>)
+    <span class="i">star</span> = <span class="t">Token</span>(<span class="t">TT</span>.<span class="t">STAR</span>, <span class="s">&quot;*&quot;</span>, <span class="n">1</span>)
+    <span class="i">expr</span> = <span class="t">Binary</span>(
+        <span class="t">Unary</span>(<span class="i">minus</span>, <span class="t">Literal</span>(<span class="n">123</span>)),
+        <span class="i">star</span>,
+        <span class="t">Grouping</span>(<span class="t">Literal</span>(<span class="n">45.67</span>))
+    )
+    <span class="k">print</span>(<span class="i">pretty</span>(<span class="i">expr</span>))
+
+<span class="k">if</span> <span class="i">__name__</span> == <span class="s">&quot;__main__&quot;</span>:
+    <span class="i">main</span>()
 </pre></div>
-<div class="source-file-narrow"><em>lox/AstPrinter.java</em>, add after <em>parenthesize</em>()</div>
-
 <p>If we did everything right, it prints:</p>
 <div class="codehilite"><pre>(* (- 123) (group 45.67))
 </pre></div>
 <p>You can go ahead and delete this method. We won&rsquo;t need it. Also, as we add new
-syntax tree types, I won&rsquo;t bother showing the necessary visit methods for them
-in AstPrinter. If you want to (and you want the Java compiler to not yell at
-you), go ahead and add them yourself. It will come in handy in the next chapter
-when we start parsing Lox code into syntax trees. Or, if you don&rsquo;t care to
-maintain AstPrinter, feel free to delete it. We won&rsquo;t need it again.</p>
+syntax tree types, I won&rsquo;t bother showing the necessary methods for them in
+pretty method. If you want to, go ahead and add them yourself. It will come in
+handy in the next chapter when we start parsing Lox code into syntax trees. Or,
+if you don&rsquo;t care to maintain <code>pretty()</code>, feel free to delete it. We won&rsquo;t need
+it again.</p>
 <div class="challenges">
 <h2><a href="#challenges" id="challenges">Challenges</a></h2>
 <ol>

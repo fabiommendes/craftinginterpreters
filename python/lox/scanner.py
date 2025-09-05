@@ -1,8 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Any
 
-from .token import Token
-from .token import TokenType as TT
+from .tokens import Token
+from .tokens import TokenType as TT
 
 KEYWORDS = {
     "and": TT.AND,

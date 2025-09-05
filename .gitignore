@@ -4,6 +4,7 @@
 /gen/
 clox
 *.class
+*.pyc
 exercises/chapter01_introduction/3/linked_list
 .idea/
 __pycache__/

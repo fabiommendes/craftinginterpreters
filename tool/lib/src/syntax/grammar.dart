@@ -13,6 +13,7 @@ final languages = {
   // needed.
   "lua": Language(rules: _commonRules),
   "python": python,
+  "toml": toml,
   "ruby": ruby,
 };
 
@@ -89,6 +90,11 @@ final python = Language(
   keywords: "and as assert break class continue def del elif else except "
       "exec finally for from global if import in is lambda not or pass "
       "print raise range return try while with yield",
+  rules: _commonRules,
+);
+
+final toml = Language(
+  keywords: "",
   rules: _commonRules,
 );
 

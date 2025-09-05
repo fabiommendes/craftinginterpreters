@@ -127,10 +127,9 @@ questions:</p>
 <p>In Lox, <span name="value">values</span> are created by literals, computed by
 expressions, and stored in variables. The user sees these as <em>Lox</em> objects, but
 they are implemented in the underlying language our interpreter is written in.
-That means bridging the lands of Lox&rsquo;s dynamic typing and Java&rsquo;s static types. A
-variable in Lox can store a value of any (Lox) type, and can even store values
-of different types at different points in time. What Java type might we use to
-represent that?</p>
+That means bridging the lands of Lox&rsquo;s and Python&rsquo;s types. Both languages have
+dynamic and somewhat strict types, but this category is very broad and we often
+need to adjust for small differences in behavior between both languages.</p>
 <aside name="value">
 <p>Here, I&rsquo;m using &ldquo;value&rdquo; and &ldquo;object&rdquo; pretty much interchangeably.</p>
 <p>Later in the C interpreter we&rsquo;ll make a slight distinction between them, but
@@ -138,83 +137,82 @@ that&rsquo;s mostly to have unique terms for two different corners of the
 implementation<span class="em">&mdash;</span>in-place versus heap-allocated data. From the user&rsquo;s
 perspective, the terms are synonymous.</p>
 </aside>
-<p>Given a Java variable with that static type, we must also be able to determine
-which kind of value it holds at runtime. When the interpreter executes a <code>+</code>
-operator, it needs to tell if it is adding two numbers or concatenating two
-strings. Is there a Java type that can hold numbers, strings, Booleans, and
-more? Is there one that can tell us what its runtime type is? There is! Good old
-java.lang.Object.</p>
 <p>In places in the interpreter where we need to store a Lox value, we can use
-Object as the type. Java has boxed versions of its primitive types that all
-subclass Object, so we can use those for Lox&rsquo;s built-in types:</p><table>
+Python&rsquo;s <code>Any</code> from the <code>typing</code> module as the type. <code>Any</code>, as the name implies,
+declares a variable that can hold any type. There are many Python types that
+cannot be produced by Lox code, and we could be more precise by declaring a
+custom type that narrows exactly to the list of supported values. In this book,
+however, I prefer to keep things simple and accessible and avoid more advanced
+Python typing features.</p><table>
 <thead>
 <tr>
   <td>Lox type</td>
-  <td>Java representation</td>
+  <td>Python representation</td>
 </tr>
 </thead>
 <tbody>
 <tr>
   <td>Any Lox value</td>
-  <td>Object</td>
+  <td>Any</td>
 </tr>
 <tr>
   <td><code>nil</code></td>
-  <td><code>null</code></td>
+  <td><code>None</code></td>
 </tr>
 <tr>
   <td>Boolean</td>
-  <td>Boolean</td>
+  <td>bool</td>
 </tr>
 <tr>
   <td>number</td>
-  <td>Double</td>
+  <td>float</td>
 </tr>
 <tr>
   <td>string</td>
-  <td>String</td>
+  <td>str</td>
 </tr>
 </tbody>
 </table>
-<p>Given a value of static type Object, we can determine if the runtime value is a
-number or a string or whatever using Java&rsquo;s built-in <code>instanceof</code> operator. In
-other words, the <span name="jvm">JVM</span>&rsquo;s own object representation
-conveniently gives us everything we need to implement Lox&rsquo;s built-in types.
-We&rsquo;ll have to do a little more work later when we add Lox&rsquo;s notions of
-functions, classes, and instances, but Object and the boxed primitive classes
-are sufficient for the types we need right now.</p>
-<aside name="jvm">
-<p>Another thing we need to do with values is manage their memory, and Java does
+<p>Given a value, we can determine if the runtime value is a number or a string or
+whatever using Python&rsquo;s built-in <code>isinstance</code> function. In other words, the
+<span name="python">Python</span>&rsquo;s own object representation conveniently gives
+us everything we need to implement Lox&rsquo;s built-in types. We&rsquo;ll have to do a
+little more work later when we add Lox&rsquo;s notions of functions, classes, and
+instances, but Python&rsquo;s own primitives are sufficient for the types we need
+right now.</p>
+<aside name="python">
+<p>Another thing we need to do with values is manage their memory, and Python does
 that too. A handy object representation and a really nice garbage collector are
-the main reasons we&rsquo;re writing our first interpreter in Java.</p>
+the main reasons we&rsquo;re writing our first interpreter in Python.</p>
 </aside>
 <h2><a href="#evaluating-expressions" id="evaluating-expressions"><small>7&#8202;.&#8202;2</small>Evaluating Expressions</a></h2>
 <p>Next, we need blobs of code to implement the evaluation logic for each kind of
 expression we can parse. We could stuff that code into the syntax tree classes
 in something like an <code>interpret()</code> method. In effect, we could tell each syntax
-tree node, &ldquo;Interpret thyself&rdquo;. This is the Gang of Four&rsquo;s
-<a href="https://en.wikipedia.org/wiki/Interpreter_pattern">Interpreter design pattern</a>. It&rsquo;s a neat pattern, but like I mentioned
-earlier, it gets messy if we jam all sorts of logic into the tree classes.</p>
-<p>Instead, we&rsquo;re going to reuse our groovy <a href="representing-code.html#the-visitor-pattern">Visitor pattern</a>. In the previous
-chapter, we created an AstPrinter class. It took in a syntax tree and
-recursively traversed it, building up a string which it ultimately returned.
-That&rsquo;s almost exactly what a real interpreter does, except instead of
-concatenating strings, it computes values.</p>
-<p>We start with a new class.</p>
-<div class="codehilite"><div class="source-file"><em>lox/Interpreter.java</em><br>
-create new file</div>
-<pre><span class="k">package</span> <span class="i">com.craftinginterpreters.lox</span>;
+tree node, &ldquo;Interpret thyself&rdquo;. This is the Gang of Four&rsquo;s [Interpreter design
+pattern][]. It&rsquo;s a neat pattern, but like I mentioned earlier, it gets messy if
+we jam all sorts of logic into the tree classes.</p>
+<p>Instead, we&rsquo;re going to reuse our groovy <a href="representing-code.html#single-dispatch">Single dispatch</a> pattern. In the
+previous chapter, we created <code>pretty()</code> single dispatwch function. It took in a
+syntax tree and recursively traversed it, building up a string which it
+ultimately returned. That&rsquo;s almost exactly what a real interpreter does, except
+instead of concatenating strings, it computes values.</p>
+<p>We start with a new single dispatch method.</p>
+<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">eval</span>.<span class="i">py</span>
+<span class="k">from</span> <span class="i">functools</span> <span class="k">import</span> <span class="i">singledispatch</span>
+<span class="k">from</span> <span class="i">typing</span> <span class="k">import</span> <span class="t">Any</span>
+<span class="k">from</span> .<span class="i">expr</span> <span class="k">import</span> *
 
-<span class="k">class</span> <span class="t">Interpreter</span> <span class="k">implements</span> <span class="t">Expr</span>.<span class="t">Visitor</span>&lt;<span class="t">Object</span>&gt; {
-}
+@<span class="i">singledispatch</span>
+<span class="k">def</span> <span class="i">eval</span>(<span class="i">expr</span>: <span class="t">Expr</span>) -&gt; <span class="t">Any</span>:
+    <span class="k">raise</span> <span class="t">TypeError</span>(<span class="i">f</span><span class="s">&quot;cannot eval {expr.__class__.__name__} objects&quot;</span>)
 </pre></div>
-<div class="source-file-narrow"><em>lox/Interpreter.java</em>, create new file</div>
-
-<p>The class declares that it&rsquo;s a visitor. The return type of the visit methods
-will be Object, the root class that we use to refer to a Lox value in our Java
-code. To satisfy the Visitor interface, we need to define visit methods for each
-of the four expression tree classes our parser produces. We&rsquo;ll start with the
-simplest<span class="ellipse">&thinsp;.&thinsp;.&thinsp;.&nbsp;</span></p>
+<p>We call it <code>eval</code> to honour a tradition in many dynamic languages (including
+Python) that have a function named like so that dynamically interpret source
+strings of that language.</p>
+<p>The return type of the <code>eval</code> method will be <code>Any</code>, meaning that it can be any
+arbitrary Python value. We need to define implementations for each of the four
+expression tree classes our parser produces. We&rsquo;ll start with the simplest<span class="ellipse">&thinsp;.&thinsp;.&thinsp;.&nbsp;</span></p>
 <h3><a href="#evaluating-literals" id="evaluating-literals"><small>7&#8202;.&#8202;2&#8202;.&#8202;1</small>Evaluating literals</a></h3>
 <p>The leaves of an expression tree<span class="em">&mdash;</span>the atomic bits of syntax that all other
 expressions are composed of<span class="em">&mdash;</span>are <span name="leaf">literals</span>. Literals
@@ -230,55 +228,37 @@ expressions, which are also leaf nodes.</p>
 <p>So, much like we converted a literal <em>token</em> into a literal <em>syntax tree node</em>
 in the parser, now we convert the literal tree node into a runtime value. That
 turns out to be trivial.</p>
-<div class="codehilite"><div class="source-file"><em>lox/Interpreter.java</em><br>
-in class <em>Interpreter</em></div>
-<pre>  <span class="a">@Override</span>
-  <span class="k">public</span> <span class="t">Object</span> <span class="i">visitLiteralExpr</span>(<span class="t">Expr</span>.<span class="t">Literal</span> <span class="i">expr</span>) {
-    <span class="k">return</span> <span class="i">expr</span>.<span class="i">value</span>;
-  }
+<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">eval</span>.<span class="i">py</span> <span class="i">after</span> <span class="i">the</span> <span class="i">eval</span>() <span class="i">function</span>
+@<span class="i">eval</span>.<span class="i">register</span>
+<span class="k">def</span> <span class="i">_</span>(<span class="i">expr</span>: <span class="t">Literal</span>):
+    <span class="k">return</span> <span class="i">expr</span>.<span class="i">value</span>
 </pre></div>
-<div class="source-file-narrow"><em>lox/Interpreter.java</em>, in class <em>Interpreter</em></div>
-
 <p>We eagerly produced the runtime value way back during scanning and stuffed it in
-the token. The parser took that value and stuck it in the literal tree node,
-so to evaluate a literal, we simply pull it back out.</p>
+the token. The parser took that value and stuck it in the literal tree node, so
+to evaluate a literal, we simply pull it back out.</p>
 <h3><a href="#evaluating-parentheses" id="evaluating-parentheses"><small>7&#8202;.&#8202;2&#8202;.&#8202;2</small>Evaluating parentheses</a></h3>
 <p>The next simplest node to evaluate is grouping<span class="em">&mdash;</span>the node you get as a result
 of using explicit parentheses in an expression.</p>
-<div class="codehilite"><div class="source-file"><em>lox/Interpreter.java</em><br>
-in class <em>Interpreter</em></div>
-<pre>  <span class="a">@Override</span>
-  <span class="k">public</span> <span class="t">Object</span> <span class="i">visitGroupingExpr</span>(<span class="t">Expr</span>.<span class="t">Grouping</span> <span class="i">expr</span>) {
-    <span class="k">return</span> <span class="i">evaluate</span>(<span class="i">expr</span>.<span class="i">expression</span>);
-  }
+<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">eval</span>.<span class="i">py</span> <span class="i">after</span> <span class="i">the</span> <span class="i">eval</span>() <span class="i">function</span>
+@<span class="i">eval</span>.<span class="i">register</span>
+<span class="k">def</span> <span class="i">_</span>(<span class="i">expr</span>: <span class="t">Grouping</span>):
+    <span class="k">return</span> <span class="i">eval</span>(<span class="i">expr</span>.<span class="i">expression</span>)
 </pre></div>
-<div class="source-file-narrow"><em>lox/Interpreter.java</em>, in class <em>Interpreter</em></div>
-
 <p>A <span name="grouping">grouping</span> node has a reference to an inner node
 for the expression contained inside the parentheses. To evaluate the grouping
 expression itself, we recursively evaluate that subexpression and return it.</p>
-<p>We rely on this helper method which simply sends the expression back into the
-interpreter&rsquo;s visitor implementation:</p>
 <aside name="grouping">
 <p>Some parsers don&rsquo;t define tree nodes for parentheses. Instead, when parsing a
 parenthesized expression, they simply return the node for the inner expression.
 We do create a node for parentheses in Lox because we&rsquo;ll need it later to
 correctly handle the left-hand sides of assignment expressions.</p>
 </aside>
-<div class="codehilite"><div class="source-file"><em>lox/Interpreter.java</em><br>
-in class <em>Interpreter</em></div>
-<pre>  <span class="k">private</span> <span class="t">Object</span> <span class="i">evaluate</span>(<span class="t">Expr</span> <span class="i">expr</span>) {
-    <span class="k">return</span> <span class="i">expr</span>.<span class="i">accept</span>(<span class="k">this</span>);
-  }
-</pre></div>
-<div class="source-file-narrow"><em>lox/Interpreter.java</em>, in class <em>Interpreter</em></div>
-
-<h3><a href="#evaluating-unary-expressions" id="evaluating-unary-expressions"><small>7&#8202;.&#8202;2&#8202;.&#8202;3</small>Evaluating unary expressions</a></h3>
+<h3><a href="#evaluating-unary-expressions-#todo" id="evaluating-unary-expressions-#todo"><small>7&#8202;.&#8202;2&#8202;.&#8202;3</small>Evaluating unary expressions (#TODO)</a></h3>
 <p>Like grouping, unary expressions have a single subexpression that we must
 evaluate first. The difference is that the unary expression itself does a little
 work afterwards.</p>
 <div class="codehilite"><div class="source-file"><em>lox/Interpreter.java</em><br>
-add after <em>visitLiteralExpr</em>()</div>
+create new file</div>
 <pre>  <span class="a">@Override</span>
   <span class="k">public</span> <span class="t">Object</span> <span class="i">visitUnaryExpr</span>(<span class="t">Expr</span>.<span class="t">Unary</span> <span class="i">expr</span>) {
     <span class="t">Object</span> <span class="i">right</span> = <span class="i">evaluate</span>(<span class="i">expr</span>.<span class="i">right</span>);
@@ -292,7 +272,7 @@ add after <em>visitLiteralExpr</em>()</div>
     <span class="k">return</span> <span class="k">null</span>;
   }
 </pre></div>
-<div class="source-file-narrow"><em>lox/Interpreter.java</em>, add after <em>visitLiteralExpr</em>()</div>
+<div class="source-file-narrow"><em>lox/Interpreter.java</em>, create new file</div>
 
 <p>First, we evaluate the operand expression. Then we apply the unary operator
 itself to the result of that. There are two different unary expressions,
@@ -343,8 +323,8 @@ falsey too.</p>
 non-empty strings are truthy.</p>
 <p>Get all that?</p>
 </aside>
-<p>Lox follows Ruby&rsquo;s simple rule: <code>false</code> and <code>nil</code> are falsey, and everything else
-is truthy. We implement that like so:</p>
+<p>Lox follows Ruby&rsquo;s simple rule: <code>false</code> and <code>nil</code> are falsey, and everything
+else is truthy. We implement that like so:</p>
 <div class="codehilite"><div class="source-file"><em>lox/Interpreter.java</em><br>
 add after <em>visitUnaryExpr</em>()</div>
 <pre>  <span class="k">private</span> <span class="t">boolean</span> <span class="i">isTruthy</span>(<span class="t">Object</span> <span class="i">object</span>) {
@@ -359,7 +339,7 @@ add after <em>visitUnaryExpr</em>()</div>
 <p>On to the last expression tree class, binary operators. There&rsquo;s a handful of
 them, and we&rsquo;ll start with the arithmetic ones.</p>
 <div class="codehilite"><div class="source-file"><em>lox/Interpreter.java</em><br>
-add after <em>evaluate</em>()</div>
+add to top of file</div>
 <pre>  <span class="a">@Override</span>
   <span class="k">public</span> <span class="t">Object</span> <span class="i">visitBinaryExpr</span>(<span class="t">Expr</span>.<span class="t">Binary</span> <span class="i">expr</span>) {
     <span class="t">Object</span> <span class="i">left</span> = <span class="i">evaluate</span>(<span class="i">expr</span>.<span class="i">left</span>);
@@ -378,13 +358,13 @@ add after <em>evaluate</em>()</div>
     <span class="k">return</span> <span class="k">null</span>;
   }
 </pre></div>
-<div class="source-file-narrow"><em>lox/Interpreter.java</em>, add after <em>evaluate</em>()</div>
+<div class="source-file-narrow"><em>lox/Interpreter.java</em>, add to top of file</div>
 
 <aside name="left">
-<p>Did you notice we pinned down a subtle corner of the language semantics here?
-In a binary expression, we evaluate the operands in left-to-right order. If
-those operands have side effects, that choice is user visible, so this isn&rsquo;t
-simply an implementation detail.</p>
+<p>Did you notice we pinned down a subtle corner of the language semantics here? In
+a binary expression, we evaluate the operands in left-to-right order. If those
+operands have side effects, that choice is user visible, so this isn&rsquo;t simply an
+implementation detail.</p>
 <p>If we want our two interpreters to be consistent (hint: we do), we&rsquo;ll need to
 make sure clox does the same thing.</p>
 </aside>
@@ -452,8 +432,7 @@ in <em>visitBinaryExpr</em>()</div>
 
 <p>Unlike the comparison operators which require numbers, the equality operators
 support operands of any type, even mixed ones. You can&rsquo;t ask Lox if 3 is <em>less</em>
-than <code>"three"</code>, but you can ask if it&rsquo;s <span name="equal"><em>equal</em></span> to
-it.</p>
+than <code>"three"</code>, but you can ask if it&rsquo;s <span name="equal"><em>equal</em></span> to it.</p>
 <aside name="equal">
 <p>Spoiler alert: it&rsquo;s not.</p>
 </aside>
@@ -502,8 +481,8 @@ gracefully.</p>
 <aside name="fail">
 <p>We could simply not detect or report a type error at all. This is what C does if
 you cast a pointer to some type that doesn&rsquo;t match the data that is actually
-being pointed to. C gains flexibility and speed by allowing that, but is
-also famously dangerous. Once you misinterpret bits in memory, all bets are off.</p>
+being pointed to. C gains flexibility and speed by allowing that, but is also
+famously dangerous. Once you misinterpret bits in memory, all bets are off.</p>
 <p>Few modern languages accept unsafe operations like that. Instead, most are
 <strong>memory safe</strong> and ensure<span class="em">&mdash;</span>through a combination of static and runtime checks<span class="em">&mdash;</span>that a program can never incorrectly interpret the value stored in a piece of
 memory.</p>
@@ -704,7 +683,7 @@ drives it.</p>
 work happens. We need to wrap a skin around them to interface with the rest of
 the program. The Interpreter&rsquo;s public API is simply one method.</p>
 <div class="codehilite"><div class="source-file"><em>lox/Interpreter.java</em><br>
-in class <em>Interpreter</em></div>
+add to top of file</div>
 <pre>  <span class="t">void</span> <span class="i">interpret</span>(<span class="t">Expr</span> <span class="i">expression</span>) {<span name="void"> </span>
     <span class="k">try</span> {
       <span class="t">Object</span> <span class="i">value</span> = <span class="i">evaluate</span>(<span class="i">expression</span>);
@@ -714,7 +693,7 @@ in class <em>Interpreter</em></div>
     }
   }
 </pre></div>
-<div class="source-file-narrow"><em>lox/Interpreter.java</em>, in class <em>Interpreter</em></div>
+<div class="source-file-narrow"><em>lox/Interpreter.java</em>, add to top of file</div>
 
 <p>This takes in a syntax tree for an expression and evaluates it. If that
 succeeds, <code>evaluate()</code> returns an object for the result value. <code>interpret()</code>
@@ -833,8 +812,8 @@ replace 1 line</div>
 </pre></div>
 <div class="source-file-narrow"><em>lox/Lox.java</em>, in <em>run</em>(), replace 1 line</div>
 
-<p>We have an entire language pipeline now: scanning, parsing, and
-execution. Congratulations, you now have your very own arithmetic calculator.</p>
+<p>We have an entire language pipeline now: scanning, parsing, and execution.
+Congratulations, you now have your very own arithmetic calculator.</p>
 <p>As you can see, the interpreter is pretty bare bones. But the Interpreter class
 and the Visitor pattern we&rsquo;ve set up today form the skeleton that later chapters
 will stuff full of interesting guts<span class="em">&mdash;</span>variables, functions, etc. Right now, the
@@ -890,8 +869,8 @@ subtyping rules for arrays allow operations that are not sound. Consider:</p>
 </pre></div>
 <p>This code compiles without any errors. The first line upcasts the Integer array
 and stores it in a variable of type Object array. The second line stores a
-string in one of its cells. The Object array type statically allows that<span class="em">&mdash;</span>strings <em>are</em> Objects<span class="em">&mdash;</span>but the actual Integer array that <code>stuff</code> refers to
-at runtime should never have a string in it! To avoid that catastrophe, when you
+string in one of its cells. The Object array type statically allows that<span class="em">&mdash;</span>strings <em>are</em> Objects<span class="em">&mdash;</span>but the actual Integer array that <code>stuff</code> refers to at
+runtime should never have a string in it! To avoid that catastrophe, when you
 store a value in an array, the JVM does a <em>runtime</em> check to make sure it&rsquo;s an
 allowed type. If not, it throws an ArrayStoreException.</p>
 <p>Java could have avoided the need to check this at runtime by disallowing the

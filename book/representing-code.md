@@ -1,6 +1,5 @@
 > To dwellers in a wood, almost every species of tree has its voice as well as
-> its feature.
-> <cite>Thomas Hardy, <em>Under the Greenwood Tree</em></cite>
+> its feature. <cite>Thomas Hardy, <em>Under the Greenwood Tree</em></cite>
 
 In the [last chapter][scanning], we took the raw source code as a string and
 transformed it into a slightly higher-level representation: a series of tokens.
@@ -24,11 +23,11 @@ that I kept stuffing more fun ideas into it until I ran out of room.
 </aside>
 
 Before we do all that, let's focus on the main goal -- a representation for
-code. It should be simple for the parser to produce and easy for the
-interpreter to consume. If you haven't written a parser or interpreter yet,
-those requirements aren't exactly illuminating. Maybe your intuition can help.
-What is your brain doing when you play the part of a *human* interpreter? How do
-you mentally evaluate an arithmetic expression like this:
+code. It should be simple for the parser to produce and easy for the interpreter
+to consume. If you haven't written a parser or interpreter yet, those
+requirements aren't exactly illuminating. Maybe your intuition can help. What is
+your brain doing when you play the part of a _human_ interpreter? How do you
+mentally evaluate an arithmetic expression like this:
 
 ```lox
 1 + 2 * 3 - 4
@@ -44,7 +43,7 @@ branches for each of their operands.
 
 In order to evaluate an arithmetic node, you need to know the numeric values of
 its subtrees, so you have to evaluate those first. That means working your way
-from the leaves up to the root -- a *post-order* traversal:
+from the leaves up to the root -- a _post-order_ traversal:
 
 <span name="tree-steps"></span>
 
@@ -70,7 +69,7 @@ nesting -- of the language.
 
 <aside name="only">
 
-That's not to say a tree is the *only* possible representation of our code. In
+That's not to say a tree is the _only_ possible representation of our code. In
 [Part III][], we'll generate bytecode, another representation that isn't as
 human friendly but is closer to the machine.
 
@@ -81,24 +80,24 @@ human friendly but is closer to the machine.
 We need to get more precise about what that grammar is then. Like lexical
 grammars in the last chapter, there is a long ton of theory around syntactic
 grammars. We're going into that theory a little more than we did when scanning
-because it turns out to be a useful tool throughout much of the interpreter.
-We start by moving one level up the [Chomsky hierarchy][]...
+because it turns out to be a useful tool throughout much of the interpreter. We
+start by moving one level up the [Chomsky hierarchy][]...
 
 [chomsky hierarchy]: https://en.wikipedia.org/wiki/Chomsky_hierarchy
 
 ## Context-Free Grammars
 
 In the last chapter, the formalism we used for defining the lexical grammar --
-the rules for how characters get grouped into tokens -- was called a *regular
-language*. That was fine for our scanner, which emits a flat sequence of tokens.
+the rules for how characters get grouped into tokens -- was called a _regular
+language_. That was fine for our scanner, which emits a flat sequence of tokens.
 But regular languages aren't powerful enough to handle expressions which can
 nest arbitrarily deeply.
 
 We need a bigger hammer, and that hammer is a **context-free grammar**
-(**CFG**). It's the next heaviest tool in the toolbox of
-**[formal grammars][]**. A formal grammar takes a set of atomic pieces it calls
-its "alphabet". Then it defines a (usually infinite) set of "strings" that are
-"in" the grammar. Each string is a sequence of "letters" in the alphabet.
+(**CFG**). It's the next heaviest tool in the toolbox of **[formal
+grammars][]**. A formal grammar takes a set of atomic pieces it calls its
+"alphabet". Then it defines a (usually infinite) set of "strings" that are "in"
+the grammar. Each string is a sequence of "letters" in the alphabet.
 
 [formal grammars]: https://en.wikipedia.org/wiki/Formal_grammar
 
@@ -107,7 +106,7 @@ from lexical to syntactic grammars. In our scanner's grammar, the alphabet
 consists of individual characters and the strings are the valid lexemes --
 roughly "words". In the syntactic grammar we're talking about now, we're at a
 different level of granularity. Now each "letter" in the alphabet is an entire
-token and a "string" is a sequence of *tokens* -- an entire expression.
+token and a "string" is a sequence of _tokens_ -- an entire expression.
 
 Oof. Maybe a table will help:
 
@@ -154,12 +153,12 @@ strings? We obviously can't list them all out. Instead, we create a finite set
 of rules. You can think of them as a game that you can "play" in one of two
 directions.
 
-If you start with the rules, you can use them to *generate* strings that are in
+If you start with the rules, you can use them to _generate_ strings that are in
 the grammar. Strings created this way are called **derivations** because each is
-*derived* from the rules of the grammar. In each step of the game, you pick a
+_derived_ from the rules of the grammar. In each step of the game, you pick a
 rule and follow what it tells you to do. Most of the lingo around formal
 grammars comes from playing them in this direction. Rules are called
-**productions** because they *produce* strings in the grammar.
+**productions** because they _produce_ strings in the grammar.
 
 Each production in a context-free grammar has a **head** -- its <span
 name="name">name</span> -- and a **body**, which describes what it generates. In
@@ -176,18 +175,17 @@ sequence of symbols in the head as well as in the body.
 
 </aside>
 
-*   A **terminal** is a letter from the grammar's alphabet. You can think of it
-    like a literal value. In the syntactic grammar we're defining, the terminals
-    are individual lexemes -- tokens coming from the scanner like `if` or
-    `1234`.
+- A **terminal** is a letter from the grammar's alphabet. You can think of it
+  like a literal value. In the syntactic grammar we're defining, the terminals
+  are individual lexemes -- tokens coming from the scanner like `if` or `1234`.
 
-    These are called "terminals", in the sense of an "end point" because they
-    don't lead to any further "moves" in the game. You simply produce that one
-    symbol.
+  These are called "terminals", in the sense of an "end point" because they
+  don't lead to any further "moves" in the game. You simply produce that one
+  symbol.
 
-*   A **nonterminal** is a named reference to another rule in the grammar. It
-    means "play that rule and insert whatever it produces here". In this way,
-    the grammar composes.
+- A **nonterminal** is a named reference to another rule in the grammar. It
+  means "play that rule and insert whatever it produces here". In this way, the
+  grammar composes.
 
 There is one last refinement: you may have multiple rules with the same name.
 When you reach a nonterminal with that name, you are allowed to pick any of the
@@ -195,7 +193,7 @@ rules for it, whichever floats your boat.
 
 To make this concrete, we need a <span name="turtles">way</span> to write down
 these production rules. People have been trying to crystallize grammar all the
-way back to Pāṇini's *Ashtadhyayi*, which codified Sanskrit grammar a mere
+way back to Pāṇini's _Ashtadhyayi_, which codified Sanskrit grammar a mere
 couple thousand years ago. Not much progress happened until John Backus and
 company needed a notation for specifying ALGOL 58 and came up with
 [**Backus-Naur form**][bnf] (**BNF**). Since then, nearly everyone uses some
@@ -211,7 +209,7 @@ words.
 <aside name="turtles">
 
 Yes, we need to define a syntax to use for the rules that define our syntax.
-Should we specify that *metasyntax* too? What notation do we use for *it?* It's
+Should we specify that _metasyntax_ too? What notation do we use for _it?_ It's
 languages all the way down!
 
 </aside>
@@ -280,10 +278,10 @@ not regular.
 
 Imagine that we've recursively expanded the `breakfast` rule here several times,
 like "bacon with bacon with bacon with..." In order to complete the string
-correctly, we need to add an *equal* number of "on the side" bits to the end.
+correctly, we need to add an _equal_ number of "on the side" bits to the end.
 Tracking the number of required trailing parts is beyond the capabilities of a
-regular grammar. Regular grammars can express *repetition*, but they can't *keep
-count* of how many repetitions there are, which is necessary to ensure that the
+regular grammar. Regular grammars can express _repetition_, but they can't _keep
+count_ of how many repetitions there are, which is necessary to ensure that the
 string has the same number of `with` and `on the side` parts.
 
 </aside>
@@ -315,52 +313,50 @@ good language designer, we'll sprinkle a little syntactic sugar on top -- some
 extra convenience notation. In addition to terminals and nonterminals, we'll
 allow a few other kinds of expressions in the body of a rule:
 
-*   Instead of repeating the rule name each time we want to add another
-    production for it, we'll allow a series of productions separated by a pipe
-    (`|`).
+- Instead of repeating the rule name each time we want to add another production
+  for it, we'll allow a series of productions separated by a pipe (`|`).
 
-    ```ebnf
-    bread → "toast" | "biscuits" | "English muffin" ;
-    ```
+  ```ebnf
+  bread → "toast" | "biscuits" | "English muffin" ;
+  ```
 
-*   Further, we'll allow parentheses for grouping and then allow `|` within that
-    to select one from a series of options within the middle of a production.
+- Further, we'll allow parentheses for grouping and then allow `|` within that
+  to select one from a series of options within the middle of a production.
 
-    ```ebnf
-    protein → ( "scrambled" | "poached" | "fried" ) "eggs" ;
-    ```
+  ```ebnf
+  protein → ( "scrambled" | "poached" | "fried" ) "eggs" ;
+  ```
 
-*   Using recursion to support repeated sequences of symbols has a certain
-    appealing <span name="purity">purity</span>, but it's kind of a chore to
-    make a separate named sub-rule each time we want to loop. So, we also use a
-    postfix `*` to allow the previous symbol or group to be repeated zero or
-    more times.
+- Using recursion to support repeated sequences of symbols has a certain
+  appealing <span name="purity">purity</span>, but it's kind of a chore to make
+  a separate named sub-rule each time we want to loop. So, we also use a postfix
+  `*` to allow the previous symbol or group to be repeated zero or more times.
 
-    ```ebnf
-    crispiness → "really" "really"* ;
-    ```
+  ```ebnf
+  crispiness → "really" "really"* ;
+  ```
 
 <aside name="purity">
 
 This is how the Scheme programming language works. It has no built-in looping
-functionality at all. Instead, *all* repetition is expressed in terms of
+functionality at all. Instead, _all_ repetition is expressed in terms of
 recursion.
 
 </aside>
 
-*   A postfix `+` is similar, but requires the preceding production to appear
-    at least once.
+- A postfix `+` is similar, but requires the preceding production to appear at
+  least once.
 
-    ```ebnf
-    crispiness → "really"+ ;
-    ```
+  ```ebnf
+  crispiness → "really"+ ;
+  ```
 
-*   A postfix `?` is for an optional production. The thing before it can appear
-    zero or one time, but not more.
+- A postfix `?` is for an optional production. The thing before it can appear
+  zero or one time, but not more.
 
-    ```ebnf
-    breakfast → protein ( "with" breakfast "on the side" )? ;
-    ```
+  ```ebnf
+  breakfast → protein ( "with" breakfast "on the side" )? ;
+  ```
 
 With all of those syntactic niceties, our breakfast grammar condenses down to:
 
@@ -407,15 +403,15 @@ chapters. Once we have that mini-language represented, parsed, and interpreted,
 then later chapters will progressively add new features to it, including the new
 syntax. For now, we are going to worry about only a handful of expressions:
 
-*   **Literals.** Numbers, strings, Booleans, and `nil`.
+- **Literals.** Numbers, strings, Booleans, and `nil`.
 
-*   **Unary expressions.** A prefix `!` to perform a logical not, and `-` to
-    negate a number.
+- **Unary expressions.** A prefix `!` to perform a logical not, and `-` to
+  negate a number.
 
-*   **Binary expressions.** The infix arithmetic (`+`, `-`, `*`, `/`) and logic
-    operators (`==`, `!=`, `<`, `<=`, `>`, `>=`) we know and love.
+- **Binary expressions.** The infix arithmetic (`+`, `-`, `*`, `/`) and logic
+  operators (`==`, `!=`, `<`, `<=`, `>`, `>=`) we know and love.
 
-*   **Parentheses.** A pair of `(` and `)` wrapped around an expression.
+- **Parentheses.** A pair of `(` and `)` wrapped around an expression.
 
 That gives us enough syntax for expressions like:
 
@@ -478,7 +474,7 @@ distinguish the different kinds -- think the number `123` versus the string
 name="token-data">homogeneous</span>. Unary expressions have a single operand,
 binary expressions have two, and literals have none.
 
-We *could* mush that all together into a single Expression class with an
+We _could_ mush that all together into a single Expression class with an
 arbitrary list of children. Some compilers do. But I like getting the most out
 of Java's type system. So we'll define a base class for expressions. Then, for
 each kind of expression -- each production under `expression` -- we create a
@@ -497,24 +493,33 @@ keep things simpler.
 
 Something like this:
 
-```java
-package com.craftinginterpreters.lox;
+```python
+# lox/expr.py
+from dataclasses import dataclass
+from typing import Any
+from .tokens import Token
 
-abstract class Expr { // [expr]
-  static class Binary extends Expr {
-    Binary(Expr left, Token operator, Expr right) {
-      this.left = left;
-      this.operator = operator;
-      this.right = right;
-    }
+class Expr:
+    """Abstract Base Class for expressions"""
 
-    final Expr left;
-    final Token operator;
-    final Expr right;
-  }
+@dataclass
+class Binary(Expr):
+    left: Expr
+    operator: Token
+    right: Expr
 
-  // Other expressions...
-}
+@dataclass
+class Grouping(Expr):
+    expression: Expr
+
+@dataclass
+class Literal(Expr):
+    value: Any
+
+@dataclass
+class Unary(Expr):
+    operator: Token
+    right: Expr
 ```
 
 <aside name="expr">
@@ -525,133 +530,35 @@ ubiquitous that I may as well start getting you used to them now.
 
 </aside>
 
-Expr is the base class that all expression classes inherit from. As you can see
-from `Binary`, the subclasses are nested inside of it. There's no technical need
-for this, but it lets us cram all of the classes into a single Java file.
+Expr is the base class that all expression classes inherit from.
 
 ### Disoriented objects
 
 You'll note that, much like the Token class, there aren't any methods here. It's
 a dumb structure. Nicely typed, but merely a bag of data. This feels strange in
-an object-oriented language like Java. Shouldn't the class *do stuff*?
+an object-oriented architecture. Shouldn't the class _do stuff_?
 
 The problem is that these tree classes aren't owned by any single domain. Should
 they have methods for parsing since that's where the trees are created? Or
 interpreting since that's where they are consumed? Trees span the border between
-those territories, which means they are really owned by *neither*.
+those territories, which means they are really owned by _neither_.
 
 In fact, these types exist to enable the parser and interpreter to
-*communicate*. That lends itself to types that are simply data with no
+_communicate_. That lends itself to types that are simply data with no
 associated behavior. This style is very natural in functional languages like
-Lisp and ML where *all* data is separate from behavior, but it feels odd in
+Lisp and ML where _all_ data is separate from behavior, but it feels odd in
 Java.
 
 Functional programming aficionados right now are jumping up to exclaim "See!
 Object-oriented languages are a bad fit for an interpreter!" I won't go that
 far. You'll recall that the scanner itself was admirably suited to
 object-orientation. It had all of the mutable state to keep track of where it
-was in the source code, a well-defined set of public methods, and a handful of
-private helpers.
+was in the source code, a well-defined set of public methods, and a of private
+helpers.
 
 My feeling is that each phase or part of the interpreter works fine in an
 object-oriented style. It is the data structures that flow between them that are
 stripped of behavior.
-
-### Metaprogramming the trees
-
-Java can express behavior-less classes, but I wouldn't say that it's
-particularly great at it. Eleven lines of code to stuff three fields in an
-object is pretty tedious, and when we're all done, we're going to have 21 of
-these classes.
-
-I don't want to waste your time or my ink writing all that down. Really, what is
-the essence of each subclass? A name, and a list of typed fields. That's it.
-We're smart language hackers, right? Let's <span
-name="automate">automate</span>.
-
-<aside name="automate">
-
-Picture me doing an awkward robot dance when you read that. "AU-TO-MATE."
-
-</aside>
-
-Instead of tediously handwriting each class definition, field declaration,
-constructor, and initializer, we'll hack together a <span
-name="python">script</span> that does it for us. It has a description of each
-tree type -- its name and fields -- and it prints out the Java code needed to
-define a class with that name and state.
-
-This script is a tiny Java command-line app that generates a file named
-"Expr.java":
-
-<aside name="python">
-
-I got the idea of scripting the syntax tree classes from Jim Hugunin, creator of
-Jython and IronPython.
-
-An actual scripting language would be a better fit for this than Java, but I'm
-trying not to throw too many languages at you.
-
-</aside>
-
-^code generate-ast
-
-Note that this file is in a different package, `.tool` instead of `.lox`. This
-script isn't part of the interpreter itself. It's a tool *we*, the people
-hacking on the interpreter, run ourselves to generate the syntax tree classes.
-When it's done, we treat "Expr.java" like any other file in the implementation.
-We are merely automating how that file gets authored.
-
-To generate the classes, it needs to have some description of each type and its
-fields.
-
-^code call-define-ast (1 before, 1 after)
-
-For brevity's sake, I jammed the descriptions of the expression types into
-strings. Each is the name of the class followed by `:` and the list of fields,
-separated by commas. Each field has a type and a name.
-
-The first thing `defineAst()` needs to do is output the base Expr class.
-
-^code define-ast
-
-When we call this, `baseName` is "Expr", which is both the name of the class and
-the name of the file it outputs. We pass this as an argument instead of
-hardcoding the name because we'll add a separate family of classes later for
-statements.
-
-Inside the base class, we define each subclass.
-
-^code nested-classes (2 before, 1 after)
-
-<aside name="robust">
-
-This isn't the world's most elegant string manipulation code, but that's fine.
-It only runs on the exact set of class definitions we give it. Robustness ain't
-a priority.
-
-</aside>
-
-That code, in turn, calls:
-
-^code define-type
-
-There we go. All of that glorious Java boilerplate is done. It declares each
-field in the class body. It defines a constructor for the class with parameters
-for each field and initializes them in the body.
-
-Compile and run this Java program now and it <span name="longer">blasts</span>
-out a new &ldquo;.java" file containing a few dozen lines of code. That file's
-about to get even longer.
-
-<aside name="longer">
-
-[Appendix II][] contains the code generated by this script once we've finished
-implementing jlox and defined all of its syntax tree nodes.
-
-[appendix ii]: appendix-ii.html
-
-</aside>
 
 ## Working with Trees
 
@@ -659,34 +566,36 @@ Put on your imagination hat for a moment. Even though we aren't there yet,
 consider what the interpreter will do with the syntax trees. Each kind of
 expression in Lox behaves differently at runtime. That means the interpreter
 needs to select a different chunk of code to handle each expression type. With
-tokens, we can simply switch on the TokenType. But we don't have a "type" enum
-for the syntax trees, just a separate Java class for each one.
+tokens, we simply matched on the TokenType.
 
-We could write a long chain of type tests:
+Similarly, we can use the match statement to match and deconstruct each node of
+the tree:
 
-```java
-if (expr instanceof Expr.Binary) {
-  // ...
-} else if (expr instanceof Expr.Grouping) {
-  // ...
-} else // ...
+```python
+match expr:
+    case Binary(left, operator, right):
+        ...
+    case Grouping(expr):
+        ...
+    # ...
 ```
 
-But all of those sequential type tests are slow. Expression types whose names
-are alphabetically later would take longer to execute because they'd fall
-through more `if` cases before finding the right type. That's not my idea of an
-elegant solution.
+Unfortunally, Python treats each cases sequentially, as if it was a chain of
+if/else statements. But all of those sequential tests are slow. Expression types
+whose names are alphabetically later would take longer to execute because they'd
+fall through more `case` tests before finding the right type. That's not my idea
+of an elegant solution.
 
 We have a family of classes and we need to associate a chunk of behavior with
-each one. The natural solution in an object-oriented language like Java is to
-put those behaviors into methods on the classes themselves. We could add an
-abstract <span name="interpreter-pattern">`interpret()`</span> method on Expr
-which each subclass would then implement to interpret itself.
+each one. The natural solution in an object-oriented language would be to put
+those behaviors into methods on the classes themselves. We could add an abstract
+<span name="interpreter-pattern">`interpret()`</span> method on Expr which each
+subclass would then implement to interpret itself.
 
 <aside name="interpreter-pattern">
 
 This exact thing is literally called the ["Interpreter pattern"][interp] in
-*Design Patterns: Elements of Reusable Object-Oriented Software*, by Erich
+_Design Patterns: Elements of Reusable Object-Oriented Software_, by Erich
 Gamma, et al.
 
 [interp]: https://en.wikipedia.org/wiki/Interpreter_pattern
@@ -727,14 +636,14 @@ together as methods inside the same class.
 
 This makes it easy to extend the table by adding new rows. Simply define a new
 class. No existing code has to be touched. But imagine if you want to add a new
-*operation* -- a new column. In Java, that means cracking open each of those
-existing classes and adding a method to it.
+_operation_ -- a new column. In pure object oriented designs, that means
+cracking open each of those existing classes and adding a method to it.
 
 Functional paradigm languages in the <span name="ml">ML</span> family flip that
 around. There, you don't have classes with methods. Types and functions are
 totally distinct. To implement an operation for a number of different types, you
-define a single function. In the body of that function, you use *pattern
-matching* -- sort of a type-based switch on steroids -- to implement the
+define a single function. In the body of that function, you use _pattern
+matching_ -- sort of a type-based switch on steroids -- to implement the
 operation for each type all in one place.
 
 <aside name="ml">
@@ -758,19 +667,19 @@ But, conversely, adding a new type is hard. You have to go back and add a new
 case to all of the pattern matches in all of the existing functions.
 
 Each style has a certain "grain" to it. That's what the paradigm name literally
-says -- an object-oriented language wants you to *orient* your code along the
+says -- an object-oriented language wants you to _orient_ your code along the
 rows of types. A functional language instead encourages you to lump each
-column's worth of code together into a *function*.
+column's worth of code together into a _function_.
 
 A bunch of smart language nerds noticed that neither style made it easy to add
-*both* rows and columns to the <span name="multi">table</span>. They called this
+_both_ rows and columns to the <span name="multi">table</span>. They called this
 difficulty the "expression problem" because -- like we are now -- they first ran
 into it when they were trying to figure out the best way to model expression
 syntax tree nodes in a compiler.
 
 <aside name="multi">
 
-Languages with *multimethods*, like Common Lisp's CLOS, Dylan, and Julia do
+Languages with _multimethods_, like Common Lisp's CLOS, Dylan, and Julia do
 support adding both new types and operations easily. What they typically
 sacrifice is either static type checking, or separate compilation.
 
@@ -783,30 +692,44 @@ language whose orientation matches the natural architectural seams in the
 program we're writing.
 
 Object-orientation works fine for many parts of our interpreter, but these tree
-classes rub against the grain of Java. Fortunately, there's a design pattern we
-can bring to bear on it.
+classes rub against the grain of object-orientation. Fortunately, Python also
+supports functional programming and we can choose the paradigm that best fits
+each sittuation.
 
-### The Visitor pattern
+### Single dispatch
 
-The **Visitor pattern** is the most widely misunderstood pattern in all of
-*Design Patterns*, which is really saying something when you look at the
-software architecture excesses of the past couple of decades.
+The naive approach to our problem would be to implement an `interpret`
+standalone function using a match/case as hinted before:
 
-The trouble starts with terminology. The pattern isn't about "visiting", and the
-"accept" method in it doesn't conjure up any helpful imagery either. Many think
-the pattern has to do with traversing trees, which isn't the case at all. We
-*are* going to use it on a set of classes that are tree-like, but that's a
-coincidence. As you'll see, the pattern works as well on a single object.
+```python
+def interpret(expr: Expr) -> Any:
+    match expr:
+        case Binary(left, operator, right):
+            return ...
+        case Grouping(expr):
+            return ...
+        # ...
+```
 
-The Visitor pattern is really about approximating the functional style within an
-OOP language. It lets us add new columns to that table easily. We can define all
-of the behavior for a new operation on a set of types in one place, without
-having to touch the types themselves. It does this the same way we solve almost
-every problem in computer science: by adding a layer of indirection.
+As I mentioned before, this approach suffers from a serious performance problem:
+each case is tested sequentially. This means that as the number of cases grows,
+the cost of interpretation grows proportionally.
 
-Before we apply it to our auto-generated Expr classes, let's walk through a
-simpler example. Say we have two kinds of pastries: <span
-name="beignet">beignets</span> and crullers.
+The scanner loop has exactly the same problem, however we generally expect much
+tighter loops during _interpretation_ than during _parsing_. A small piece file
+with only a few lines of code may easily implement a loop that repeat millions
+of times. On the other hand, it is not so common to bump into Lox files with
+millions bytes.
+
+The Python standard library has a neat solution to this problem using
+`functools.singledispatch`. Single dispatch works similarly to the method
+dispatch for classes. It associates an implementation function to each class and
+its descendants and, but each implementation does not have to live in the class
+body.
+
+Before we apply it to our Expr classes, let's walk through a simpler example.
+Say we have two kinds of pastries: <span name="beignet">beignets</span> and
+crullers.
 
 <aside name="beignet">
 
@@ -822,108 +745,60 @@ previous night's revelry.
 
 </aside>
 
-^code pastries (no location)
+```python
+
+class Pastry:
+    ...
+
+class Beignet(Pastry):
+    ...
+
+class Cruller(Pastry):
+    ...
+```
 
 We want to be able to define new pastry operations -- cooking them, eating them,
 decorating them, etc. -- without having to add a new method to each class every
-time. Here's how we do it. First, we define a separate interface.
+time. Here's how we do it. First, we define the fallback for the desired
+operation. If there is no universal fallback, we simply raise a TypeError.
 
-^code pastry-visitor (no location)
+```python
+from functools import singledispatch
 
-<aside name="overload">
+@singledispatch
+def cook(obj: Pastry):
+    msg = f"cannot cook {obj.__class__.__name__} objects"
+    raise TypeError(msg)
+```
 
-In *Design Patterns*, both of these methods are confusingly named `visit()`, and
-they rely on overloading to distinguish them. This leads some readers to think
-that the correct visit method is chosen *at runtime* based on its parameter
-type. That isn't the case. Unlike over*riding*, over*loading* is statically
-dispatched at compile time.
+Then we provide a separate implementatation for each of the supported types:
 
-Using distinct names for each method makes the dispatch more obvious, and also
-shows you how to apply this pattern in languages that don't support overloading.
+```python
+@cook.register:
+def _(obj: Beignet):
+    print("Cooking a Beignet")
 
-</aside>
+@cook.register:
+def _(obj: Cruller):
+    print("Cooking a Cruller")
+```
 
-Each operation that can be performed on pastries is a new class that implements
-that interface. It has a concrete method for each type of pastry. That keeps the
-code for the operation on both types all nestled snugly together in one class.
+Each operation that can be performed on pastries is a new <span
+name="multimethods">single-dispatch</span> function that register an
+implementation for each Pastry subclass. To perform an operation on a pastry, we
+simply call the function with the desired pastry object.
 
-Given some pastry, how do we route it to the correct method on the visitor based
-on its type? Polymorphism to the rescue! We add this method to Pastry:
+<aside name="multimethods">
 
-^code pastry-accept (1 before, 1 after, no location)
-
-Each subclass implements it.
-
-^code beignet-accept (1 before, 1 after, no location)
-
-And:
-
-^code cruller-accept (1 before, 1 after, no location)
-
-To perform an operation on a pastry, we call its `accept()` method and pass in
-the visitor for the operation we want to execute. The pastry -- the specific
-subclass's overriding implementation of `accept()` -- turns around and calls the
-appropriate visit method on the visitor and passes *itself* to it.
-
-That's the heart of the trick right there. It lets us use polymorphic dispatch
-on the *pastry* classes to select the appropriate method on the *visitor* class.
-In the table, each pastry class is a row, but if you look at all of the methods
-for a single visitor, they form a *column*.
-
-<img src="image/representing-code/visitor.png" alt="Now all of the cells for one operation are part of the same class, the visitor." />
-
-We added one `accept()` method to each class, and we can use it for as many
-visitors as we want without ever having to touch the pastry classes again. It's
-a clever pattern.
-
-### Visitors for expressions
-
-OK, let's weave it into our expression classes. We'll also <span
-name="context">refine</span> the pattern a little. In the pastry example, the
-visit and `accept()` methods don't return anything. In practice, visitors often
-want to define operations that produce values. But what return type should
-`accept()` have? We can't assume every visitor class wants to produce the same
-type, so we'll use generics to let each implementation fill in a return type.
-
-<aside name="context">
-
-Another common refinement is an additional "context" parameter that is passed to
-the visit methods and then sent back through as a parameter to `accept()`. That
-lets operations take an additional parameter. The visitors we'll define in the
-book don't need that, so I omitted it.
+Another common refinement is passing additional parameters to the dispatch
+methods. Python's `singledispatch` accept additional parameters but it only
+dispatch based on the first one. Some programming languages have the concept of
+multimethods, which allow us to specify different implementations based on a
+combination of argument types. Python has external libraries that implement
+this, but fortunately it is not necessary in our case, as all operations
+dispatch only on expression types.
 
 </aside>
-
-First, we define the visitor interface. Again, we nest it inside the base class
-so that we can keep everything in one file.
-
-^code call-define-visitor (2 before, 1 after)
-
-That function generates the visitor interface.
-
-^code define-visitor
-
-Here, we iterate through all of the subclasses and declare a visit method for
-each one. When we define new expression types later, this will automatically
-include them.
-
-Inside the base class, we define the abstract `accept()` method.
-
-^code base-accept-method (2 before, 1 after)
-
-Finally, each subclass implements that and calls the right visit method for its
-own type.
-
-^code accept-method (1 before, 2 after)
-
-There we go. Now we can define operations on expressions without having to muck
-with the classes or our generator script. Compile and run this generator script
-to output an updated "Expr.java" file. It contains a generated Visitor
-interface and a set of expression node classes that support the Visitor pattern
-using it.
-
-Before we end this rambling chapter, let's implement that Visitor interface and
-see the pattern in action.
 
 ## A (Not Very) Pretty Printer
 
@@ -956,20 +831,59 @@ It produces:
 ```
 
 Not exactly "pretty", but it does show the nesting and grouping explicitly. To
-implement this, we define a new class.
+implement this, we define a new single dispatch method.
 
-^code ast-printer
+```python
+# lox/printer.py
+from functools import singledispatch
+from .expr import *
 
-As you can see, it implements the visitor interface. That means we need visit
-methods for each of the expression types we have so far.
+@singledispatch
+def pretty(expr: Expr) -> str:
+    name = expr.__class__.__name__
+    raise TypeError(f"cannot display {name} objects")
+```
 
-^code visit-methods (2 before, 1 after)
+We now need to provide the implementation for each expression type
+
+```python
+# lox/printer.py after the pretty() definition
+@pretty.register
+def _(expr: Binary):
+    symbol = expr.operator.lexeme
+    return parenthesize(symbol, expr.left, expr.right)
+
+@pretty.register
+def _(expr: Grouping):
+  return parenthesize("group", expr.expression)
+
+@pretty.register
+def _(expr: Literal):
+    if expr.value is None:
+        return "nil"
+    elif expr.value is True:
+        return "true"
+    elif expr.value is False:
+        return "false"
+    return str(expr.value)
+
+@pretty.register
+def _(expr: Unary):
+    symbol = expr.operator.lexeme
+    return parenthesize(symbol, expr.right)
+```
 
 Literal expressions are easy -- they convert the value to a string with a little
-check to handle Java's `null` standing in for Lox's `nil`. The other expressions
-have subexpressions, so they use this `parenthesize()` helper method:
+check to handle Python's `None` standing in for Lox's `nil`. The other
+expressions have subexpressions, so they use this `parenthesize()` helper
+method:
 
-^code print-utilities
+```python
+# lox/printer.py
+def parenthesize(name: str, *exprs: Expr) -> str:
+    parts = [name, *map(pretty, exprs)]
+    return "(" + " ".join(parts) + ")"
+```
 
 It takes a name and a list of subexpressions and wraps them all up in
 parentheses, yielding a string like:
@@ -978,22 +892,31 @@ parentheses, yielding a string like:
 (+ 1 2)
 ```
 
-Note that it calls `accept()` on each subexpression and passes in itself. This
+Note that it calls `pretty()` on each subexpression and passes in itself. This
 is the <span name="tree">recursive</span> step that lets us print an entire
 tree.
-
-<aside name="tree">
-
-This recursion is also why people think the Visitor pattern itself has to do
-with trees.
-
-</aside>
 
 We don't have a parser yet, so it's hard to see this in action. For now, we'll
 hack together a little `main()` method that manually instantiates a tree and
 prints it.
 
-^code printer-main
+```python
+# lox/printer.py at the end of file
+from .tokens import Token, TokenType as TT
+
+def main():
+    minus = Token(TT.MINUS, "-", 1)
+    star = Token(TT.STAR, "*", 1)
+    expr = Binary(
+        Unary(minus, Literal(123)),
+        star,
+        Grouping(Literal(45.67))
+    )
+    print(pretty(expr))
+
+if __name__ == "__main__":
+    main()
+```
 
 If we did everything right, it prints:
 
@@ -1002,11 +925,11 @@ If we did everything right, it prints:
 ```
 
 You can go ahead and delete this method. We won't need it. Also, as we add new
-syntax tree types, I won't bother showing the necessary visit methods for them
-in AstPrinter. If you want to (and you want the Java compiler to not yell at
-you), go ahead and add them yourself. It will come in handy in the next chapter
-when we start parsing Lox code into syntax trees. Or, if you don't care to
-maintain AstPrinter, feel free to delete it. We won't need it again.
+syntax tree types, I won't bother showing the necessary methods for them in
+pretty method. If you want to, go ahead and add them yourself. It will come in
+handy in the next chapter when we start parsing Lox code into syntax trees. Or,
+if you don't care to maintain `pretty()`, feel free to delete it. We won't need
+it again.
 
 <div class="challenges">
 
@@ -1024,7 +947,7 @@ maintain AstPrinter, feel free to delete it. We won't need it again.
     Produce a grammar that matches the same language but does not use any of
     that notational sugar.
 
-    *Bonus:* What kind of expression does this bit of grammar encode?
+    _Bonus:_ What kind of expression does this bit of grammar encode?
 
 1.  The Visitor pattern lets you emulate the functional style in an
     object-oriented language. Devise a complementary pattern for a functional

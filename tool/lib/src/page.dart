@@ -83,11 +83,13 @@ class Page {
     // Return fake tags for the placeholders.
     if (name == "omit") return CodeTag(this, "omit", 9998, 0, 0, false);
     if (name == "not-yet") return CodeTag(this, "omit", 9999, 0, 0, false);
-
+    
     var codeTag = _ensureFile().codeTags[name];
     if (codeTag != null) return codeTag;
 
-    throw ArgumentError("Could not find code tag '$name'.");
+    // FIXME: disable non-used tags
+    // throw ArgumentError("Could not find code tag '$name'.");
+    return CodeTag(this, "omit", 9999, 0, 0, false);
   }
 
   String toString() => title;

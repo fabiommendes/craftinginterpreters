@@ -1,10 +1,9 @@
-> Grammar, which knows how to control even kings.
-> <cite>Molière</cite>
+> Grammar, which knows how to control even kings. <cite>Molière</cite>
 
 <span name="parse">This</span> chapter marks the first major milestone of the
 book. Many of us have cobbled together a mishmash of regular expressions and
 substring operations to extract some sense out of a pile of text. The code was
-probably riddled with bugs and a beast to maintain. Writing a *real* parser --
+probably riddled with bugs and a beast to maintain. Writing a _real_ parser --
 one with decent error handling, a coherent internal structure, and the ability
 to robustly chew through a sophisticated syntax -- is considered a rare,
 impressive skill. In this chapter, you will <span name="attain">attain</span>
@@ -28,7 +27,7 @@ little less daunting when it's behind you than when it loomed ahead.
 
 It's easier than you think, partially because we front-loaded a lot of the hard
 work in the [last chapter][]. You already know your way around a formal grammar.
-You're familiar with syntax trees, and we have some Java classes to represent
+You're familiar with syntax trees, and we have some Python classes to represent
 them. The only remaining piece is parsing -- transmogrifying a sequence of
 tokens into one of those syntax trees.
 
@@ -37,23 +36,23 @@ tokens into one of those syntax trees.
 Some CS textbooks make a big deal out of parsers. In the '60s, computer
 scientists -- understandably tired of programming in assembly language --
 started designing more sophisticated, <span name="human">human</span>-friendly
-languages like Fortran and ALGOL. Alas, they weren't very *machine*-friendly
-for the primitive computers of the time.
+languages like Fortran and ALGOL. Alas, they weren't very _machine_-friendly for
+the primitive computers of the time.
 
 <aside name="human">
 
 Imagine how harrowing assembly programming on those old machines must have been
-that they considered *Fortran* to be an improvement.
+that they considered _Fortran_ to be an improvement.
 
 </aside>
 
 These pioneers designed languages that they honestly weren't even sure how to
 write compilers for, and then did groundbreaking work inventing parsing and
-compiling techniques that could handle these new, big languages on those old, tiny
-machines.
+compiling techniques that could handle these new, big languages on those old,
+tiny machines.
 
 Classic compiler books read like fawning hagiographies of these heroes and their
-tools. The cover of *Compilers: Principles, Techniques, and Tools* literally has
+tools. The cover of _Compilers: Principles, Techniques, and Tools_ literally has
 a dragon labeled "complexity of compiler design" being slain by a knight bearing
 a sword and shield branded "LALR parser generator" and "syntax directed
 translation". They laid it on thick.
@@ -66,19 +65,19 @@ later, but this book omits the trophy case.
 ## Ambiguity and the Parsing Game
 
 In the last chapter, I said you can "play" a context-free grammar like a game in
-order to *generate* strings. Parsers play that game in reverse. Given a string
+order to _generate_ strings. Parsers play that game in reverse. Given a string
 -- a series of tokens -- we map those tokens to terminals in the grammar to
 figure out which rules could have generated that string.
 
 The "could have" part is interesting. It's entirely possible to create a grammar
-that is *ambiguous*, where different choices of productions can lead to the same
-string. When you're using the grammar to *generate* strings, that doesn't matter
+that is _ambiguous_, where different choices of productions can lead to the same
+string. When you're using the grammar to _generate_ strings, that doesn't matter
 much. Once you have the string, who cares how you got to it?
 
 When parsing, ambiguity means the parser may misunderstand the user's code. As
-we parse, we aren't just determining if the string is valid Lox code, we're
-also tracking which rules match which parts of it so that we know what part of
-the language each token belongs to. Here's the Lox expression grammar we put
+we parse, we aren't just determining if the string is valid Lox code, we're also
+tracking which rules match which parts of it so that we know what part of the
+language each token belongs to. Here's the Lox expression grammar we put
 together in the last chapter:
 
 ```ebnf
@@ -115,54 +114,54 @@ Another is:
 4. Back at the outer `binary`, for the operator, pick `"-"`.
 5. For the right-hand `expression`, pick `NUMBER`, and use `1`.
 
-Those produce the same *strings*, but not the same *syntax trees*:
+Those produce the same _strings_, but not the same _syntax trees_:
 
 <img src="image/parsing-expressions/syntax-trees.png" alt="Two valid syntax trees: (6 / 3) - 1 and 6 / (3 - 1)" />
 
-In other words, the grammar allows seeing the expression as `(6 / 3) - 1` or `6
-/ (3 - 1)`. The `binary` rule lets operands nest any which way you want. That in
-turn affects the result of evaluating the parsed tree. The way mathematicians
+In other words, the grammar allows seeing the expression as `(6 / 3) - 1` or
+`6 / (3 - 1)`. The `binary` rule lets operands nest any which way you want. That
+in turn affects the result of evaluating the parsed tree. The way mathematicians
 have addressed this ambiguity since blackboards were first invented is by
 defining rules for precedence and associativity.
 
-*   <span name="nonassociative">**Precedence**</span> determines which operator
-    is evaluated first in an expression containing a mixture of different
-    operators. Precedence rules tell us that we evaluate the `/` before the `-`
-    in the above example. Operators with higher precedence are evaluated
-    before operators with lower precedence. Equivalently, higher precedence
-    operators are said to "bind tighter".
+- <span name="nonassociative">**Precedence**</span> determines which operator is
+  evaluated first in an expression containing a mixture of different operators.
+  Precedence rules tell us that we evaluate the `/` before the `-` in the above
+  example. Operators with higher precedence are evaluated before operators with
+  lower precedence. Equivalently, higher precedence operators are said to "bind
+  tighter".
 
-*   **Associativity** determines which operator is evaluated first in a series
-    of the *same* operator. When an operator is **left-associative** (think
-    "left-to-right"), operators on the left evaluate before those on the right.
-    Since `-` is left-associative, this expression:
+- **Associativity** determines which operator is evaluated first in a series of
+  the _same_ operator. When an operator is **left-associative** (think
+  "left-to-right"), operators on the left evaluate before those on the right.
+  Since `-` is left-associative, this expression:
 
-    ```lox
-    5 - 3 - 1
-    ```
+  ```lox
+  5 - 3 - 1
+  ```
 
-    is equivalent to:
+  is equivalent to:
 
-    ```lox
-    (5 - 3) - 1
-    ```
+  ```lox
+  (5 - 3) - 1
+  ```
 
-    Assignment, on the other hand, is **right-associative**. This:
+  Assignment, on the other hand, is **right-associative**. This:
 
-    ```lox
-    a = b = c
-    ```
+  ```lox
+  a = b = c
+  ```
 
-    is equivalent to:
+  is equivalent to:
 
-    ```lox
-    a = (b = c)
-    ```
+  ```lox
+  a = (b = c)
+  ```
 
 <aside name="nonassociative">
 
 While not common these days, some languages specify that certain pairs of
-operators have *no* relative precedence. That makes it a syntax error to mix
+operators have _no_ relative precedence. That makes it a syntax error to mix
 those operators in an expression without using explicit grouping.
 
 Likewise, some operators are **non-associative**. That means it's an error to
@@ -268,8 +267,8 @@ instead of touching every rule that contains an expression.
 expression     → equality
 ```
 
-Over at the other end of the precedence table, a primary expression contains
-all the literals and grouping expressions.
+Over at the other end of the precedence table, a primary expression contains all
+the literals and grouping expressions.
 
 ```ebnf
 primary        → NUMBER | STRING | "true" | "false" | "nil"
@@ -286,8 +285,8 @@ unary          → ( "!" | "-" ) unary ;
 
 But this rule has a problem. It never terminates.
 
-Remember, each rule needs to match expressions at that precedence level *or
-higher*, so we also need to let this match a primary expression.
+Remember, each rule needs to match expressions at that precedence level _or
+higher_, so we also need to let this match a primary expression.
 
 ```ebnf
 unary          → ( "!" | "-" ) unary
@@ -323,8 +322,8 @@ print (0.1 * 0.2) * 0.3;
 
 In languages like Lox that use [IEEE 754][754] double-precision floating-point
 numbers, the first evaluates to `0.006`, while the second yields
-`0.006000000000000001`. Sometimes that tiny difference matters.
-[This][float] is a good place to learn more.
+`0.006000000000000001`. Sometimes that tiny difference matters. [This][float] is
+a good place to learn more.
 
 [754]: https://en.wikipedia.org/wiki/Double-precision_floating-point_format
 [float]: https://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg.html
@@ -346,10 +345,10 @@ intend to parse it. Instead of a left recursive rule, we'll use a different one.
 factor         → unary ( ( "/" | "*" ) unary )* ;
 ```
 
-We define a factor expression as a flat *sequence* of multiplications
-and divisions. This matches the same syntax as the previous rule, but better
-mirrors the code we'll write to parse Lox. We use the same structure for all of
-the other binary operator precedence levels, giving us this complete expression
+We define a factor expression as a flat _sequence_ of multiplications and
+divisions. This matches the same syntax as the previous rule, but better mirrors
+the code we'll write to parse Lox. We use the same structure for all of the
+other binary operator precedence levels, giving us this complete expression
 grammar:
 
 ```ebnf
@@ -387,8 +386,8 @@ technique is more than sufficient: **recursive descent**.
 Recursive descent is the simplest way to build a parser, and doesn't require
 using complex parser generator tools like Yacc, Bison or ANTLR. All you need is
 straightforward handwritten code. Don't be fooled by its simplicity, though.
-Recursive descent parsers are fast, robust, and can support sophisticated
-error handling. In fact, GCC, V8 (the JavaScript VM in Chrome), Roslyn (the C#
+Recursive descent parsers are fast, robust, and can support sophisticated error
+handling. In fact, GCC, V8 (the JavaScript VM in Chrome), Roslyn (the C#
 compiler written in C#) and many other heavyweight production language
 implementations use recursive descent. It rocks.
 
@@ -401,7 +400,7 @@ and larger chunks of syntax.
 
 <aside name="descent">
 
-It's called "recursive *descent*" because it walks *down* the grammar.
+It's called "recursive _descent_" because it walks _down_ the grammar.
 Confusingly, we also use direction metaphorically when talking about "high" and
 "low" precedence, but the orientation is reversed. In a top-down parser, you
 reach the lowest-precedence expressions first because they may in turn contain
@@ -443,17 +442,31 @@ call.
 
 Each grammar rule becomes a method inside this new class:
 
-^code parser
+```python
+# lox/parser.py
+from dataclasses import dataclass
+from .tokens import Token, TokenType as TT
+from .expr import *
+
+@dataclass
+class Parser:
+    tokens: list[Token]
+    current: int = 0
+```
 
 Like the scanner, the parser consumes a flat input sequence, only now we're
 reading tokens instead of characters. We store the list of tokens and use
 `current` to point to the next token eagerly waiting to be parsed.
 
 We're going to run straight through the expression grammar now and translate
-each rule to Java code. The first rule, `expression`, simply expands to the
+each rule to Python code. The first rule, `expression`, simply expands to the
 `equality` rule, so that's straightforward.
 
-^code expression
+```python
+# lox/parser.py method of the Parser class
+def expression(self) -> Expr:
+    return self.equality()
+```
 
 Each method for parsing a grammar rule produces a syntax tree for that rule and
 returns it to the caller. When the body of the rule contains a nonterminal -- a
@@ -474,9 +487,20 @@ The rule for equality is a little more complex.
 equality       → comparison ( ( "!=" | "==" ) comparison )* ;
 ```
 
-In Java, that becomes:
+In Python, that becomes:
 
-^code equality
+```python
+# lox/parser.py method of the Parser class
+def equality(self) -> Expr:
+    expr = self.comparison()
+
+    while self.match(TT.BANG_EQUAL, TT.EQUAL_EQUAL):
+      operator = self.previous()
+      right = self.comparison()
+      expr = Binary(expr, operator, right)
+
+    return expr
+```
 
 Let's step through it. The first `comparison` nonterminal in the body translates
 to the first call to `comparison()` in the method. We take that result and store
@@ -484,11 +508,19 @@ it in a local variable.
 
 Then, the `( ... )*` loop in the rule maps to a `while` loop. We need to know
 when to exit that loop. We can see that inside the rule, we must first find
-either a `!=` or `==` token. So, if we *don't* see one of those, we must be done
+either a `!=` or `==` token. So, if we _don't_ see one of those, we must be done
 with the sequence of equality operators. We express that check using a handy
 `match()` method.
 
-^code match
+```python
+# lox/parser.py method of the Parser class
+def match(self, *types: TT) -> bool:
+    for type in types:
+        if self.check(type):
+            self.advance()
+            return True
+    return False
+```
 
 This checks to see if the current token has any of the given types. If so, it
 consumes the token and returns `true`. Otherwise, it returns `false` and leaves
@@ -498,18 +530,38 @@ fundamental operations.
 The `check()` method returns `true` if the current token is of the given type.
 Unlike `match()`, it never consumes the token, it only looks at it.
 
-^code check
+```python
+# lox/parser.py method of the Parser class
+def check(self, type: TT) -> bool:
+    return not self.is_at_end() and self.peek().type == type
+```
 
 The `advance()` method consumes the current token and returns it, similar to how
 our scanner's corresponding method crawled through characters.
 
-^code advance
+```python
+# lox/parser.py method of the Parser class
+def advance(self, type: TT) -> bool:
+    return not self.is_at_end():
+        self.current += 1
+    return self.previous()
+```
 
 These methods bottom out on the last handful of primitive operations.
 
-^code utils
+```python
+# lox/parser.py method of the Parser class
+def is_at_end(self) -> bool:
+    return peek().type == EOF
 
-`isAtEnd()` checks if we've run out of tokens to parse. `peek()` returns the
+def peek(self) -> Token:
+    return self.tokens[self.current]
+
+def previous(self) -> Token:
+    return tokens[self.current - 1]
+```
+
+`is_at_end()` checks if we've run out of tokens to parse. `peek()` returns the
 current token we have yet to consume, and `previous()` returns the most recently
 consumed token. The latter makes it easier to use `match()` and then access the
 just-matched token.
@@ -541,8 +593,8 @@ The parser falls out of the loop once it hits a token that's not an equality
 operator. Finally, it returns the expression. Note that if the parser never
 encounters an equality operator, then it never enters the loop. In that case,
 the `equality()` method effectively calls and returns `comparison()`. In that
-way, this method matches an equality operator *or anything of higher
-precedence*.
+way, this method matches an equality operator _or anything of higher
+precedence_.
 
 Moving on to the next rule...
 
@@ -550,15 +602,27 @@ Moving on to the next rule...
 comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
 ```
 
-Translated to Java:
+Translated to Python:
 
-^code comparison
+```python
+# lox/parser.py method of the Parser class
+def comparison(self) -> Expr:
+    expr = self.term()
+
+    while self.match(TT.GREATER, TT.GREATER_EQUAL, TT.LESS,
+                     TT.LESS_EQUAL):
+        operator = self.previous()
+        right = self.term()
+        expr = Binary(expr, operator, right)
+
+    return expr
+```
 
 The grammar rule is virtually <span name="handle">identical</span> to `equality`
 and so is the corresponding code. The only differences are the token types for
-the operators we match, and the method we call for the operands -- now
-`term()` instead of `comparison()`. The remaining two binary operator rules
-follow the same pattern.
+the operators we match, and the method we call for the operands -- now `term()`
+instead of `comparison()`. The remaining two binary operator rules follow the
+same pattern.
 
 In order of precedence, first addition and subtraction:
 
@@ -570,11 +634,33 @@ types, and an operand method handle to simplify this redundant code.
 
 </aside>
 
-^code term
+```python
+# lox/parser.py method of the Parser class
+def term(self) -> Expr:
+    expr = self.factor()
+
+    while self.match(TT.MINUS, TT.PLUS):
+        operator = self.previous()
+        right = self.unary()
+        expr = Binary(expr, operator, right)
+
+    return expr
+```
 
 And finally, multiplication and division:
 
-^code factor
+```python
+# lox/parser.py method of the Parser class
+def factor(self) -> Expr:
+    expr = self.unary()
+
+    while self.match(TT.SLASH, TT.STAR):
+        operator = self.previous()
+        right = self.unary()
+        expr = Binary(expr, operator, right)
+
+    return expr
+```
 
 That's all of the binary operators, parsed with the correct precedence and
 associativity. We're crawling up the precedence hierarchy and now we've reached
@@ -587,7 +673,16 @@ unary          → ( "!" | "-" ) unary
 
 The code for this is a little different.
 
-^code unary
+```python
+# lox/parser.py method of the Parser class
+def unary(self) -> Expr:
+    if self.match(TT.BANG, TT.MINUS):
+        operator = self.previous()
+        right = self.unary()
+        return Unary(operator, right)
+
+    return self.primary()
+```
 
 Again, we look at the <span name="current">current</span> token to see how to
 parse. If it's a `!` or `-`, we must have a unary expression. In that case, we
@@ -612,10 +707,25 @@ primary        → NUMBER | STRING | "true" | "false" | "nil"
 Most of the cases for the rule are single terminals, so parsing is
 straightforward.
 
-^code primary
+```python
+# lox/parser.py method of the Parser class
+def primary(self) -> Expr:
+    if self.match(FALSE):
+        return Literal(False)
+    if self.match(TRUE):
+        return Literal(True)
+    if self.match(NIL):
+        return Literal(None)
+    if self.match(NUMBER, STRING):
+        return Literal(previous().literal)
+    if self.match(LEFT_PAREN):
+        expr = self.expression()
+        self.consume(RIGHT_PAREN, "Expect ')' after expression.")
+        return Grouping(expr)
+```
 
 The interesting branch is the one for handling parentheses. After we match an
-opening `(` and parse the expression inside it, we *must* find a `)` token. If
+opening `(` and parse the expression inside it, we _must_ find a `)` token. If
 we don't, that's an error.
 
 ## Syntax Errors
@@ -624,19 +734,19 @@ A parser really has two jobs:
 
 1.  Given a valid sequence of tokens, produce a corresponding syntax tree.
 
-2.  Given an *invalid* sequence of tokens, detect any errors and tell the
-    user about their mistakes.
+2.  Given an _invalid_ sequence of tokens, detect any errors and tell the user
+    about their mistakes.
 
 Don't underestimate how important the second job is! In modern IDEs and editors,
 the parser is constantly reparsing code -- often while the user is still editing
 it -- in order to syntax highlight and support things like auto-complete. That
-means it will encounter code in incomplete, half-wrong states *all the time.*
+means it will encounter code in incomplete, half-wrong states _all the time._
 
 When the user doesn't realize the syntax is wrong, it is up to the parser to
 help guide them back onto the right path. The way it reports errors is a large
 part of your language's user interface. Good syntax error handling is hard. By
 definition, the code isn't in a well-defined state, so there's no infallible way
-to know what the user *meant* to write. The parser can't read your <span
+to know what the user _meant_ to write. The parser can't read your <span
 name="telepathy">mind</span>.
 
 <aside name="telepathy">
@@ -649,45 +759,45 @@ who knows what the future will bring?
 There are a couple of hard requirements for when the parser runs into a syntax
 error. A parser must:
 
-*   **Detect and report the error.** If it doesn't detect the <span
-    name="error">error</span> and passes the resulting malformed syntax tree on
-    to the interpreter, all manner of horrors may be summoned.
+- **Detect and report the error.** If it doesn't detect the <span
+  name="error">error</span> and passes the resulting malformed syntax tree on to
+  the interpreter, all manner of horrors may be summoned.
 
-    <aside name="error">
+  <aside name="error">
 
-    Philosophically speaking, if an error isn't detected and the interpreter
-    runs the code, is it *really* an error?
+  Philosophically speaking, if an error isn't detected and the interpreter runs
+  the code, is it _really_ an error?
 
-    </aside>
+  </aside>
 
-*   **Avoid crashing or hanging.** Syntax errors are a fact of life, and
-    language tools have to be robust in the face of them. Segfaulting or getting
-    stuck in an infinite loop isn't allowed. While the source may not be valid
-    *code*, it's still a valid *input to the parser* because users use the
-    parser to learn what syntax is allowed.
+- **Avoid crashing or hanging.** Syntax errors are a fact of life, and language
+  tools have to be robust in the face of them. Segfaulting or getting stuck in
+  an infinite loop isn't allowed. While the source may not be valid _code_, it's
+  still a valid _input to the parser_ because users use the parser to learn what
+  syntax is allowed.
 
 Those are the table stakes if you want to get in the parser game at all, but you
 really want to raise the ante beyond that. A decent parser should:
 
-*   **Be fast.** Computers are thousands of times faster than they were when
-    parser technology was first invented. The days of needing to optimize your
-    parser so that it could get through an entire source file during a coffee
-    break are over. But programmer expectations have risen as quickly, if not
-    faster. They expect their editors to reparse files in milliseconds after
-    every keystroke.
+- **Be fast.** Computers are thousands of times faster than they were when
+  parser technology was first invented. The days of needing to optimize your
+  parser so that it could get through an entire source file during a coffee
+  break are over. But programmer expectations have risen as quickly, if not
+  faster. They expect their editors to reparse files in milliseconds after every
+  keystroke.
 
-*   **Report as many distinct errors as there are.** Aborting after the first
-    error is easy to implement, but it's annoying for users if every time they
-    fix what they think is the one error in a file, a new one appears. They
-    want to see them all.
+- **Report as many distinct errors as there are.** Aborting after the first
+  error is easy to implement, but it's annoying for users if every time they fix
+  what they think is the one error in a file, a new one appears. They want to
+  see them all.
 
-*   **Minimize *cascaded* errors.** Once a single error is found, the parser no
-    longer really knows what's going on. It tries to get itself back on track
-    and keep going, but if it gets confused, it may report a slew of ghost
-    errors that don't indicate other real problems in the code. When the first
-    error is fixed, those phantoms disappear, because they reflect only the
-    parser's own confusion. Cascaded errors are annoying because they can scare
-    the user into thinking their code is in a worse state than it is.
+- **Minimize _cascaded_ errors.** Once a single error is found, the parser no
+  longer really knows what's going on. It tries to get itself back on track and
+  keep going, but if it gets confused, it may report a slew of ghost errors that
+  don't indicate other real problems in the code. When the first error is fixed,
+  those phantoms disappear, because they reflect only the parser's own
+  confusion. Cascaded errors are annoying because they can scare the user into
+  thinking their code is in a worse state than it is.
 
 The last two points are in tension. We want to report as many separate errors as
 we can, but we don't want to report ones that are merely side effects of an
@@ -697,7 +807,7 @@ The way a parser responds to an error and keeps going to look for later errors
 is called **error recovery**. This was a hot research topic in the '60s. Back
 then, you'd hand a stack of punch cards to the secretary and come back the next
 day to see if the compiler succeeded. With an iteration loop that slow, you
-*really* wanted to find every single error in your code in one pass.
+_really_ wanted to find every single error in your code in one pass.
 
 Today, when parsers complete before you've even finished typing, it's less of an
 issue. Simple, fast error recovery is fine.
@@ -730,27 +840,37 @@ point in the rule.
 
 Any additional real syntax errors hiding in those discarded tokens aren't
 reported, but it also means that any mistaken cascaded errors that are side
-effects of the initial error aren't *falsely* reported either, which is a decent
+effects of the initial error aren't _falsely_ reported either, which is a decent
 trade-off.
 
 The traditional place in the grammar to synchronize is between statements. We
 don't have those yet, so we won't actually synchronize in this chapter, but
 we'll get the machinery in place for later.
 
-### Entering panic mode
+### Entering panic mode (#TODO)
 
 Back before we went on this side trip around error recovery, we were writing the
 code to parse a parenthesized expression. After parsing the expression, the
 parser looks for the closing `)` by calling `consume()`. Here, finally, is that
 method:
 
-^code consume
+```python
+# lox/parser.py method of the Parser class
+def consume(self, type: TT, message: str):
+    if self.check(type):
+        return self.advance()
+    raise self.error(self.peek(), message)
+```
 
 It's similar to `match()` in that it checks to see if the next token is of the
 expected type. If so, it consumes the token and everything is groovy. If some
 other token is there, then we've hit an error. We report it by calling this:
 
-^code error
+```python
+# lox/parser.py method of the Parser class
+def error(self, token: Token, message: str):
+    return ParseError()
+```
 
 First, that shows the error to the user by calling:
 
@@ -761,13 +881,13 @@ token itself. This will come in handy later since we use tokens throughout the
 interpreter to track locations in code.
 
 After we report the error, the user knows about their mistake, but what does the
-*parser* do next? Back in `error()`, we create and return a ParseError, an
+_parser_ do next? Back in `error()`, we create and return a ParseError, an
 instance of this new class:
 
 ^code parse-error (1 before, 1 after)
 
 This is a simple sentinel class we use to unwind the parser. The `error()`
-method *returns* the error instead of *throwing* it because we want to let the
+method _returns_ the error instead of _throwing_ it because we want to let the
 calling method inside the parser decide whether to unwind or not. Some parse
 errors occur in places where the parser isn't likely to get into a weird state
 and we don't need to <span name="production">synchronize</span>. In those
@@ -781,7 +901,7 @@ into panic mode.
 <aside name="production">
 
 Another way to handle common syntax errors is with **error productions**. You
-augment the grammar with a rule that *successfully* matches the *erroneous*
+augment the grammar with a rule that _successfully_ matches the _erroneous_
 syntax. The parser safely parses it but then reports it as an error instead of
 producing a syntax tree.
 
@@ -797,7 +917,7 @@ unary → ( "!" | "-" | "+" ) unary
 This lets the parser consume `+` without going into panic mode or leaving the
 parser in a weird state.
 
-Error productions work well because you, the parser author, know *how* the code
+Error productions work well because you, the parser author, know _how_ the code
 is wrong and what the user was likely trying to do. That means you can give a
 more helpful message to get the user back on track, like, "Unary '+' expressions
 are not supported." Mature parsers tend to accumulate error productions like
@@ -812,22 +932,22 @@ parser's own state?
 ### Synchronizing a recursive descent parser
 
 With recursive descent, the parser's state -- which rules it is in the middle of
-recognizing -- is not stored explicitly in fields. Instead, we use Java's
-own call stack to track what the parser is doing. Each rule in the middle of
-being parsed is a call frame on the stack. In order to reset that state, we need
-to clear out those call frames.
+recognizing -- is not stored explicitly in fields. Instead, we use Java's own
+call stack to track what the parser is doing. Each rule in the middle of being
+parsed is a call frame on the stack. In order to reset that state, we need to
+clear out those call frames.
 
 The natural way to do that in Java is exceptions. When we want to synchronize,
-we *throw* that ParseError object. Higher up in the method for the grammar rule
+we _throw_ that ParseError object. Higher up in the method for the grammar rule
 we are synchronizing to, we'll catch it. Since we synchronize on statement
 boundaries, we'll catch the exception there. After the exception is caught, the
 parser is in the right state. All that's left is to synchronize the tokens.
 
 We want to discard tokens until we're right at the beginning of the next
 statement. That boundary is pretty easy to spot -- it's one of the main reasons
-we picked it. *After* a semicolon, we're <span name="semicolon">probably</span>
+we picked it. _After_ a semicolon, we're <span name="semicolon">probably</span>
 finished with a statement. Most statements start with a keyword -- `for`, `if`,
-`return`, `var`, etc. When the *next* token is any of those, we're probably
+`return`, `var`, etc. When the _next_ token is any of those, we're probably
 about to start a statement.
 
 <aside name="semicolon">
@@ -840,7 +960,20 @@ the first error precisely, so everything after that is kind of "best effort".
 
 This method encapsulates that logic:
 
-^code synchronize
+```python
+# lox/parser.py method of the Parser class
+def synchronize(self):
+    self.advance()
+    boundary_tokens = {TT.CLASS, TT.FUN, TT.VAR, TT.FOR, TT.IF,
+                       TT.WHILE, TT.PRINT, TT.RETURN}
+
+    while not self.is_at_end():
+        if self.previous().type == SEMICOLON:
+            return
+        if self.peek().type in boundary_tokens:
+            return
+      self.advance()
+```
 
 It discards tokens until it thinks it has found a statement boundary. After
 catching a ParseError, we'll call this and then we are hopefully back in sync.
@@ -863,21 +996,34 @@ methods for each grammar rule, it eventually hits `primary()`. If none of the
 cases in there match, it means we are sitting on a token that can't start an
 expression. We need to handle that error too.
 
-^code primary-error (5 before, 1 after)
+```python
+# lox/parser.py at the end of Parser.primary() method
+    ...
+    raise ParseError(self.peek(), "Expect expression.")
+```
 
 With that, all that remains in the parser is to define an initial method to kick
 it off. That method is called, naturally enough, `parse()`.
 
-^code parse
+```python
+# lox/parser.py method of the Parser class
+def parse(self):
+    try:
+        return self.expression()
+    except ParseError:
+        return None
+```
 
 We'll revisit this method later when we add statements to the language. For now,
 it parses a single expression and returns it. We also have some temporary code
 to exit out of panic mode. Syntax error recovery is the parser's job, so we
 don't want the ParseError exception to escape into the rest of the interpreter.
 
-When a syntax error does occur, this method returns `null`. That's OK. The
+# FIXME:
+
+When a syntax error does occur, this method returns `None`. That's OK. The
 parser promises not to crash or hang on invalid syntax, but it doesn't promise
-to return a *usable syntax tree* if an error is found. As soon as the parser
+to return a _usable syntax tree_ if an error is found. As soon as the parser
 reports an error, `hadError` gets set, and subsequent phases are skipped.
 
 Finally, we can hook up our brand new parser to the main Lox class and try it
@@ -889,7 +1035,18 @@ display it.
 
 Delete the old code to print the scanned tokens and replace it with this:
 
-^code print-ast (1 before, 1 after)
+```python
+# lox/lox.py in run() method of the Lox class
+    tokens = tokenize(self.source)
+    parser = Parser(tokens)
+    expression = parser.parse()
+
+    # FIXME: handle ParseErrors
+    # Stop if there was a syntax error.
+    if (hadError) return;
+
+    print(pretty(expression))
+```
 
 Congratulations, you have crossed the <span name="harder">threshold</span>! That
 really is all there is to handwriting a parser. We'll extend the grammar in
@@ -967,13 +1124,13 @@ This kind of internal consistency makes the language easier to learn because
 there are fewer edge cases and exceptions users have to stumble into and then
 correct. That's good, because before users can use our language, they have to
 load all of that syntax and semantics into their heads. A simpler, more rational
-language *makes sense*.
+language _makes sense_.
 
 But, for many users there is an even faster shortcut to getting our language's
-ideas into their wetware -- *use concepts they already know*. Many newcomers to
+ideas into their wetware -- _use concepts they already know_. Many newcomers to
 our language will be coming from some other language or languages. If our
 language uses some of the same syntax or semantics as those, there is much less
-for the user to learn (and *unlearn*).
+for the user to learn (and _unlearn_).
 
 This is particularly helpful with syntax. You may not remember it well today,
 but way back when you learned your very first programming language, code
@@ -984,8 +1141,8 @@ language, you force users to start that process all over again.
 Taking advantage of what users already know is one of the most powerful tools
 you can use to ease adoption of your language. It's almost impossible to
 overestimate how valuable this is. But it faces you with a nasty problem: What
-happens when the thing the users all know *kind of sucks*? C's bitwise operator
-precedence is a mistake that doesn't make sense. But it's a *familiar* mistake
+happens when the thing the users all know _kind of sucks_? C's bitwise operator
+precedence is a mistake that doesn't make sense. But it's a _familiar_ mistake
 that millions have already gotten used to and learned to live with.
 
 Do you stay true to your language's own internal logic and ignore history? Do
@@ -1000,7 +1157,7 @@ history books and start our own story.
 In practice, it's often better to make the most of what users already know.
 Getting them to come to your language requires a big leap. The smaller you can
 make that chasm, the more people will be willing to cross it. But you can't
-*always* stick to history, or your language won't have anything new and
-compelling to give people a *reason* to jump over.
+_always_ stick to history, or your language won't have anything new and
+compelling to give people a _reason_ to jump over.
 
 </div>

@@ -93,8 +93,7 @@
   <h1>Parsing Expressions</h1>
 
 <blockquote>
-<p>Grammar, which knows how to control even kings.
-<cite>Molière</cite></p>
+<p>Grammar, which knows how to control even kings. <cite>Molière</cite></p>
 </blockquote>
 <p><span name="parse">This</span> chapter marks the first major milestone of the
 book. Many of us have cobbled together a mishmash of regular expressions and
@@ -115,21 +114,21 @@ little less daunting when it&rsquo;s behind you than when it loomed ahead.</p>
 </aside>
 <p>It&rsquo;s easier than you think, partially because we front-loaded a lot of the hard
 work in the <a href="representing-code.html">last chapter</a>. You already know your way around a formal grammar.
-You&rsquo;re familiar with syntax trees, and we have some Java classes to represent
+You&rsquo;re familiar with syntax trees, and we have some Python classes to represent
 them. The only remaining piece is parsing<span class="em">&mdash;</span>transmogrifying a sequence of
 tokens into one of those syntax trees.</p>
 <p>Some CS textbooks make a big deal out of parsers. In the &rsquo;60s, computer
 scientists<span class="em">&mdash;</span>understandably tired of programming in assembly language<span class="em">&mdash;</span>started designing more sophisticated, <span name="human">human</span>-friendly
-languages like Fortran and ALGOL. Alas, they weren&rsquo;t very <em>machine</em>-friendly
-for the primitive computers of the time.</p>
+languages like Fortran and ALGOL. Alas, they weren&rsquo;t very <em>machine</em>-friendly for
+the primitive computers of the time.</p>
 <aside name="human">
 <p>Imagine how harrowing assembly programming on those old machines must have been
 that they considered <em>Fortran</em> to be an improvement.</p>
 </aside>
 <p>These pioneers designed languages that they honestly weren&rsquo;t even sure how to
 write compilers for, and then did groundbreaking work inventing parsing and
-compiling techniques that could handle these new, big languages on those old, tiny
-machines.</p>
+compiling techniques that could handle these new, big languages on those old,
+tiny machines.</p>
 <p>Classic compiler books read like fawning hagiographies of these heroes and their
 tools. The cover of <em>Compilers: Principles, Techniques, and Tools</em> literally has
 a dragon labeled &ldquo;complexity of compiler design&rdquo; being slain by a knight bearing
@@ -148,9 +147,9 @@ that is <em>ambiguous</em>, where different choices of productions can lead to t
 string. When you&rsquo;re using the grammar to <em>generate</em> strings, that doesn&rsquo;t matter
 much. Once you have the string, who cares how you got to it?</p>
 <p>When parsing, ambiguity means the parser may misunderstand the user&rsquo;s code. As
-we parse, we aren&rsquo;t just determining if the string is valid Lox code, we&rsquo;re
-also tracking which rules match which parts of it so that we know what part of
-the language each token belongs to. Here&rsquo;s the Lox expression grammar we put
+we parse, we aren&rsquo;t just determining if the string is valid Lox code, we&rsquo;re also
+tracking which rules match which parts of it so that we know what part of the
+language each token belongs to. Here&rsquo;s the Lox expression grammar we put
 together in the last chapter:</p>
 <div class="codehilite"><pre><span class="i">expression</span>     → <span class="i">literal</span>
                | <span class="i">unary</span>
@@ -182,22 +181,23 @@ together in the last chapter:</p>
 <li>For the right-hand <code>expression</code>, pick <code>NUMBER</code>, and use <code>1</code>.</li>
 </ol>
 <p>Those produce the same <em>strings</em>, but not the same <em>syntax trees</em>:</p><img src="image/parsing-expressions/syntax-trees.png" alt="Two valid syntax trees: (6 / 3) - 1 and 6 / (3 - 1)" />
-<p>In other words, the grammar allows seeing the expression as <code>(6 / 3) - 1</code> or <code>6 / (3 - 1)</code>. The <code>binary</code> rule lets operands nest any which way you want. That in
-turn affects the result of evaluating the parsed tree. The way mathematicians
+<p>In other words, the grammar allows seeing the expression as <code>(6 / 3) - 1</code> or
+<code>6 / (3 - 1)</code>. The <code>binary</code> rule lets operands nest any which way you want. That
+in turn affects the result of evaluating the parsed tree. The way mathematicians
 have addressed this ambiguity since blackboards were first invented is by
 defining rules for precedence and associativity.</p>
 <ul>
 <li>
-<p><span name="nonassociative"><strong>Precedence</strong></span> determines which operator
-is evaluated first in an expression containing a mixture of different
-operators. Precedence rules tell us that we evaluate the <code>/</code> before the <code>-</code>
-in the above example. Operators with higher precedence are evaluated
-before operators with lower precedence. Equivalently, higher precedence
-operators are said to &ldquo;bind tighter&rdquo;.</p>
+<p><span name="nonassociative"><strong>Precedence</strong></span> determines which operator is
+evaluated first in an expression containing a mixture of different operators.
+Precedence rules tell us that we evaluate the <code>/</code> before the <code>-</code> in the above
+example. Operators with higher precedence are evaluated before operators with
+lower precedence. Equivalently, higher precedence operators are said to &ldquo;bind
+tighter&rdquo;.</p>
 </li>
 <li>
-<p><strong>Associativity</strong> determines which operator is evaluated first in a series
-of the <em>same</em> operator. When an operator is <strong>left-associative</strong> (think
+<p><strong>Associativity</strong> determines which operator is evaluated first in a series of
+the <em>same</em> operator. When an operator is <strong>left-associative</strong> (think
 &ldquo;left-to-right&rdquo;), operators on the left evaluate before those on the right.
 Since <code>-</code> is left-associative, this expression:</p>
 <div class="codehilite"><pre><span class="n">5</span> - <span class="n">3</span> - <span class="n">1</span>
@@ -300,8 +300,8 @@ instead of touching every rule that contains an expression.</p>
 </aside>
 <div class="codehilite"><pre><span class="i">expression</span>     → <span class="i">equality</span>
 </pre></div>
-<p>Over at the other end of the precedence table, a primary expression contains
-all the literals and grouping expressions.</p>
+<p>Over at the other end of the precedence table, a primary expression contains all
+the literals and grouping expressions.</p>
 <div class="codehilite"><pre><span class="i">primary</span>        → <span class="t">NUMBER</span> | <span class="t">STRING</span> | <span class="s">&quot;true&quot;</span> | <span class="s">&quot;false&quot;</span> | <span class="s">&quot;nil&quot;</span>
                | <span class="s">&quot;(&quot;</span> <span class="i">expression</span> <span class="s">&quot;)&quot;</span> ;
 </pre></div>
@@ -336,8 +336,8 @@ the result of a sequence of multiplications. Consider:</p>
 </pre></div>
 <p>In languages like Lox that use <a href="https://en.wikipedia.org/wiki/Double-precision_floating-point_format">IEEE 754</a> double-precision floating-point
 numbers, the first evaluates to <code>0.006</code>, while the second yields
-<code>0.006000000000000001</code>. Sometimes that tiny difference matters.
-<a href="https://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg.html">This</a> is a good place to learn more.</p>
+<code>0.006000000000000001</code>. Sometimes that tiny difference matters. <a href="https://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg.html">This</a> is
+a good place to learn more.</p>
 </aside>
 <p>All of this is correct, but the fact that the first symbol in the body of the
 rule is the same as the head of the rule means this production is
@@ -350,10 +350,10 @@ partially a pragmatic one. This rule is correct, but not optimal for how we
 intend to parse it. Instead of a left recursive rule, we&rsquo;ll use a different one.</p>
 <div class="codehilite"><pre><span class="i">factor</span>         → <span class="i">unary</span> ( ( <span class="s">&quot;/&quot;</span> | <span class="s">&quot;*&quot;</span> ) <span class="i">unary</span> )* ;
 </pre></div>
-<p>We define a factor expression as a flat <em>sequence</em> of multiplications
-and divisions. This matches the same syntax as the previous rule, but better
-mirrors the code we&rsquo;ll write to parse Lox. We use the same structure for all of
-the other binary operator precedence levels, giving us this complete expression
+<p>We define a factor expression as a flat <em>sequence</em> of multiplications and
+divisions. This matches the same syntax as the previous rule, but better mirrors
+the code we&rsquo;ll write to parse Lox. We use the same structure for all of the
+other binary operator precedence levels, giving us this complete expression
 grammar:</p>
 <div class="codehilite"><pre><span class="i">expression</span>     → <span class="i">equality</span> ;
 <span class="i">equality</span>       → <span class="i">comparison</span> ( ( <span class="s">&quot;!=&quot;</span> | <span class="s">&quot;==&quot;</span> ) <span class="i">comparison</span> )* ;
@@ -377,8 +377,8 @@ technique is more than sufficient: <strong>recursive descent</strong>.</p>
 <p>Recursive descent is the simplest way to build a parser, and doesn&rsquo;t require
 using complex parser generator tools like Yacc, Bison or ANTLR. All you need is
 straightforward handwritten code. Don&rsquo;t be fooled by its simplicity, though.
-Recursive descent parsers are fast, robust, and can support sophisticated
-error handling. In fact, GCC, V8 (the JavaScript VM in Chrome), Roslyn (the C#
+Recursive descent parsers are fast, robust, and can support sophisticated error
+handling. In fact, GCC, V8 (the JavaScript VM in Chrome), Roslyn (the C#
 compiler written in C#) and many other heavyweight production language
 implementations use recursive descent. It rocks.</p>
 <p>Recursive descent is considered a <strong>top-down parser</strong> because it starts from the
@@ -419,39 +419,26 @@ itself<span class="em">&mdash;</span>directly or indirectly<span class="em">&mda
 call.</p>
 <h3><a href="#the-parser-class" id="the-parser-class"><small>6&#8202;.&#8202;2&#8202;.&#8202;1</small>The parser class</a></h3>
 <p>Each grammar rule becomes a method inside this new class:</p>
-<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
-create new file</div>
-<pre><span class="k">package</span> <span class="i">com.craftinginterpreters.lox</span>;
+<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">parser</span>.<span class="i">py</span>
+<span class="k">from</span> <span class="i">dataclasses</span> <span class="k">import</span> <span class="i">dataclass</span>
+<span class="k">from</span> .<span class="i">tokens</span> <span class="k">import</span> <span class="t">Token</span>, <span class="t">TokenType</span> <span class="k">as</span> <span class="t">TT</span>
+<span class="k">from</span> .<span class="i">expr</span> <span class="k">import</span> *
 
-<span class="k">import</span> <span class="i">java.util.List</span>;
-
-<span class="k">import static</span> <span class="i">com.craftinginterpreters.lox.TokenType.*</span>;
-
-<span class="k">class</span> <span class="t">Parser</span> {
-  <span class="k">private</span> <span class="k">final</span> <span class="t">List</span>&lt;<span class="t">Token</span>&gt; <span class="i">tokens</span>;
-  <span class="k">private</span> <span class="t">int</span> <span class="i">current</span> = <span class="n">0</span>;
-
-  <span class="t">Parser</span>(<span class="t">List</span>&lt;<span class="t">Token</span>&gt; <span class="i">tokens</span>) {
-    <span class="k">this</span>.<span class="i">tokens</span> = <span class="i">tokens</span>;
-  }
-}
+@<span class="i">dataclass</span>
+<span class="k">class</span> <span class="t">Parser</span>:
+    <span class="i">tokens</span>: <span class="i">list</span>[<span class="t">Token</span>]
+    <span class="i">current</span>: <span class="i">int</span> = <span class="n">0</span>
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, create new file</div>
-
 <p>Like the scanner, the parser consumes a flat input sequence, only now we&rsquo;re
 reading tokens instead of characters. We store the list of tokens and use
 <code>current</code> to point to the next token eagerly waiting to be parsed.</p>
 <p>We&rsquo;re going to run straight through the expression grammar now and translate
-each rule to Java code. The first rule, <code>expression</code>, simply expands to the
+each rule to Python code. The first rule, <code>expression</code>, simply expands to the
 <code>equality</code> rule, so that&rsquo;s straightforward.</p>
-<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
-add after <em>Parser</em>()</div>
-<pre>  <span class="k">private</span> <span class="t">Expr</span> <span class="i">expression</span>() {
-    <span class="k">return</span> <span class="i">equality</span>();
-  }
+<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">parser</span>.<span class="i">py</span> <span class="i">method</span> <span class="i">of</span> <span class="i">the</span> <span class="t">Parser</span> <span class="k">class</span>
+<span class="k">def</span> <span class="i">expression</span>(<span class="i">self</span>) -&gt; <span class="t">Expr</span>:
+    <span class="k">return</span> <span class="i">self</span>.<span class="i">equality</span>()
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, add after <em>Parser</em>()</div>
-
 <p>Each method for parsing a grammar rule produces a syntax tree for that rule and
 returns it to the caller. When the body of the rule contains a nonterminal<span class="em">&mdash;</span>a
 reference to another rule<span class="em">&mdash;</span>we <span name="left">call</span> that other rule&rsquo;s
@@ -464,23 +451,18 @@ and so on, until the parser hits a stack overflow and dies.</p>
 <p>The rule for equality is a little more complex.</p>
 <div class="codehilite"><pre><span class="i">equality</span>       → <span class="i">comparison</span> ( ( <span class="s">&quot;!=&quot;</span> | <span class="s">&quot;==&quot;</span> ) <span class="i">comparison</span> )* ;
 </pre></div>
-<p>In Java, that becomes:</p>
-<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
-add after <em>expression</em>()</div>
-<pre>  <span class="k">private</span> <span class="t">Expr</span> <span class="i">equality</span>() {
-    <span class="t">Expr</span> <span class="i">expr</span> = <span class="i">comparison</span>();
+<p>In Python, that becomes:</p>
+<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">parser</span>.<span class="i">py</span> <span class="i">method</span> <span class="i">of</span> <span class="i">the</span> <span class="t">Parser</span> <span class="k">class</span>
+<span class="k">def</span> <span class="i">equality</span>(<span class="i">self</span>) -&gt; <span class="t">Expr</span>:
+    <span class="i">expr</span> = <span class="i">self</span>.<span class="i">comparison</span>()
 
-    <span class="k">while</span> (<span class="i">match</span>(<span class="i">BANG_EQUAL</span>, <span class="i">EQUAL_EQUAL</span>)) {
-      <span class="t">Token</span> <span class="i">operator</span> = <span class="i">previous</span>();
-      <span class="t">Expr</span> <span class="i">right</span> = <span class="i">comparison</span>();
-      <span class="i">expr</span> = <span class="k">new</span> <span class="t">Expr</span>.<span class="t">Binary</span>(<span class="i">expr</span>, <span class="i">operator</span>, <span class="i">right</span>);
-    }
+    <span class="k">while</span> <span class="i">self</span>.<span class="i">match</span>(<span class="t">TT</span>.<span class="t">BANG_EQUAL</span>, <span class="t">TT</span>.<span class="t">EQUAL_EQUAL</span>):
+      <span class="i">operator</span> = <span class="i">self</span>.<span class="i">previous</span>()
+      <span class="i">right</span> = <span class="i">self</span>.<span class="i">comparison</span>()
+      <span class="i">expr</span> = <span class="t">Binary</span>(<span class="i">expr</span>, <span class="i">operator</span>, <span class="i">right</span>)
 
-    <span class="k">return</span> <span class="i">expr</span>;
-  }
+    <span class="k">return</span> <span class="i">expr</span>
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, add after <em>expression</em>()</div>
-
 <p>Let&rsquo;s step through it. The first <code>comparison</code> nonterminal in the body translates
 to the first call to <code>comparison()</code> in the method. We take that result and store
 it in a local variable.</p>
@@ -489,65 +471,44 @@ when to exit that loop. We can see that inside the rule, we must first find
 either a <code>!=</code> or <code>==</code> token. So, if we <em>don&rsquo;t</em> see one of those, we must be done
 with the sequence of equality operators. We express that check using a handy
 <code>match()</code> method.</p>
-<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
-add after <em>equality</em>()</div>
-<pre>  <span class="k">private</span> <span class="t">boolean</span> <span class="i">match</span>(<span class="t">TokenType</span>... <span class="i">types</span>) {
-    <span class="k">for</span> (<span class="t">TokenType</span> <span class="i">type</span> : <span class="i">types</span>) {
-      <span class="k">if</span> (<span class="i">check</span>(<span class="i">type</span>)) {
-        <span class="i">advance</span>();
-        <span class="k">return</span> <span class="k">true</span>;
-      }
-    }
-
-    <span class="k">return</span> <span class="k">false</span>;
-  }
+<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">parser</span>.<span class="i">py</span> <span class="i">method</span> <span class="i">of</span> <span class="i">the</span> <span class="t">Parser</span> <span class="k">class</span>
+<span class="k">def</span> <span class="i">match</span>(<span class="i">self</span>, *<span class="i">types</span>: <span class="t">TT</span>) -&gt; <span class="i">bool</span>:
+    <span class="k">for</span> <span class="i">type</span> <span class="k">in</span> <span class="i">types</span>:
+        <span class="k">if</span> <span class="i">self</span>.<span class="i">check</span>(<span class="i">type</span>):
+            <span class="i">self</span>.<span class="i">advance</span>()
+            <span class="k">return</span> <span class="t">True</span>
+    <span class="k">return</span> <span class="t">False</span>
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, add after <em>equality</em>()</div>
-
 <p>This checks to see if the current token has any of the given types. If so, it
 consumes the token and returns <code>true</code>. Otherwise, it returns <code>false</code> and leaves
 the current token alone. The <code>match()</code> method is defined in terms of two more
 fundamental operations.</p>
 <p>The <code>check()</code> method returns <code>true</code> if the current token is of the given type.
 Unlike <code>match()</code>, it never consumes the token, it only looks at it.</p>
-<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
-add after <em>match</em>()</div>
-<pre>  <span class="k">private</span> <span class="t">boolean</span> <span class="i">check</span>(<span class="t">TokenType</span> <span class="i">type</span>) {
-    <span class="k">if</span> (<span class="i">isAtEnd</span>()) <span class="k">return</span> <span class="k">false</span>;
-    <span class="k">return</span> <span class="i">peek</span>().<span class="i">type</span> == <span class="i">type</span>;
-  }
+<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">parser</span>.<span class="i">py</span> <span class="i">method</span> <span class="i">of</span> <span class="i">the</span> <span class="t">Parser</span> <span class="k">class</span>
+<span class="k">def</span> <span class="i">check</span>(<span class="i">self</span>, <span class="i">type</span>: <span class="t">TT</span>) -&gt; <span class="i">bool</span>:
+    <span class="k">return</span> <span class="k">not</span> <span class="i">self</span>.<span class="i">is_at_end</span>() <span class="k">and</span> <span class="i">self</span>.<span class="i">peek</span>().<span class="i">type</span> == <span class="i">type</span>
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, add after <em>match</em>()</div>
-
 <p>The <code>advance()</code> method consumes the current token and returns it, similar to how
 our scanner&rsquo;s corresponding method crawled through characters.</p>
-<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
-add after <em>check</em>()</div>
-<pre>  <span class="k">private</span> <span class="t">Token</span> <span class="i">advance</span>() {
-    <span class="k">if</span> (!<span class="i">isAtEnd</span>()) <span class="i">current</span>++;
-    <span class="k">return</span> <span class="i">previous</span>();
-  }
+<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">parser</span>.<span class="i">py</span> <span class="i">method</span> <span class="i">of</span> <span class="i">the</span> <span class="t">Parser</span> <span class="k">class</span>
+<span class="k">def</span> <span class="i">advance</span>(<span class="i">self</span>, <span class="i">type</span>: <span class="t">TT</span>) -&gt; <span class="i">bool</span>:
+    <span class="k">return</span> <span class="k">not</span> <span class="i">self</span>.<span class="i">is_at_end</span>():
+        <span class="i">self</span>.<span class="i">current</span> += <span class="n">1</span>
+    <span class="k">return</span> <span class="i">self</span>.<span class="i">previous</span>()
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, add after <em>check</em>()</div>
-
 <p>These methods bottom out on the last handful of primitive operations.</p>
-<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
-add after <em>advance</em>()</div>
-<pre>  <span class="k">private</span> <span class="t">boolean</span> <span class="i">isAtEnd</span>() {
-    <span class="k">return</span> <span class="i">peek</span>().<span class="i">type</span> == <span class="i">EOF</span>;
-  }
+<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">parser</span>.<span class="i">py</span> <span class="i">method</span> <span class="i">of</span> <span class="i">the</span> <span class="t">Parser</span> <span class="k">class</span>
+<span class="k">def</span> <span class="i">is_at_end</span>(<span class="i">self</span>) -&gt; <span class="i">bool</span>:
+    <span class="k">return</span> <span class="i">peek</span>().<span class="i">type</span> == <span class="t">EOF</span>
 
-  <span class="k">private</span> <span class="t">Token</span> <span class="i">peek</span>() {
-    <span class="k">return</span> <span class="i">tokens</span>.<span class="i">get</span>(<span class="i">current</span>);
-  }
+<span class="k">def</span> <span class="i">peek</span>(<span class="i">self</span>) -&gt; <span class="t">Token</span>:
+    <span class="k">return</span> <span class="i">self</span>.<span class="i">tokens</span>[<span class="i">self</span>.<span class="i">current</span>]
 
-  <span class="k">private</span> <span class="t">Token</span> <span class="i">previous</span>() {
-    <span class="k">return</span> <span class="i">tokens</span>.<span class="i">get</span>(<span class="i">current</span> - <span class="n">1</span>);
-  }
+<span class="k">def</span> <span class="i">previous</span>(<span class="i">self</span>) -&gt; <span class="t">Token</span>:
+    <span class="k">return</span> <span class="i">tokens</span>[<span class="i">self</span>.<span class="i">current</span> - <span class="n">1</span>]
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, add after <em>advance</em>()</div>
-
-<p><code>isAtEnd()</code> checks if we&rsquo;ve run out of tokens to parse. <code>peek()</code> returns the
+<p><code>is_at_end()</code> checks if we&rsquo;ve run out of tokens to parse. <code>peek()</code> returns the
 current token we have yet to consume, and <code>previous()</code> returns the most recently
 consumed token. The latter makes it easier to use <code>match()</code> and then access the
 just-matched token.</p>
@@ -575,67 +536,53 @@ precedence</em>.</p>
 <p>Moving on to the next rule<span class="ellipse">&thinsp;.&thinsp;.&thinsp;.&nbsp;</span></p>
 <div class="codehilite"><pre><span class="i">comparison</span>     → <span class="i">term</span> ( ( <span class="s">&quot;&gt;&quot;</span> | <span class="s">&quot;&gt;=&quot;</span> | <span class="s">&quot;&lt;&quot;</span> | <span class="s">&quot;&lt;=&quot;</span> ) <span class="i">term</span> )* ;
 </pre></div>
-<p>Translated to Java:</p>
-<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
-add after <em>equality</em>()</div>
-<pre>  <span class="k">private</span> <span class="t">Expr</span> <span class="i">comparison</span>() {
-    <span class="t">Expr</span> <span class="i">expr</span> = <span class="i">term</span>();
+<p>Translated to Python:</p>
+<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">parser</span>.<span class="i">py</span> <span class="i">method</span> <span class="i">of</span> <span class="i">the</span> <span class="t">Parser</span> <span class="k">class</span>
+<span class="k">def</span> <span class="i">comparison</span>(<span class="i">self</span>) -&gt; <span class="t">Expr</span>:
+    <span class="i">expr</span> = <span class="i">self</span>.<span class="i">term</span>()
 
-    <span class="k">while</span> (<span class="i">match</span>(<span class="i">GREATER</span>, <span class="i">GREATER_EQUAL</span>, <span class="i">LESS</span>, <span class="i">LESS_EQUAL</span>)) {
-      <span class="t">Token</span> <span class="i">operator</span> = <span class="i">previous</span>();
-      <span class="t">Expr</span> <span class="i">right</span> = <span class="i">term</span>();
-      <span class="i">expr</span> = <span class="k">new</span> <span class="t">Expr</span>.<span class="t">Binary</span>(<span class="i">expr</span>, <span class="i">operator</span>, <span class="i">right</span>);
-    }
+    <span class="k">while</span> <span class="i">self</span>.<span class="i">match</span>(<span class="t">TT</span>.<span class="t">GREATER</span>, <span class="t">TT</span>.<span class="t">GREATER_EQUAL</span>, <span class="t">TT</span>.<span class="t">LESS</span>,
+                     <span class="t">TT</span>.<span class="t">LESS_EQUAL</span>):
+        <span class="i">operator</span> = <span class="i">self</span>.<span class="i">previous</span>()
+        <span class="i">right</span> = <span class="i">self</span>.<span class="i">term</span>()
+        <span class="i">expr</span> = <span class="t">Binary</span>(<span class="i">expr</span>, <span class="i">operator</span>, <span class="i">right</span>)
 
-    <span class="k">return</span> <span class="i">expr</span>;
-  }
+    <span class="k">return</span> <span class="i">expr</span>
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, add after <em>equality</em>()</div>
-
 <p>The grammar rule is virtually <span name="handle">identical</span> to <code>equality</code>
 and so is the corresponding code. The only differences are the token types for
-the operators we match, and the method we call for the operands<span class="em">&mdash;</span>now
-<code>term()</code> instead of <code>comparison()</code>. The remaining two binary operator rules
-follow the same pattern.</p>
+the operators we match, and the method we call for the operands<span class="em">&mdash;</span>now <code>term()</code>
+instead of <code>comparison()</code>. The remaining two binary operator rules follow the
+same pattern.</p>
 <p>In order of precedence, first addition and subtraction:</p>
 <aside name="handle">
 <p>If you wanted to do some clever Java 8, you could create a helper method for
 parsing a left-associative series of binary operators given a list of token
 types, and an operand method handle to simplify this redundant code.</p>
 </aside>
-<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
-add after <em>comparison</em>()</div>
-<pre>  <span class="k">private</span> <span class="t">Expr</span> <span class="i">term</span>() {
-    <span class="t">Expr</span> <span class="i">expr</span> = <span class="i">factor</span>();
+<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">parser</span>.<span class="i">py</span> <span class="i">method</span> <span class="i">of</span> <span class="i">the</span> <span class="t">Parser</span> <span class="k">class</span>
+<span class="k">def</span> <span class="i">term</span>(<span class="i">self</span>) -&gt; <span class="t">Expr</span>:
+    <span class="i">expr</span> = <span class="i">self</span>.<span class="i">factor</span>()
 
-    <span class="k">while</span> (<span class="i">match</span>(<span class="i">MINUS</span>, <span class="i">PLUS</span>)) {
-      <span class="t">Token</span> <span class="i">operator</span> = <span class="i">previous</span>();
-      <span class="t">Expr</span> <span class="i">right</span> = <span class="i">factor</span>();
-      <span class="i">expr</span> = <span class="k">new</span> <span class="t">Expr</span>.<span class="t">Binary</span>(<span class="i">expr</span>, <span class="i">operator</span>, <span class="i">right</span>);
-    }
+    <span class="k">while</span> <span class="i">self</span>.<span class="i">match</span>(<span class="t">TT</span>.<span class="t">MINUS</span>, <span class="t">TT</span>.<span class="t">PLUS</span>):
+        <span class="i">operator</span> = <span class="i">self</span>.<span class="i">previous</span>()
+        <span class="i">right</span> = <span class="i">self</span>.<span class="i">unary</span>()
+        <span class="i">expr</span> = <span class="t">Binary</span>(<span class="i">expr</span>, <span class="i">operator</span>, <span class="i">right</span>)
 
-    <span class="k">return</span> <span class="i">expr</span>;
-  }
+    <span class="k">return</span> <span class="i">expr</span>
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, add after <em>comparison</em>()</div>
-
 <p>And finally, multiplication and division:</p>
-<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
-add after <em>term</em>()</div>
-<pre>  <span class="k">private</span> <span class="t">Expr</span> <span class="i">factor</span>() {
-    <span class="t">Expr</span> <span class="i">expr</span> = <span class="i">unary</span>();
+<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">parser</span>.<span class="i">py</span> <span class="i">method</span> <span class="i">of</span> <span class="i">the</span> <span class="t">Parser</span> <span class="k">class</span>
+<span class="k">def</span> <span class="i">factor</span>(<span class="i">self</span>) -&gt; <span class="t">Expr</span>:
+    <span class="i">expr</span> = <span class="i">self</span>.<span class="i">unary</span>()
 
-    <span class="k">while</span> (<span class="i">match</span>(<span class="i">SLASH</span>, <span class="i">STAR</span>)) {
-      <span class="t">Token</span> <span class="i">operator</span> = <span class="i">previous</span>();
-      <span class="t">Expr</span> <span class="i">right</span> = <span class="i">unary</span>();
-      <span class="i">expr</span> = <span class="k">new</span> <span class="t">Expr</span>.<span class="t">Binary</span>(<span class="i">expr</span>, <span class="i">operator</span>, <span class="i">right</span>);
-    }
+    <span class="k">while</span> <span class="i">self</span>.<span class="i">match</span>(<span class="t">TT</span>.<span class="t">SLASH</span>, <span class="t">TT</span>.<span class="t">STAR</span>):
+        <span class="i">operator</span> = <span class="i">self</span>.<span class="i">previous</span>()
+        <span class="i">right</span> = <span class="i">self</span>.<span class="i">unary</span>()
+        <span class="i">expr</span> = <span class="t">Binary</span>(<span class="i">expr</span>, <span class="i">operator</span>, <span class="i">right</span>)
 
-    <span class="k">return</span> <span class="i">expr</span>;
-  }
+    <span class="k">return</span> <span class="i">expr</span>
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, add after <em>term</em>()</div>
-
 <p>That&rsquo;s all of the binary operators, parsed with the correct precedence and
 associativity. We&rsquo;re crawling up the precedence hierarchy and now we&rsquo;ve reached
 the unary operators.</p>
@@ -643,20 +590,15 @@ the unary operators.</p>
                | <span class="i">primary</span> ;
 </pre></div>
 <p>The code for this is a little different.</p>
-<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
-add after <em>factor</em>()</div>
-<pre>  <span class="k">private</span> <span class="t">Expr</span> <span class="i">unary</span>() {
-    <span class="k">if</span> (<span class="i">match</span>(<span class="i">BANG</span>, <span class="i">MINUS</span>)) {
-      <span class="t">Token</span> <span class="i">operator</span> = <span class="i">previous</span>();
-      <span class="t">Expr</span> <span class="i">right</span> = <span class="i">unary</span>();
-      <span class="k">return</span> <span class="k">new</span> <span class="t">Expr</span>.<span class="t">Unary</span>(<span class="i">operator</span>, <span class="i">right</span>);
-    }
+<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">parser</span>.<span class="i">py</span> <span class="i">method</span> <span class="i">of</span> <span class="i">the</span> <span class="t">Parser</span> <span class="k">class</span>
+<span class="k">def</span> <span class="i">unary</span>(<span class="i">self</span>) -&gt; <span class="t">Expr</span>:
+    <span class="k">if</span> <span class="i">self</span>.<span class="i">match</span>(<span class="t">TT</span>.<span class="t">BANG</span>, <span class="t">TT</span>.<span class="t">MINUS</span>):
+        <span class="i">operator</span> = <span class="i">self</span>.<span class="i">previous</span>()
+        <span class="i">right</span> = <span class="i">self</span>.<span class="i">unary</span>()
+        <span class="k">return</span> <span class="t">Unary</span>(<span class="i">operator</span>, <span class="i">right</span>)
 
-    <span class="k">return</span> <span class="i">primary</span>();
-  }
+    <span class="k">return</span> <span class="i">self</span>.<span class="i">primary</span>()
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, add after <em>factor</em>()</div>
-
 <p>Again, we look at the <span name="current">current</span> token to see how to
 parse. If it&rsquo;s a <code>!</code> or <code>-</code>, we must have a unary expression. In that case, we
 grab the token and then recursively call <code>unary()</code> again to parse the operand.
@@ -672,26 +614,21 @@ expressions.</p>
 </pre></div>
 <p>Most of the cases for the rule are single terminals, so parsing is
 straightforward.</p>
-<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
-add after <em>unary</em>()</div>
-<pre>  <span class="k">private</span> <span class="t">Expr</span> <span class="i">primary</span>() {
-    <span class="k">if</span> (<span class="i">match</span>(<span class="i">FALSE</span>)) <span class="k">return</span> <span class="k">new</span> <span class="t">Expr</span>.<span class="t">Literal</span>(<span class="k">false</span>);
-    <span class="k">if</span> (<span class="i">match</span>(<span class="i">TRUE</span>)) <span class="k">return</span> <span class="k">new</span> <span class="t">Expr</span>.<span class="t">Literal</span>(<span class="k">true</span>);
-    <span class="k">if</span> (<span class="i">match</span>(<span class="i">NIL</span>)) <span class="k">return</span> <span class="k">new</span> <span class="t">Expr</span>.<span class="t">Literal</span>(<span class="k">null</span>);
-
-    <span class="k">if</span> (<span class="i">match</span>(<span class="i">NUMBER</span>, <span class="i">STRING</span>)) {
-      <span class="k">return</span> <span class="k">new</span> <span class="t">Expr</span>.<span class="t">Literal</span>(<span class="i">previous</span>().<span class="i">literal</span>);
-    }
-
-    <span class="k">if</span> (<span class="i">match</span>(<span class="i">LEFT_PAREN</span>)) {
-      <span class="t">Expr</span> <span class="i">expr</span> = <span class="i">expression</span>();
-      <span class="i">consume</span>(<span class="i">RIGHT_PAREN</span>, <span class="s">&quot;Expect &#39;)&#39; after expression.&quot;</span>);
-      <span class="k">return</span> <span class="k">new</span> <span class="t">Expr</span>.<span class="t">Grouping</span>(<span class="i">expr</span>);
-    }
-  }
+<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">parser</span>.<span class="i">py</span> <span class="i">method</span> <span class="i">of</span> <span class="i">the</span> <span class="t">Parser</span> <span class="k">class</span>
+<span class="k">def</span> <span class="i">primary</span>(<span class="i">self</span>) -&gt; <span class="t">Expr</span>:
+    <span class="k">if</span> <span class="i">self</span>.<span class="i">match</span>(<span class="t">FALSE</span>):
+        <span class="k">return</span> <span class="t">Literal</span>(<span class="t">False</span>)
+    <span class="k">if</span> <span class="i">self</span>.<span class="i">match</span>(<span class="t">TRUE</span>):
+        <span class="k">return</span> <span class="t">Literal</span>(<span class="t">True</span>)
+    <span class="k">if</span> <span class="i">self</span>.<span class="i">match</span>(<span class="t">NIL</span>):
+        <span class="k">return</span> <span class="t">Literal</span>(<span class="t">None</span>)
+    <span class="k">if</span> <span class="i">self</span>.<span class="i">match</span>(<span class="t">NUMBER</span>, <span class="t">STRING</span>):
+        <span class="k">return</span> <span class="t">Literal</span>(<span class="i">previous</span>().<span class="i">literal</span>)
+    <span class="k">if</span> <span class="i">self</span>.<span class="i">match</span>(<span class="t">LEFT_PAREN</span>):
+        <span class="i">expr</span> = <span class="i">self</span>.<span class="i">expression</span>()
+        <span class="i">self</span>.<span class="i">consume</span>(<span class="t">RIGHT_PAREN</span>, <span class="s">&quot;Expect &#39;)&#39; after expression.&quot;</span>)
+        <span class="k">return</span> <span class="t">Grouping</span>(<span class="i">expr</span>)
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, add after <em>unary</em>()</div>
-
 <p>The interesting branch is the one for handling parentheses. After we match an
 opening <code>(</code> and parse the expression inside it, we <em>must</em> find a <code>)</code> token. If
 we don&rsquo;t, that&rsquo;s an error.</p>
@@ -702,8 +639,8 @@ we don&rsquo;t, that&rsquo;s an error.</p>
 <p>Given a valid sequence of tokens, produce a corresponding syntax tree.</p>
 </li>
 <li>
-<p>Given an <em>invalid</em> sequence of tokens, detect any errors and tell the
-user about their mistakes.</p>
+<p>Given an <em>invalid</em> sequence of tokens, detect any errors and tell the user
+about their mistakes.</p>
 </li>
 </ol>
 <p>Don&rsquo;t underestimate how important the second job is! In modern IDEs and editors,
@@ -725,18 +662,18 @@ error. A parser must:</p>
 <ul>
 <li>
 <p><strong>Detect and report the error.</strong> If it doesn&rsquo;t detect the <span
-name="error">error</span> and passes the resulting malformed syntax tree on
-to the interpreter, all manner of horrors may be summoned.</p>
+name="error">error</span> and passes the resulting malformed syntax tree on to
+the interpreter, all manner of horrors may be summoned.</p>
 <aside name="error">
-<p>Philosophically speaking, if an error isn&rsquo;t detected and the interpreter
-runs the code, is it <em>really</em> an error?</p>
+<p>Philosophically speaking, if an error isn&rsquo;t detected and the interpreter runs
+the code, is it <em>really</em> an error?</p>
 </aside></li>
 <li>
-<p><strong>Avoid crashing or hanging.</strong> Syntax errors are a fact of life, and
-language tools have to be robust in the face of them. Segfaulting or getting
-stuck in an infinite loop isn&rsquo;t allowed. While the source may not be valid
-<em>code</em>, it&rsquo;s still a valid <em>input to the parser</em> because users use the
-parser to learn what syntax is allowed.</p>
+<p><strong>Avoid crashing or hanging.</strong> Syntax errors are a fact of life, and language
+tools have to be robust in the face of them. Segfaulting or getting stuck in
+an infinite loop isn&rsquo;t allowed. While the source may not be valid <em>code</em>, it&rsquo;s
+still a valid <em>input to the parser</em> because users use the parser to learn what
+syntax is allowed.</p>
 </li>
 </ul>
 <p>Those are the table stakes if you want to get in the parser game at all, but you
@@ -747,23 +684,23 @@ really want to raise the ante beyond that. A decent parser should:</p>
 parser technology was first invented. The days of needing to optimize your
 parser so that it could get through an entire source file during a coffee
 break are over. But programmer expectations have risen as quickly, if not
-faster. They expect their editors to reparse files in milliseconds after
-every keystroke.</p>
+faster. They expect their editors to reparse files in milliseconds after every
+keystroke.</p>
 </li>
 <li>
 <p><strong>Report as many distinct errors as there are.</strong> Aborting after the first
-error is easy to implement, but it&rsquo;s annoying for users if every time they
-fix what they think is the one error in a file, a new one appears. They
-want to see them all.</p>
+error is easy to implement, but it&rsquo;s annoying for users if every time they fix
+what they think is the one error in a file, a new one appears. They want to
+see them all.</p>
 </li>
 <li>
 <p><strong>Minimize <em>cascaded</em> errors.</strong> Once a single error is found, the parser no
-longer really knows what&rsquo;s going on. It tries to get itself back on track
-and keep going, but if it gets confused, it may report a slew of ghost
-errors that don&rsquo;t indicate other real problems in the code. When the first
-error is fixed, those phantoms disappear, because they reflect only the
-parser&rsquo;s own confusion. Cascaded errors are annoying because they can scare
-the user into thinking their code is in a worse state than it is.</p>
+longer really knows what&rsquo;s going on. It tries to get itself back on track and
+keep going, but if it gets confused, it may report a slew of ghost errors that
+don&rsquo;t indicate other real problems in the code. When the first error is fixed,
+those phantoms disappear, because they reflect only the parser&rsquo;s own
+confusion. Cascaded errors are annoying because they can scare the user into
+thinking their code is in a worse state than it is.</p>
 </li>
 </ul>
 <p>The last two points are in tension. We want to report as many separate errors as
@@ -800,33 +737,24 @@ trade-off.</p>
 <p>The traditional place in the grammar to synchronize is between statements. We
 don&rsquo;t have those yet, so we won&rsquo;t actually synchronize in this chapter, but
 we&rsquo;ll get the machinery in place for later.</p>
-<h3><a href="#entering-panic-mode" id="entering-panic-mode"><small>6&#8202;.&#8202;3&#8202;.&#8202;2</small>Entering panic mode</a></h3>
+<h3><a href="#entering-panic-mode-#todo" id="entering-panic-mode-#todo"><small>6&#8202;.&#8202;3&#8202;.&#8202;2</small>Entering panic mode (#TODO)</a></h3>
 <p>Back before we went on this side trip around error recovery, we were writing the
 code to parse a parenthesized expression. After parsing the expression, the
 parser looks for the closing <code>)</code> by calling <code>consume()</code>. Here, finally, is that
 method:</p>
-<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
-add after <em>match</em>()</div>
-<pre>  <span class="k">private</span> <span class="t">Token</span> <span class="i">consume</span>(<span class="t">TokenType</span> <span class="i">type</span>, <span class="t">String</span> <span class="i">message</span>) {
-    <span class="k">if</span> (<span class="i">check</span>(<span class="i">type</span>)) <span class="k">return</span> <span class="i">advance</span>();
-
-    <span class="k">throw</span> <span class="i">error</span>(<span class="i">peek</span>(), <span class="i">message</span>);
-  }
+<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">parser</span>.<span class="i">py</span> <span class="i">method</span> <span class="i">of</span> <span class="i">the</span> <span class="t">Parser</span> <span class="k">class</span>
+<span class="k">def</span> <span class="i">consume</span>(<span class="i">self</span>, <span class="i">type</span>: <span class="t">TT</span>, <span class="i">message</span>: <span class="i">str</span>):
+    <span class="k">if</span> <span class="i">self</span>.<span class="i">check</span>(<span class="i">type</span>):
+        <span class="k">return</span> <span class="i">self</span>.<span class="i">advance</span>()
+    <span class="k">raise</span> <span class="i">self</span>.<span class="i">error</span>(<span class="i">self</span>.<span class="i">peek</span>(), <span class="i">message</span>)
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, add after <em>match</em>()</div>
-
 <p>It&rsquo;s similar to <code>match()</code> in that it checks to see if the next token is of the
 expected type. If so, it consumes the token and everything is groovy. If some
 other token is there, then we&rsquo;ve hit an error. We report it by calling this:</p>
-<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
-add after <em>previous</em>()</div>
-<pre>  <span class="k">private</span> <span class="t">ParseError</span> <span class="i">error</span>(<span class="t">Token</span> <span class="i">token</span>, <span class="t">String</span> <span class="i">message</span>) {
-    <span class="t">Lox</span>.<span class="i">error</span>(<span class="i">token</span>, <span class="i">message</span>);
-    <span class="k">return</span> <span class="k">new</span> <span class="t">ParseError</span>();
-  }
+<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">parser</span>.<span class="i">py</span> <span class="i">method</span> <span class="i">of</span> <span class="i">the</span> <span class="t">Parser</span> <span class="k">class</span>
+<span class="k">def</span> <span class="i">error</span>(<span class="i">self</span>, <span class="i">token</span>: <span class="t">Token</span>, <span class="i">message</span>: <span class="i">str</span>):
+    <span class="k">return</span> <span class="t">ParseError</span>()
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, add after <em>previous</em>()</div>
-
 <p>First, that shows the error to the user by calling:</p>
 <div class="codehilite"><div class="source-file"><em>lox/Lox.java</em><br>
 add after <em>report</em>()</div>
@@ -846,14 +774,12 @@ interpreter to track locations in code.</p>
 <p>After we report the error, the user knows about their mistake, but what does the
 <em>parser</em> do next? Back in <code>error()</code>, we create and return a ParseError, an
 instance of this new class:</p>
-<div class="codehilite"><pre class="insert-before">class Parser {
-</pre><div class="source-file"><em>lox/Parser.java</em><br>
-nest inside class <em>Parser</em></div>
+<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
+create new file</div>
 <pre class="insert">  <span class="k">private</span> <span class="k">static</span> <span class="k">class</span> <span class="t">ParseError</span> <span class="k">extends</span> <span class="t">RuntimeException</span> {}
 
-</pre><pre class="insert-after">  private final List&lt;Token&gt; tokens;
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, nest inside class <em>Parser</em></div>
+<div class="source-file-narrow"><em>lox/Parser.java</em>, create new file</div>
 
 <p>This is a simple sentinel class we use to unwind the parser. The <code>error()</code>
 method <em>returns</em> the error instead of <em>throwing</em> it because we want to let the
@@ -889,10 +815,10 @@ synchronize. Discarding tokens is pretty easy, but how do we synchronize the
 parser&rsquo;s own state?</p>
 <h3><a href="#synchronizing-a-recursive-descent-parser" id="synchronizing-a-recursive-descent-parser"><small>6&#8202;.&#8202;3&#8202;.&#8202;3</small>Synchronizing a recursive descent parser</a></h3>
 <p>With recursive descent, the parser&rsquo;s state<span class="em">&mdash;</span>which rules it is in the middle of
-recognizing<span class="em">&mdash;</span>is not stored explicitly in fields. Instead, we use Java&rsquo;s
-own call stack to track what the parser is doing. Each rule in the middle of
-being parsed is a call frame on the stack. In order to reset that state, we need
-to clear out those call frames.</p>
+recognizing<span class="em">&mdash;</span>is not stored explicitly in fields. Instead, we use Java&rsquo;s own
+call stack to track what the parser is doing. Each rule in the middle of being
+parsed is a call frame on the stack. In order to reset that state, we need to
+clear out those call frames.</p>
 <p>The natural way to do that in Java is exceptions. When we want to synchronize,
 we <em>throw</em> that ParseError object. Higher up in the method for the grammar rule
 we are synchronizing to, we&rsquo;ll catch it. Since we synchronize on statement
@@ -910,32 +836,19 @@ loop. Our synchronization isn&rsquo;t perfect, but that&rsquo;s OK. We&rsquo;ve 
 the first error precisely, so everything after that is kind of &ldquo;best effort&rdquo;.</p>
 </aside>
 <p>This method encapsulates that logic:</p>
-<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
-add after <em>error</em>()</div>
-<pre>  <span class="k">private</span> <span class="t">void</span> <span class="i">synchronize</span>() {
-    <span class="i">advance</span>();
+<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">parser</span>.<span class="i">py</span> <span class="i">method</span> <span class="i">of</span> <span class="i">the</span> <span class="t">Parser</span> <span class="k">class</span>
+<span class="k">def</span> <span class="i">synchronize</span>(<span class="i">self</span>):
+    <span class="i">self</span>.<span class="i">advance</span>()
+    <span class="i">boundary_tokens</span> = {<span class="t">TT</span>.<span class="t">CLASS</span>, <span class="t">TT</span>.<span class="t">FUN</span>, <span class="t">TT</span>.<span class="t">VAR</span>, <span class="t">TT</span>.<span class="t">FOR</span>, <span class="t">TT</span>.<span class="t">IF</span>,
+                       <span class="t">TT</span>.<span class="t">WHILE</span>, <span class="t">TT</span>.<span class="t">PRINT</span>, <span class="t">TT</span>.<span class="t">RETURN</span>}
 
-    <span class="k">while</span> (!<span class="i">isAtEnd</span>()) {
-      <span class="k">if</span> (<span class="i">previous</span>().<span class="i">type</span> == <span class="i">SEMICOLON</span>) <span class="k">return</span>;
-
-      <span class="k">switch</span> (<span class="i">peek</span>().<span class="i">type</span>) {
-        <span class="k">case</span> <span class="i">CLASS</span>:
-        <span class="k">case</span> <span class="i">FUN</span>:
-        <span class="k">case</span> <span class="i">VAR</span>:
-        <span class="k">case</span> <span class="i">FOR</span>:
-        <span class="k">case</span> <span class="i">IF</span>:
-        <span class="k">case</span> <span class="i">WHILE</span>:
-        <span class="k">case</span> <span class="i">PRINT</span>:
-        <span class="k">case</span> <span class="i">RETURN</span>:
-          <span class="k">return</span>;
-      }
-
-      <span class="i">advance</span>();
-    }
-  }
+    <span class="k">while</span> <span class="k">not</span> <span class="i">self</span>.<span class="i">is_at_end</span>():
+        <span class="k">if</span> <span class="i">self</span>.<span class="i">previous</span>().<span class="i">type</span> == <span class="t">SEMICOLON</span>:
+            <span class="k">return</span>
+        <span class="k">if</span> <span class="i">self</span>.<span class="i">peek</span>().<span class="i">type</span> <span class="k">in</span> <span class="i">boundary_tokens</span>:
+            <span class="k">return</span>
+      <span class="i">self</span>.<span class="i">advance</span>()
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, add after <em>error</em>()</div>
-
 <p>It discards tokens until it thinks it has found a statement boundary. After
 catching a ParseError, we&rsquo;ll call this and then we are hopefully back in sync.
 When it works well, we have discarded tokens that would have likely caused
@@ -951,39 +864,25 @@ need to add a little error handling. As the parser descends through the parsing
 methods for each grammar rule, it eventually hits <code>primary()</code>. If none of the
 cases in there match, it means we are sitting on a token that can&rsquo;t start an
 expression. We need to handle that error too.</p>
-<div class="codehilite"><pre class="insert-before">    if (match(LEFT_PAREN)) {
-      Expr expr = expression();
-      consume(RIGHT_PAREN, &quot;Expect ')' after expression.&quot;);
-      return new Expr.Grouping(expr);
-    }
-</pre><div class="source-file"><em>lox/Parser.java</em><br>
-in <em>primary</em>()</div>
-<pre class="insert">
-
-    <span class="k">throw</span> <span class="i">error</span>(<span class="i">peek</span>(), <span class="s">&quot;Expect expression.&quot;</span>);
-</pre><pre class="insert-after">  }
+<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">parser</span>.<span class="i">py</span> <span class="i">at</span> <span class="i">the</span> <span class="i">end</span> <span class="i">of</span> <span class="t">Parser</span>.<span class="i">primary</span>() <span class="i">method</span>
+    ...
+    <span class="k">raise</span> <span class="t">ParseError</span>(<span class="i">self</span>.<span class="i">peek</span>(), <span class="s">&quot;Expect expression.&quot;</span>)
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, in <em>primary</em>()</div>
-
 <p>With that, all that remains in the parser is to define an initial method to kick
 it off. That method is called, naturally enough, <code>parse()</code>.</p>
-<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
-add after <em>Parser</em>()</div>
-<pre>  <span class="t">Expr</span> <span class="i">parse</span>() {
-    <span class="k">try</span> {
-      <span class="k">return</span> <span class="i">expression</span>();
-    } <span class="k">catch</span> (<span class="t">ParseError</span> <span class="i">error</span>) {
-      <span class="k">return</span> <span class="k">null</span>;
-    }
-  }
+<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">parser</span>.<span class="i">py</span> <span class="i">method</span> <span class="i">of</span> <span class="i">the</span> <span class="t">Parser</span> <span class="k">class</span>
+<span class="k">def</span> <span class="i">parse</span>(<span class="i">self</span>):
+    <span class="k">try</span>:
+        <span class="k">return</span> <span class="i">self</span>.<span class="i">expression</span>()
+    <span class="k">except</span> <span class="t">ParseError</span>:
+        <span class="k">return</span> <span class="t">None</span>
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, add after <em>Parser</em>()</div>
-
 <p>We&rsquo;ll revisit this method later when we add statements to the language. For now,
 it parses a single expression and returns it. We also have some temporary code
 to exit out of panic mode. Syntax error recovery is the parser&rsquo;s job, so we
 don&rsquo;t want the ParseError exception to escape into the rest of the interpreter.</p>
-<p>When a syntax error does occur, this method returns <code>null</code>. That&rsquo;s OK. The
+<h1><a href="#fixme" id="fixme"><small>6&#8202;.&#8202;4</small>FIXME:</a></h1>
+<p>When a syntax error does occur, this method returns <code>None</code>. That&rsquo;s OK. The
 parser promises not to crash or hang on invalid syntax, but it doesn&rsquo;t promise
 to return a <em>usable syntax tree</em> if an error is found. As soon as the parser
 reports an error, <code>hadError</code> gets set, and subsequent phases are skipped.</p>
@@ -992,21 +891,17 @@ out. We still don&rsquo;t have an interpreter, so for now, we&rsquo;ll parse to 
 tree and then use the AstPrinter class from the <a href="representing-code.html#a-not-very-pretty-printer">last chapter</a> to
 display it.</p>
 <p>Delete the old code to print the scanned tokens and replace it with this:</p>
-<div class="codehilite"><pre class="insert-before">    List&lt;Token&gt; tokens = scanner.scanTokens();
-</pre><div class="source-file"><em>lox/Lox.java</em><br>
-in <em>run</em>()<br>
-replace 5 lines</div>
-<pre class="insert">    <span class="t">Parser</span> <span class="i">parser</span> = <span class="k">new</span> <span class="t">Parser</span>(<span class="i">tokens</span>);
-    <span class="t">Expr</span> <span class="i">expression</span> = <span class="i">parser</span>.<span class="i">parse</span>();
+<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">lox</span>.<span class="i">py</span> <span class="k">in</span> <span class="i">run</span>() <span class="i">method</span> <span class="i">of</span> <span class="i">the</span> <span class="t">Lox</span> <span class="k">class</span>
+    <span class="i">tokens</span> = <span class="i">tokenize</span>(<span class="i">self</span>.<span class="i">source</span>)
+    <span class="i">parser</span> = <span class="t">Parser</span>(<span class="i">tokens</span>)
+    <span class="i">expression</span> = <span class="i">parser</span>.<span class="i">parse</span>()
 
-    <span class="c">// Stop if there was a syntax error.</span>
+    # <span class="t">FIXME</span>: <span class="i">handle</span> <span class="t">ParseErrors</span>
+    # <span class="t">Stop</span> <span class="k">if</span> <span class="i">there</span> <span class="i">was</span> <span class="i">a</span> <span class="i">syntax</span> <span class="i">error</span>.
     <span class="k">if</span> (<span class="i">hadError</span>) <span class="k">return</span>;
 
-    <span class="t">System</span>.<span class="i">out</span>.<span class="i">println</span>(<span class="k">new</span> <span class="t">AstPrinter</span>().<span class="i">print</span>(<span class="i">expression</span>));
-</pre><pre class="insert-after">  }
+    <span class="k">print</span>(<span class="i">pretty</span>(<span class="i">expression</span>))
 </pre></div>
-<div class="source-file-narrow"><em>lox/Lox.java</em>, in <em>run</em>(), replace 5 lines</div>
-
 <p>Congratulations, you have crossed the <span name="harder">threshold</span>! That
 really is all there is to handwriting a parser. We&rsquo;ll extend the grammar in
 later chapters with assignment, statements, and other stuff, but none of that is

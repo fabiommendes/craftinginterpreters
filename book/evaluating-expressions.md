@@ -38,12 +38,11 @@ Taking them on one at a time...
 ## Representing Values
 
 In Lox, <span name="value">values</span> are created by literals, computed by
-expressions, and stored in variables. The user sees these as *Lox* objects, but
+expressions, and stored in variables. The user sees these as _Lox_ objects, but
 they are implemented in the underlying language our interpreter is written in.
-That means bridging the lands of Lox's dynamic typing and Java's static types. A
-variable in Lox can store a value of any (Lox) type, and can even store values
-of different types at different points in time. What Java type might we use to
-represent that?
+That means bridging the lands of Lox's and Python's types. Both languages have
+dynamic and somewhat strict types, but this category is very broad and we often
+need to adjust for small differences in behavior between both languages.
 
 <aside name="value">
 
@@ -56,61 +55,58 @@ perspective, the terms are synonymous.
 
 </aside>
 
-Given a Java variable with that static type, we must also be able to determine
-which kind of value it holds at runtime. When the interpreter executes a `+`
-operator, it needs to tell if it is adding two numbers or concatenating two
-strings. Is there a Java type that can hold numbers, strings, Booleans, and
-more? Is there one that can tell us what its runtime type is? There is! Good old
-java.lang.Object.
-
 In places in the interpreter where we need to store a Lox value, we can use
-Object as the type. Java has boxed versions of its primitive types that all
-subclass Object, so we can use those for Lox's built-in types:
+Python's `Any` from the `typing` module as the type. `Any`, as the name implies,
+declares a variable that can hold any type. There are many Python types that
+cannot be produced by Lox code, and we could be more precise by declaring a
+custom type that narrows exactly to the list of supported values. In this book,
+however, I prefer to keep things simple and accessible and avoid more advanced
+Python typing features.
 
 <table>
 <thead>
 <tr>
   <td>Lox type</td>
-  <td>Java representation</td>
+  <td>Python representation</td>
 </tr>
 </thead>
 <tbody>
 <tr>
   <td>Any Lox value</td>
-  <td>Object</td>
+  <td>Any</td>
 </tr>
 <tr>
   <td><code>nil</code></td>
-  <td><code>null</code></td>
+  <td><code>None</code></td>
 </tr>
 <tr>
   <td>Boolean</td>
-  <td>Boolean</td>
+  <td>bool</td>
 </tr>
 <tr>
   <td>number</td>
-  <td>Double</td>
+  <td>float</td>
 </tr>
 <tr>
   <td>string</td>
-  <td>String</td>
+  <td>str</td>
 </tr>
 </tbody>
 </table>
 
-Given a value of static type Object, we can determine if the runtime value is a
-number or a string or whatever using Java's built-in `instanceof` operator. In
-other words, the <span name="jvm">JVM</span>'s own object representation
-conveniently gives us everything we need to implement Lox's built-in types.
-We'll have to do a little more work later when we add Lox's notions of
-functions, classes, and instances, but Object and the boxed primitive classes
-are sufficient for the types we need right now.
+Given a value, we can determine if the runtime value is a number or a string or
+whatever using Python's built-in `isinstance` function. In other words, the
+<span name="python">Python</span>'s own object representation conveniently gives
+us everything we need to implement Lox's built-in types. We'll have to do a
+little more work later when we add Lox's notions of functions, classes, and
+instances, but Python's own primitives are sufficient for the types we need
+right now.
 
-<aside name="jvm">
+<aside name="python">
 
-Another thing we need to do with values is manage their memory, and Java does
+Another thing we need to do with values is manage their memory, and Python does
 that too. A handy object representation and a really nice garbage collector are
-the main reasons we're writing our first interpreter in Java.
+the main reasons we're writing our first interpreter in Python.
 
 </aside>
 
@@ -119,36 +115,48 @@ the main reasons we're writing our first interpreter in Java.
 Next, we need blobs of code to implement the evaluation logic for each kind of
 expression we can parse. We could stuff that code into the syntax tree classes
 in something like an `interpret()` method. In effect, we could tell each syntax
-tree node, "Interpret thyself". This is the Gang of Four's
-[Interpreter design pattern][]. It's a neat pattern, but like I mentioned
-earlier, it gets messy if we jam all sorts of logic into the tree classes.
+tree node, "Interpret thyself". This is the Gang of Four's [Interpreter design
+pattern][]. It's a neat pattern, but like I mentioned earlier, it gets messy if
+we jam all sorts of logic into the tree classes.
 
 [interpreter design pattern]: https://en.wikipedia.org/wiki/Interpreter_pattern
 
-Instead, we're going to reuse our groovy [Visitor pattern][]. In the previous
-chapter, we created an AstPrinter class. It took in a syntax tree and
-recursively traversed it, building up a string which it ultimately returned.
-That's almost exactly what a real interpreter does, except instead of
-concatenating strings, it computes values.
+Instead, we're going to reuse our groovy [Single dispatch][] pattern. In the
+previous chapter, we created `pretty()` single dispatwch function. It took in a
+syntax tree and recursively traversed it, building up a string which it
+ultimately returned. That's almost exactly what a real interpreter does, except
+instead of concatenating strings, it computes values.
 
-[visitor pattern]: representing-code.html#the-visitor-pattern
+[single dispatch]: representing-code.html#single-dispatch
 
-We start with a new class.
+We start with a new single dispatch method.
 
-^code interpreter-class
+```python
+# lox/eval.py
+from functools import singledispatch
+from typing import Any
+from .expr import *
 
-The class declares that it's a visitor. The return type of the visit methods
-will be Object, the root class that we use to refer to a Lox value in our Java
-code. To satisfy the Visitor interface, we need to define visit methods for each
-of the four expression tree classes our parser produces. We'll start with the
-simplest...
+@singledispatch
+def eval(expr: Expr) -> Any:
+    msg = f"cannot eval {expr.__class__.__name__} objects"
+    raise TypeError(msg)
+```
+
+We call it `eval` to honour a tradition in many dynamic languages (including
+Python) that have a function named like so that dynamically interpret source
+strings of that language.
+
+The return type of the `eval` method will be `Any`, meaning that it can be any
+arbitrary Python value. We need to define implementations for each of the four
+expression tree classes our parser produces. We'll start with the simplest...
 
 ### Evaluating literals
 
 The leaves of an expression tree -- the atomic bits of syntax that all other
 expressions are composed of -- are <span name="leaf">literals</span>. Literals
-are almost values already, but the distinction is important. A literal is a *bit
-of syntax* that produces a value. A literal always appears somewhere in the
+are almost values already, but the distinction is important. A literal is a _bit
+of syntax_ that produces a value. A literal always appears somewhere in the
 user's source code. Lots of values are produced by computation and don't exist
 anywhere in the code itself. Those aren't literals. A literal comes from the
 parser's domain. Values are an interpreter concept, part of the runtime's world.
@@ -162,29 +170,36 @@ expressions, which are also leaf nodes.
 
 </aside>
 
-So, much like we converted a literal *token* into a literal *syntax tree node*
+So, much like we converted a literal _token_ into a literal _syntax tree node_
 in the parser, now we convert the literal tree node into a runtime value. That
 turns out to be trivial.
 
-^code visit-literal
+```python
+# lox/eval.py after the eval() function
+@eval.register
+def _(expr: Literal):
+    return expr.value
+```
 
 We eagerly produced the runtime value way back during scanning and stuffed it in
-the token. The parser took that value and stuck it in the literal tree node,
-so to evaluate a literal, we simply pull it back out.
+the token. The parser took that value and stuck it in the literal tree node, so
+to evaluate a literal, we simply pull it back out.
 
 ### Evaluating parentheses
 
 The next simplest node to evaluate is grouping -- the node you get as a result
 of using explicit parentheses in an expression.
 
-^code visit-grouping
+```python
+# lox/eval.py after the eval() function
+@eval.register
+def _(expr: Grouping):
+    return eval(expr.expression)
+```
 
 A <span name="grouping">grouping</span> node has a reference to an inner node
 for the expression contained inside the parentheses. To evaluate the grouping
 expression itself, we recursively evaluate that subexpression and return it.
-
-We rely on this helper method which simply sends the expression back into the
-interpreter's visitor implementation:
 
 <aside name="grouping">
 
@@ -195,9 +210,7 @@ correctly handle the left-hand sides of assignment expressions.
 
 </aside>
 
-^code evaluate
-
-### Evaluating unary expressions
+### Evaluating unary expressions (#TODO)
 
 Like grouping, unary expressions have a single subexpression that we must
 evaluate first. The difference is that the unary expression itself does a little
@@ -210,7 +223,7 @@ itself to the result of that. There are two different unary expressions,
 identified by the type of the operator token.
 
 Shown here is `-`, which negates the result of the subexpression. The
-subexpression must be a number. Since we don't *statically* know that in Java,
+subexpression must be a number. Since we don't _statically_ know that in Java,
 we <span name="cast">cast</span> it before performing the operation. This type
 cast happens at runtime when the `-` is evaluated. That's the core of what makes
 a language dynamically typed right there.
@@ -233,7 +246,7 @@ The other unary operator is logical not.
 
 The implementation is simple, but what is this "truthy" thing about? We need to
 make a little side trip to one of the great questions of Western philosophy:
-*What is truth?*
+_What is truth?_
 
 ### Truthiness and falsiness
 
@@ -242,7 +255,7 @@ least inside the world of Lox, we need to decide what happens when you use
 something other than `true` or `false` in a logic operation like `!` or any
 other place where a Boolean is expected.
 
-We *could* just say it's an error because we don't roll with implicit
+We _could_ just say it's an error because we don't roll with implicit
 conversions, but most dynamically typed languages aren't that ascetic. Instead,
 they take the universe of values of all types and partition them into two sets,
 one of which they define to be "true", or "truthful", or (my favorite) "truthy",
@@ -252,7 +265,7 @@ arbitrary and gets <span name="weird">weird</span> in a few languages.
 <aside name="weird" class="bottom">
 
 In JavaScript, strings are truthy, but empty strings are not. Arrays are truthy
-but empty arrays are... also truthy. The number `0` is falsey, but the *string*
+but empty arrays are... also truthy. The number `0` is falsey, but the _string_
 `"0"` is truthy.
 
 In Python, empty strings are falsey like in JS, but other empty sequences are
@@ -265,8 +278,8 @@ Get all that?
 
 </aside>
 
-Lox follows Ruby's simple rule: `false` and `nil` are falsey, and everything else
-is truthy. We implement that like so:
+Lox follows Ruby's simple rule: `false` and `nil` are falsey, and everything
+else is truthy. We implement that like so:
 
 ^code is-truthy
 
@@ -279,10 +292,10 @@ them, and we'll start with the arithmetic ones.
 
 <aside name="left">
 
-Did you notice we pinned down a subtle corner of the language semantics here?
-In a binary expression, we evaluate the operands in left-to-right order. If
-those operands have side effects, that choice is user visible, so this isn't
-simply an implementation detail.
+Did you notice we pinned down a subtle corner of the language semantics here? In
+a binary expression, we evaluate the operands in left-to-right order. If those
+operands have side effects, that choice is user visible, so this isn't simply an
+implementation detail.
 
 If we want our two interpreters to be consistent (hint: we do), we'll need to
 make sure clox does the same thing.
@@ -297,8 +310,8 @@ I left out one arithmetic operator because it's a little special.
 ^code binary-plus (3 before, 1 after)
 
 The `+` operator can also be used to concatenate two strings. To handle that, we
-don't just assume the operands are a certain type and *cast* them, we
-dynamically *check* the type and choose the appropriate operation. This is why
+don't just assume the operands are a certain type and _cast_ them, we
+dynamically _check_ the type and choose the appropriate operation. This is why
 we need our object representation to support `instanceof`.
 
 <aside name="plus">
@@ -327,9 +340,8 @@ The last pair of operators are equality.
 ^code binary-equality
 
 Unlike the comparison operators which require numbers, the equality operators
-support operands of any type, even mixed ones. You can't ask Lox if 3 is *less*
-than `"three"`, but you can ask if it's <span name="equal">*equal*</span> to
-it.
+support operands of any type, even mixed ones. You can't ask Lox if 3 is _less_
+than `"three"`, but you can ask if it's <span name="equal">_equal_</span> to it.
 
 <aside name="equal">
 
@@ -342,7 +354,7 @@ Like truthiness, the equality logic is hoisted out into a separate method.
 ^code is-equal
 
 This is one of those corners where the details of how we represent Lox objects
-in terms of Java matter. We need to correctly implement *Lox's* notion of
+in terms of Java matter. We need to correctly implement _Lox's_ notion of
 equality, which may be different from Java's.
 
 Fortunately, the two are pretty similar. Lox doesn't do implicit conversions in
@@ -361,7 +373,7 @@ What do you expect this to evaluate to:
 
 According to [IEEE 754][], which specifies the behavior of double-precision
 numbers, dividing a zero by zero gives you the special **NaN** ("not a number")
-value. Strangely enough, NaN is *not* equal to itself.
+value. Strangely enough, NaN is _not_ equal to itself.
 
 In Java, the `==` operator on primitive doubles preserves that behavior, but the
 `equals()` method on the Double class does not. Lox uses the latter, so doesn't
@@ -373,7 +385,7 @@ of language implementers' lives.
 </aside>
 
 And that's it! That's all the code we need to correctly interpret a valid Lox
-expression. But what about an *invalid* one? In particular, what happens when a
+expression. But what about an _invalid_ one? In particular, what happens when a
 subexpression evaluates to an object of the wrong type for the operation being
 performed?
 
@@ -389,8 +401,8 @@ gracefully.
 
 We could simply not detect or report a type error at all. This is what C does if
 you cast a pointer to some type that doesn't match the data that is actually
-being pointed to. C gains flexibility and speed by allowing that, but is
-also famously dangerous. Once you misinterpret bits in memory, all bets are off.
+being pointed to. C gains flexibility and speed by allowing that, but is also
+famously dangerous. Once you misinterpret bits in memory, all bets are off.
 
 Few modern languages accept unsafe operations like that. Instead, most are
 **memory safe** and ensure -- through a combination of static and runtime checks
@@ -400,8 +412,8 @@ memory.
 </aside>
 
 It's time for us to talk about **runtime errors**. I spilled a lot of ink in the
-previous chapters talking about error handling, but those were all *syntax* or
-*static* errors. Those are detected and reported before *any* code is executed.
+previous chapters talking about error handling, but those were all _syntax_ or
+_static_ errors. Those are detected and reported before _any_ code is executed.
 Runtime errors are failures that the language semantics demand we detect and
 report while the program is running (hence the name).
 
@@ -410,7 +422,7 @@ the Java cast will fail and the JVM will throw a ClassCastException. That
 unwinds the whole stack and exits the application, vomiting a Java stack trace
 onto the user. That's probably not what we want. The fact that Lox is
 implemented in Java should be a detail hidden from the user. Instead, we want
-them to understand that a *Lox* runtime error occurred, and give them an error
+them to understand that a _Lox_ runtime error occurred, and give them an error
 message relevant to our language and their program.
 
 The Java behavior does have one thing going for it, though. It correctly stops
@@ -429,7 +441,7 @@ all the way out.
 
 <aside name="muffin">
 
-I don't know, man, *can* you negate a muffin?
+I don't know, man, _can_ you negate a muffin?
 
 <img src="image/evaluating-expressions/muffin.png" alt="A muffin, negated." />
 
@@ -440,8 +452,8 @@ application entirely. That has a certain melodramatic flair. Sort of the
 programming language interpreter equivalent of a mic drop.
 
 Tempting as that is, we should probably do something a little less cataclysmic.
-While a runtime error needs to stop evaluating the *expression*, it shouldn't
-kill the *interpreter*. If a user is running the REPL and has a typo in a line
+While a runtime error needs to stop evaluating the _expression_, it shouldn't
+kill the _interpreter_. If a user is running the REPL and has a typo in a line
 of code, they should still be able to keep the session going and enter more code
 after that.
 
@@ -517,8 +529,8 @@ one:
 
 <aside name="operand">
 
-Another subtle semantic choice: We evaluate *both* operands before checking the
-type of *either*. Imagine we have a function `say()` that prints its argument
+Another subtle semantic choice: We evaluate _both_ operands before checking the
+type of _either_. Imagine we have a function `say()` that prints its argument
 then returns it. Using that, we write:
 
 ```lox
@@ -594,7 +606,7 @@ put this method there too:
 
 We use the token associated with the RuntimeError to tell the user what line of
 code was executing when the error occurred. Even better would be to give the
-user an entire call stack to show how they *got* to be executing that code. But
+user an entire call stack to show how they _got_ to be executing that code. But
 we don't have function calls yet, so I guess we don't have to worry about it.
 
 After showing the error, `runtimeError()` sets this field:
@@ -635,8 +647,8 @@ printing the syntax tree and replace it with this:
 
 ^code interpreter-interpret (3 before, 1 after)
 
-We have an entire language pipeline now: scanning, parsing, and
-execution. Congratulations, you now have your very own arithmetic calculator.
+We have an entire language pipeline now: scanning, parsing, and execution.
+Congratulations, you now have your very own arithmetic calculator.
 
 As you can see, the interpreter is pretty bare bones. But the Interpreter class
 and the Visitor pattern we've set up today form the skeleton that later chapters
@@ -659,7 +671,7 @@ interpreter doesn't do very much, but it's alive!
     types do you allow and how do you define their ordering? Justify your
     choices and compare them to other languages.
 
-2.  Many languages define `+` such that if *either* operand is a string, the
+2.  Many languages define `+` such that if _either_ operand is a string, the
     other is converted to a string and the results are then concatenated. For
     example, `"scone" + 4` would yield `scone4`. Extend the code in
     `visitBinaryExpr()` to support that.
@@ -683,21 +695,22 @@ are dynamically typed and defer checking for type errors until runtime right
 before an operation is attempted. We tend to consider this a black-and-white
 choice, but there is actually a continuum between them.
 
-It turns out even most statically typed languages do *some* type checks at
+It turns out even most statically typed languages do _some_ type checks at
 runtime. The type system checks most type rules statically, but inserts runtime
 checks in the generated code for other operations.
 
-For example, in Java, the *static* type system assumes a cast expression will
+For example, in Java, the _static_ type system assumes a cast expression will
 always safely succeed. After you cast some value, you can statically treat it as
 the destination type and not get any compile errors. But downcasts can fail,
 obviously. The only reason the static checker can presume that casts always
 succeed without violating the language's soundness guarantees, is because the
-cast is checked *at runtime* and throws an exception on failure.
+cast is checked _at runtime_ and throws an exception on failure.
 
 A more subtle example is [covariant arrays][] in Java and C#. The static
 subtyping rules for arrays allow operations that are not sound. Consider:
 
-[covariant arrays]: https://en.wikipedia.org/wiki/Covariance_and_contravariance_(computer_science)#Covariant_arrays_in_Java_and_C.23
+[covariant arrays]:
+  https://en.wikipedia.org/wiki/Covariance_and_contravariance_(computer_science)#Covariant_arrays_in_Java_and_C.23
 
 ```java
 Object[] stuff = new Integer[1];
@@ -706,30 +719,30 @@ stuff[0] = "not an int!";
 
 This code compiles without any errors. The first line upcasts the Integer array
 and stores it in a variable of type Object array. The second line stores a
-string in one of its cells. The Object array type statically allows that
--- strings *are* Objects -- but the actual Integer array that `stuff` refers to
-at runtime should never have a string in it! To avoid that catastrophe, when you
-store a value in an array, the JVM does a *runtime* check to make sure it's an
+string in one of its cells. The Object array type statically allows that --
+strings _are_ Objects -- but the actual Integer array that `stuff` refers to at
+runtime should never have a string in it! To avoid that catastrophe, when you
+store a value in an array, the JVM does a _runtime_ check to make sure it's an
 allowed type. If not, it throws an ArrayStoreException.
 
 Java could have avoided the need to check this at runtime by disallowing the
-cast on the first line. It could make arrays *invariant* such that an array of
-Integers is *not* an array of Objects. That's statically sound, but it prohibits
+cast on the first line. It could make arrays _invariant_ such that an array of
+Integers is _not_ an array of Objects. That's statically sound, but it prohibits
 common and safe patterns of code that only read from arrays. Covariance is safe
-if you never *write* to the array. Those patterns were particularly important
+if you never _write_ to the array. Those patterns were particularly important
 for usability in Java 1.0 before it supported generics. James Gosling and the
 other Java designers traded off a little static safety and performance -- those
 array store checks take time -- in return for some flexibility.
 
 There are few modern statically typed languages that don't make that trade-off
-*somewhere*. Even Haskell will let you run code with non-exhaustive matches. If
+_somewhere_. Even Haskell will let you run code with non-exhaustive matches. If
 you find yourself designing a statically typed language, keep in mind that you
-can sometimes give users more flexibility without sacrificing *too* many of the
+can sometimes give users more flexibility without sacrificing _too_ many of the
 benefits of static safety by deferring some type checks until runtime.
 
 On the other hand, a key reason users choose statically typed languages is
 because of the confidence the language gives them that certain kinds of errors
-can *never* occur when their program is run. Defer too many type checks until
+can _never_ occur when their program is run. Defer too many type checks until
 runtime, and you erode that confidence.
 
 </div>
