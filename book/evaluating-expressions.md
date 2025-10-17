@@ -136,9 +136,12 @@ We start with a new single dispatch method.
 from functools import singledispatch
 from typing import Any
 from .expr import *
+from .token import TokenType as TT
+
+type Environment = Any  # Placeholder for future Environment class
 
 @singledispatch
-def eval(expr: Expr) -> Any:
+def eval(expr: Expr, env: Environment) -> Any:
     msg = f"cannot eval {expr.__class__.__name__} objects"
     raise TypeError(msg)
 ```
@@ -146,6 +149,13 @@ def eval(expr: Expr) -> Any:
 We call it `eval` to honour a tradition in many dynamic languages (including
 Python) that have a function named like so that dynamically interpret source
 strings of that language.
+
+The function `eval` receive a second parameter, `env`, which represents the
+_current execution environment_ -- which is an object that tracks the state of
+our program as it runs. Right now, we don't have any state to track, so we can
+just pass in `None` (or anything else) when we call `eval()`. Later, when we add
+variables and functions, we'll define a proper `Environment` class and pass in
+an instance of that.
 
 The return type of the `eval` method will be `Any`, meaning that it can be any
 arbitrary Python value. We need to define implementations for each of the four
@@ -177,7 +187,7 @@ turns out to be trivial.
 ```python
 # lox/eval.py after the eval() function
 @eval.register
-def _(expr: Literal):
+def _(expr: Literal, env) -> Any:
     return expr.value
 ```
 
@@ -193,8 +203,8 @@ of using explicit parentheses in an expression.
 ```python
 # lox/eval.py after the eval() function
 @eval.register
-def _(expr: Grouping):
-    return eval(expr.expression)
+def _(expr: Grouping, env):
+    return eval(expr.expression, env)
 ```
 
 A <span name="grouping">grouping</span> node has a reference to an inner node
@@ -210,30 +220,28 @@ correctly handle the left-hand sides of assignment expressions.
 
 </aside>
 
-### Evaluating unary expressions (#TODO)
+### Evaluating unary expressions
 
 Like grouping, unary expressions have a single subexpression that we must
 evaluate first. The difference is that the unary expression itself does a little
 work afterwards.
 
-^code visit-unary
+```python
+# lox/eval.py after the eval() function
+@eval.register
+def _(expr: Unary, env):
+    right = eval(expr.right, env)
+
+    match expr.operator.type :
+        case TT.MINUS:
+            return -right
+
+    # Unreachable.
+```
 
 First, we evaluate the operand expression. Then we apply the unary operator
 itself to the result of that. There are two different unary expressions,
 identified by the type of the operator token.
-
-Shown here is `-`, which negates the result of the subexpression. The
-subexpression must be a number. Since we don't _statically_ know that in Java,
-we <span name="cast">cast</span> it before performing the operation. This type
-cast happens at runtime when the `-` is evaluated. That's the core of what makes
-a language dynamically typed right there.
-
-<aside name="cast">
-
-You're probably wondering what happens if the cast fails. Fear not, we'll get
-into that soon.
-
-</aside>
 
 You can start to see how evaluation recursively traverses the tree. We can't
 evaluate the unary operator itself until after we evaluate its operand
@@ -242,7 +250,11 @@ each node evaluates its children before doing its own work.
 
 The other unary operator is logical not.
 
-^code unary-bang (1 before, 1 after)
+```python
+# lox/eval.py match/case expression of eval(Unary)
+case TT.BANG:
+    return not is_truthy(right)
+```
 
 The implementation is simple, but what is this "truthy" thing about? We need to
 make a little side trip to one of the great questions of Western philosophy:
@@ -281,16 +293,37 @@ Get all that?
 Lox follows Ruby's simple rule: `false` and `nil` are falsey, and everything
 else is truthy. We implement that like so:
 
-^code is-truthy
+```python
+# lox/eval.py after all eval() implementations
+def is_truthy(obj: Any) -> bool:
+    if obj is None or obj is False:
+        return False
+    return True
+```
 
 ### Evaluating binary operators
 
 On to the last expression tree class, binary operators. There's a handful of
 them, and we'll start with the arithmetic ones.
 
-^code visit-binary
+```python
+# lox/eval.py after the eval() function
+@eval.register
+def _(expr: Binary, env):
+    left = eval(expr.left, env)
+    right = eval(expr.right, env)
 
-<aside name="left">
+    match expr.operator.type :
+        case TT.PLUS:
+            return left + right
+        case TT.MINUS:
+            return left - right
+        case TT.SLASH:
+            return left / right
+        case TT.STAR:
+            return left * right
+    # Unreachable.
+```
 
 Did you notice we pinned down a subtle corner of the language semantics here? In
 a binary expression, we evaluate the operands in left-to-right order. If those
@@ -305,16 +338,11 @@ make sure clox does the same thing.
 I think you can figure out what's going on here. The main difference from the
 unary negation operator is that we have two operands to evaluate.
 
-I left out one arithmetic operator because it's a little special.
-
-^code binary-plus (3 before, 1 after)
-
-The `+` operator can also be used to concatenate two strings. To handle that, we
-don't just assume the operands are a certain type and _cast_ them, we
-dynamically _check_ the type and choose the appropriate operation. This is why
-we need our object representation to support `instanceof`.
-
 <aside name="plus">
+
+Lox, just like Python, Java, JavaScript, and many other languages, uses the `+`
+operator for both adding numbers and concatenating strings. That is why we
+simply added to two operands in the Python implementation.
 
 We could have defined an operator specifically for string concatenation. That's
 what Perl (`.`), Lua (`..`), Smalltalk (`,`), Haskell (`++`), and others do.
@@ -329,7 +357,17 @@ adding both integers and floating-point numbers.
 
 Next up are the comparison operators.
 
-^code binary-comparison (1 before, 1 after)
+```python
+# lox/eval.py match/case expression of eval(Binary)
+case TT.GREATER:
+    return left > right
+case TT.GREATER_EQUAL:
+    return left >= right
+case TT.LESS:
+    return left < right
+case TT.LESS_EQUAL:
+    return left <= right
+```
 
 They are basically the same as arithmetic. The only difference is that where the
 arithmetic operators produce a value whose type is the same as the operands
@@ -337,7 +375,13 @@ arithmetic operators produce a value whose type is the same as the operands
 
 The last pair of operators are equality.
 
-^code binary-equality
+```python
+# lox/eval.py match/case expression of eval(Binary)
+case TT.BANG_EQUAL:
+    return is_equal(left, right)
+case TT.EQUAL_EQUAL:
+    return is_equal(left, right)
+```
 
 Unlike the comparison operators which require numbers, the equality operators
 support operands of any type, even mixed ones. You can't ask Lox if 3 is _less_
@@ -351,17 +395,21 @@ Spoiler alert: it's not.
 
 Like truthiness, the equality logic is hoisted out into a separate method.
 
-^code is-equal
+```python
+# lox/eval.py after all eval() implementations
+
+def is_equal(a, b):
+    return type(a) == type(b) and a == b
+```
 
 This is one of those corners where the details of how we represent Lox objects
-in terms of Java matter. We need to correctly implement _Lox's_ notion of
-equality, which may be different from Java's.
+in terms of Python matter. We need to correctly implement _Lox's_ notion of
+equality, which may be different from Python's.
 
 Fortunately, the two are pretty similar. Lox doesn't do implicit conversions in
-equality and Java does not either. We do have to handle `nil`/`null` specially
-so that we don't throw a NullPointerException if we try to call `equals()` on
-`null`. Otherwise, we're fine. Java's <span name="nan">`equals()`</span> method
-on Boolean, Double, and String have the behavior we want for Lox.
+equality and Python does not either. The only corner cases concerns with
+comparisons between numbers and Booleans. Python's `bool` is a subclass of
+`int`, which can compare with `float`, unlike in Lox.
 
 <aside name="nan">
 
@@ -375,10 +423,11 @@ According to [IEEE 754][], which specifies the behavior of double-precision
 numbers, dividing a zero by zero gives you the special **NaN** ("not a number")
 value. Strangely enough, NaN is _not_ equal to itself.
 
-In Java, the `==` operator on primitive doubles preserves that behavior, but the
-`equals()` method on the Double class does not. Lox uses the latter, so doesn't
-follow IEEE. These kinds of subtle incompatibilities occupy a dismaying fraction
-of language implementers' lives.
+In Python, the `==` operator on floats preserves that behavior, but division by
+zero raises an exception. Lox original Java implementation Lox uses
+Double.equal() for comparison which makes NaNs equal to themselves. The C
+implementation, however, follows IEEE 754. These kinds of subtle
+incompatibilities occupy a dismaying fraction of language implementers' lives.
 
 [ieee 754]: https://en.wikipedia.org/wiki/IEEE_754
 
@@ -418,14 +467,14 @@ Runtime errors are failures that the language semantics demand we detect and
 report while the program is running (hence the name).
 
 Right now, if an operand is the wrong type for the operation being performed,
-the Java cast will fail and the JVM will throw a ClassCastException. That
-unwinds the whole stack and exits the application, vomiting a Java stack trace
-onto the user. That's probably not what we want. The fact that Lox is
-implemented in Java should be a detail hidden from the user. Instead, we want
+the Python interpreter will raise some exception like ValueError or TypeError.
+That unwinds the whole stack and exits the application, vomiting a Python stack
+trace onto the user. That's probably not what we want. The fact that Lox is
+implemented in Python should be a detail hidden from the user. Instead, we want
 them to understand that a _Lox_ runtime error occurred, and give them an error
 message relevant to our language and their program.
 
-The Java behavior does have one thing going for it, though. It correctly stops
+The Python behavior does have one thing going for it, though. It correctly stops
 executing any code when the error occurs. Let's say the user enters some
 expression like:
 
@@ -460,26 +509,45 @@ after that.
 ### Detecting runtime errors
 
 Our tree-walk interpreter evaluates nested expressions using recursive method
-calls, and we need to unwind out of all of those. Throwing an exception in Java
-is a fine way to accomplish that. However, instead of using Java's own cast
-failure, we'll define a Lox-specific one so that we can handle it how we want.
+calls, and we need to unwind out of all of those. Raising an exception in Python
+is a fine way to accomplish that. However, instead of using Python's own type
+conversion machinery, we'll define a Lox-specific one so that we can handle it
+how we want.
 
-Before we do the cast, we check the object's type ourselves. So, for unary `-`,
-we add:
+Before we perform some operation, we check the object's type ourselves. So, for
+unary `-`, we change the implementation:
 
-^code check-unary-operand (1 before, 1 after)
+```python
+# lox/eval.py match/case expression of eval(Unary)
+case TT.MINUS:
+      return -as_number_operand(expr.operator, right)
+```
 
 The code to check the operand is:
 
-^code check-operand
+```python
+# lox/eval.py at the end of the file
+def as_number_operand(operator: Token, operand: Any) -> float:
+    if isinstance(operand, float):
+        return operand
+    raise LoxRuntimeError(operator, "Operand must be a number")
+```
 
 When the check fails, it throws one of these:
 
-^code runtime-error-class
+```python
+# lox/errors.py
+from .tokens import Token
 
-Unlike the Java cast exception, our <span name="class">class</span> tracks the
-token that identifies where in the user's code the runtime error came from. As
-with static errors, this helps the user know where to fix their code.
+class LoxRuntimeError(Exception):
+    def __init__(self, token: Token, message: str):
+        super().__init__(message)
+        self.token = token
+```
+
+Unlike the Python type and value errors, our <span name="class">class</span>
+tracks the token that identifies where in the user's code the runtime error came
+from. As with static errors, this helps the user know where to fix their code.
 
 <aside name="class">
 
@@ -494,38 +562,52 @@ We need similar checking for the binary operators. Since I promised you every
 single line of code needed to implement the interpreters, I'll run through them
 all.
 
-Greater than:
+Following the same logic, we can reimplent the binary operators to check their
+operands before each operation.
 
-^code check-greater-operand (1 before, 1 after)
+Comparison operators:
 
-Greater than or equal to:
+```python
+# lox/eval.py match/case expression of eval(Binary)
+case TT.GREATER:
+    check_number_operands(expr.operator, left, right)
+    return left > right
+case TT.GREATER_EQUAL:
+    check_number_operands(expr.operator, left, right)
+    return left >= right
+case TT.LESS:
+    check_number_operands(expr.operator, left, right)
+    return left < right
+case TT.LESS_EQUAL:
+    check_number_operands(expr.operator, left, right)
+    return left <= right
+```
 
-^code check-greater-equal-operand (1 before, 1 after)
+Arithmetic operators:
 
-Less than:
-
-^code check-less-operand (1 before, 1 after)
-
-Less than or equal to:
-
-^code check-less-equal-operand (1 before, 1 after)
-
-Subtraction:
-
-^code check-minus-operand (1 before, 1 after)
-
-Division:
-
-^code check-slash-operand (1 before, 1 after)
-
-Multiplication:
-
-^code check-star-operand (1 before, 1 after)
+```python
+# lox/eval.py match/case expression of eval(Binary)
+case TT.MINUS:
+    check_number_operands(expr.operator, left, right)
+    return left - right
+case TT.SLASH:
+    check_number_operands(expr.operator, left, right)
+    return left / right
+case TT.STAR:
+    check_number_operands(expr.operator, left, right)
+    return left * right
+```
 
 All of those rely on this validator, which is virtually the same as the unary
 one:
 
-^code check-operands
+```python
+lox/eval.py at the end of the file
+
+def check_number_operands(operator: Token, left: Any, right: Any):
+    if not (isinstance(left, float) and isinstance(right, float)):
+        raise LoxRuntimeError(operator, "Operands must be numbers")
+```
 
 <aside name="operand">
 
@@ -543,11 +625,18 @@ evaluating the right.
 
 </aside>
 
-The last remaining operator, again the odd one out, is addition. Since `+` is
-overloaded for numbers and strings, it already has code to check the types. All
-we need to do is fail if neither of the two success cases match.
+The last remaining operator, the odd one out, is addition. Since `+` is
+overloaded for numbers and strings we cannot reuse the same logic as the other
+operators.
 
-^code string-wrong-type (3 before, 1 after)
+```python
+# lox/eval.py match/case expression of eval(Binary)
+case TT.PLUS:
+    if type(left) == type(right) and type(left) in (float, str):
+        return left + right
+    msg = "Operands must be two numbers or two strings"
+    raise LoxRuntimeError(expr.operator, msg)
+```
 
 That gets us detecting runtime errors deep in the innards of the evaluator. The
 errors are getting thrown. The next step is to write the code that catches them.
@@ -746,3 +835,4 @@ can _never_ occur when their program is run. Defer too many type checks until
 runtime, and you erode that confidence.
 
 </div>
+````

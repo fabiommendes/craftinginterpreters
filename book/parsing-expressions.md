@@ -542,7 +542,7 @@ our scanner's corresponding method crawled through characters.
 ```python
 # lox/parser.py method of the Parser class
 def advance(self, type: TT) -> bool:
-    return not self.is_at_end():
+    if not self.is_at_end()
         self.current += 1
     return self.previous()
 ```
@@ -552,13 +552,13 @@ These methods bottom out on the last handful of primitive operations.
 ```python
 # lox/parser.py method of the Parser class
 def is_at_end(self) -> bool:
-    return peek().type == EOF
+    return self.peek().type == TT.EOF
 
 def peek(self) -> Token:
     return self.tokens[self.current]
 
 def previous(self) -> Token:
-    return tokens[self.current - 1]
+    return self.tokens[self.current - 1]
 ```
 
 `is_at_end()` checks if we've run out of tokens to parse. `peek()` returns the
@@ -628,7 +628,7 @@ In order of precedence, first addition and subtraction:
 
 <aside name="handle">
 
-If you wanted to do some clever Java 8, you could create a helper method for
+If you wanted to do some clever Python, you could create a helper method for
 parsing a left-associative series of binary operators given a list of token
 types, and an operand method handle to simplify this redundant code.
 
@@ -710,17 +710,18 @@ straightforward.
 ```python
 # lox/parser.py method of the Parser class
 def primary(self) -> Expr:
-    if self.match(FALSE):
+    if self.match(TT.FALSE):
         return Literal(False)
-    if self.match(TRUE):
+    if self.match(TT.TRUE):
         return Literal(True)
-    if self.match(NIL):
+    if self.match(TT.NIL):
         return Literal(None)
-    if self.match(NUMBER, STRING):
-        return Literal(previous().literal)
-    if self.match(LEFT_PAREN):
+    if self.match(TT.NUMBER, TT.STRING):
+        return Literal(self.previous().literal)
+    if self.match(TT.LEFT_PAREN):
         expr = self.expression()
-        self.consume(RIGHT_PAREN, "Expect ')' after expression.")
+        msg = "Expect ')' after expression."
+        self.consume(TT.RIGHT_PAREN, msg)
         return Grouping(expr)
 ```
 
@@ -847,7 +848,7 @@ The traditional place in the grammar to synchronize is between statements. We
 don't have those yet, so we won't actually synchronize in this chapter, but
 we'll get the machinery in place for later.
 
-### Entering panic mode (#TODO)
+### Entering panic mode
 
 Back before we went on this side trip around error recovery, we were writing the
 code to parse a parenthesized expression. After parsing the expression, the
@@ -874,7 +875,14 @@ def error(self, token: Token, message: str):
 
 First, that shows the error to the user by calling:
 
-^code token-error
+```python
+# lox/parser.py method of the Parser class
+def error(self, token: Token,  message: str):
+    if token.type == TT.EOF:
+        self.report(token.line, " at end", message)
+    else:
+        self.report(token.line, f" at '{token.lexeme}'", message)
+```
 
 This reports an error at a given token. It shows the token's location and the
 token itself. This will come in handy later since we use tokens throughout the
@@ -884,7 +892,11 @@ After we report the error, the user knows about their mistake, but what does the
 _parser_ do next? Back in `error()`, we create and return a ParseError, an
 instance of this new class:
 
-^code parse-error (1 before, 1 after)
+```python
+# lox/parser.py after Parser class
+class ParseError(RuntimeError):
+    pass
+```
 
 This is a simple sentinel class we use to unwind the parser. The `error()`
 method _returns_ the error instead of _throwing_ it because we want to let the
@@ -968,7 +980,7 @@ def synchronize(self):
                        TT.WHILE, TT.PRINT, TT.RETURN}
 
     while not self.is_at_end():
-        if self.previous().type == SEMICOLON:
+        if self.previous().type == TT.SEMICOLON:
             return
         if self.peek().type in boundary_tokens:
             return
@@ -1002,24 +1014,24 @@ expression. We need to handle that error too.
     raise ParseError(self.peek(), "Expect expression.")
 ```
 
-With that, all that remains in the parser is to define an initial method to kick
-it off. That method is called, naturally enough, `parse()`.
+With that, all that remains is for us to choose an initial method to kick it
+off. Similarly with the tokenizer, we create a top-level function `parse()` that
+encapsulates all this logic.
 
 ```python
-# lox/parser.py method of the Parser class
-def parse(self):
+# lox/parser.py at top-level
+def parse(tokens: list[Token]) -> Expr | None:
+    parser = Parser(tokens)
     try:
-        return self.expression()
+        return parser.expression()
     except ParseError:
         return None
 ```
 
-We'll revisit this method later when we add statements to the language. For now,
-it parses a single expression and returns it. We also have some temporary code
-to exit out of panic mode. Syntax error recovery is the parser's job, so we
+We'll revisit this function later when we add statements to the language. For
+now, it parses a single expression and returns it. We also have some temporary
+code to exit out of panic mode. Syntax error recovery is the parser's job, so we
 don't want the ParseError exception to escape into the rest of the interpreter.
-
-# FIXME:
 
 When a syntax error does occur, this method returns `None`. That's OK. The
 parser promises not to crash or hang on invalid syntax, but it doesn't promise
@@ -1038,14 +1050,20 @@ Delete the old code to print the scanned tokens and replace it with this:
 ```python
 # lox/lox.py in run() method of the Lox class
     tokens = tokenize(self.source)
-    parser = Parser(tokens)
-    expression = parser.parse()
+    expression = parse(tokens)
+    if expression is None:
+        return
 
-    # FIXME: handle ParseErrors
-    # Stop if there was a syntax error.
-    if (hadError) return;
-
+    # For now, we just print the AST
     print(pretty(expression))
+```
+
+We also need to setup some imports in the beginning of this file:
+
+```python
+# lox/lox.py at top-level
+from .parser import parse
+from .ast_printer import pretty
 ```
 
 Congratulations, you have crossed the <span name="harder">threshold</span>! That

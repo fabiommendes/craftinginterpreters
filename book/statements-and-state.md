@@ -11,7 +11,7 @@ To support bindings, our interpreter needs internal state. When you define a
 variable at the beginning of the program and use it at the end, the interpreter
 has to hold on to the value of that variable in the meantime. So in this
 chapter, we will give our interpreter a brain that can not just process, but
-*remember*.
+_remember_.
 
 <img src="image/statements-and-state/brain.png" alt="A brain, presumably remembering stuff." />
 
@@ -45,13 +45,13 @@ from expressions. We start with the two simplest kinds:
 1.  An **expression statement** lets you place an expression where a statement
     is expected. They exist to evaluate expressions that have side effects. You
     may not notice them, but you use them all the time in <span
-    name="expr-stmt">C</span>, Java, and other languages. Any time you see a
-    function or method call followed by a `;`, you're looking at an expression
-    statement.
+    name="expr-stmt">C</span>, Python, Java, and other languages. Any time you
+    see a function or method call followed by a `;`, you're looking at an
+    expression statement.
 
     <aside name="expr-stmt">
 
-    Pascal is an outlier. It distinguishes between *procedures* and *functions*.
+    Pascal is an outlier. It distinguishes between _procedures_ and _functions_.
     Functions return values, but procedures cannot. There is a statement form
     for calling a procedure, but functions can only be called where an
     expression is expected. There are no expression statements in Pascal.
@@ -69,9 +69,9 @@ from expressions. We start with the two simplest kinds:
 
     <aside name="print">
 
-    I will note with only a modicum of defensiveness that BASIC and Python
-    have dedicated `print` statements and they are real languages. Granted,
-    Python did remove their `print` statement in 3.0...
+    I will note with only a modicum of defensiveness that BASIC and Python have
+    dedicated `print` statements and they are real languages. Granted, Python
+    did remove their `print` statement in 3.0...
 
     </aside>
 
@@ -109,27 +109,19 @@ body of a `while` loop is always a statement.
 
 Since the two syntaxes are disjoint, we don't need a single base class that they
 all inherit from. Splitting expressions and statements into separate class
-hierarchies enables the Java compiler to help us find dumb mistakes like passing
-a statement to a Java method that expects an expression.
+hierarchies help us find dumb mistakes like passing a statement to a method that
+expects an expression (granted you configured your IDE to catch such things).
 
 That means a new base class for statements. As our elders did before us, we will
-use the cryptic name "Stmt". With great <span name="foresight">foresight</span>,
-I have designed our little AST metaprogramming script in anticipation of this.
-That's why we passed in "Expr" as a parameter to `defineAst()`. Now we add
-another call to define Stmt and its <span name="stmt-ast">subclasses</span>.
-
-<aside name="foresight">
-
-Not really foresight: I wrote all the code for the book before I sliced it into
-chapters.
-
-</aside>
+use the cryptic name "Stmt". Just as before, we will define them using
+dataclasses.
 
 ^code stmt-ast (2 before, 1 after)
 
 <aside name="stmt-ast">
 
-The generated code for the new nodes is in [Appendix II][appendix-ii]: [Expression statement][], [Print statement][].
+The generated code for the new nodes is in [Appendix II][appendix-ii]:
+[Expression statement][], [Print statement][].
 
 [appendix-ii]: appendix-ii.html
 [expression statement]: appendix-ii.html#expression-statement
@@ -198,8 +190,8 @@ We wrap that Expr in a Stmt of the right type and return it.
 We're running through the previous couple of chapters in microcosm, working our
 way through the front end. Our parser can now produce statement syntax trees, so
 the next and final step is to interpret them. As in expressions, we use the
-Visitor pattern, but we have a new visitor interface, Stmt.Visitor, to
-implement since statements have their own base class.
+Visitor pattern, but we have a new visitor interface, Stmt.Visitor, to implement
+since statements have their own base class.
 
 We add that to the list of interfaces Interpreter implements.
 
@@ -228,7 +220,7 @@ what can you do?
 <aside name="discard">
 
 Appropriately enough, we discard the value returned by `evaluate()` by placing
-that call inside a *Java* expression statement.
+that call inside a _Java_ expression statement.
 
 </aside>
 
@@ -306,7 +298,7 @@ Later, we'll add assignment and block scope, but that's enough to get moving.
 
 <aside name="globals">
 
-Global state gets a bad rap. Sure, lots of global state -- especially *mutable*
+Global state gets a bad rap. Sure, lots of global state -- especially _mutable_
 state -- makes it hard to maintain large programs. It's good software
 engineering to minimize how much you use.
 
@@ -326,9 +318,9 @@ from other statements, and we're going to split the statement grammar in two to
 handle them. That's because the grammar restricts where some kinds of statements
 are allowed.
 
-The clauses in control flow statements -- think the then and else branches of
-an `if` statement or the body of a `while` -- are each a single statement. But
-that statement is not allowed to be one that declares a name. This is OK:
+The clauses in control flow statements -- think the then and else branches of an
+`if` statement or the body of a `while` -- are each a single statement. But that
+statement is not allowed to be one that declares a name. This is OK:
 
 ```lox
 if (monday) print "Ugh, already?";
@@ -340,7 +332,7 @@ But this is not:
 if (monday) var beverage = "espresso";
 ```
 
-We *could* allow the latter, but it's confusing. What is the scope of that
+We _could_ allow the latter, but it's confusing. What is the scope of that
 `beverage` variable? Does it persist after the `if` statement? If so, what is
 its value on days other than Monday? Does the variable exist at all on those
 days?
@@ -356,7 +348,7 @@ the "higher" precedence statements that don't declare names.
 In this analogy, block statements work sort of like parentheses do for
 expressions. A block is itself in the "higher" precedence level and can be used
 anywhere, like in the clauses of an `if` statement. But the statements it
-*contains* can be lower precedence. You're allowed to declare variables and
+_contains_ can be lower precedence. You're allowed to declare variables and
 other names inside the block. The curlies let you escape back into the full
 statement grammar from a place where only some statements are allowed.
 
@@ -551,7 +543,7 @@ var a = "after";
 print a; // "after".
 ```
 
-A variable statement doesn't just define a *new* variable, it can also be used
+A variable statement doesn't just define a _new_ variable, it can also be used
 to *re*define an existing variable. We could <span name="scheme">choose</span>
 to make this an error instead. The user may not intend to redefine an existing
 variable. (If they did mean to, they probably would have used assignment, not
@@ -584,21 +576,21 @@ This is a little more semantically interesting. If the variable is found, it
 simply returns the value bound to it. But what if it's not? Again, we have a
 choice:
 
-* Make it a syntax error.
+- Make it a syntax error.
 
-* Make it a runtime error.
+- Make it a runtime error.
 
-* Allow it and return some default value like `nil`.
+- Allow it and return some default value like `nil`.
 
-Lox is pretty lax, but the last option is a little *too* permissive to me.
+Lox is pretty lax, but the last option is a little _too_ permissive to me.
 Making it a syntax error -- a compile-time error -- seems like a smart choice.
 Using an undefined variable is a bug, and the sooner you detect the mistake, the
 better.
 
-The problem is that *using* a variable isn't the same as *referring* to it. You
+The problem is that _using_ a variable isn't the same as _referring_ to it. You
 can refer to a variable in a chunk of code without immediately evaluating it if
 that chunk of code is wrapped inside a function. If we make it a static error to
-*mention* a variable before it's been declared, it becomes much harder to define
+_mention_ a variable before it's been declared, it becomes much harder to define
 recursive functions.
 
 We could accommodate single recursion -- a function that calls itself -- by
@@ -637,11 +629,11 @@ the two functions, then `isOdd()` isn't defined when we're looking at
 Some statically typed languages like Java and C# solve this by specifying that
 the top level of a program isn't a sequence of imperative statements. Instead, a
 program is a set of declarations which all come into being simultaneously. The
-implementation declares *all* of the names before looking at the bodies of *any*
+implementation declares _all_ of the names before looking at the bodies of _any_
 of the functions.
 
 Older languages like C and Pascal don't work like this. Instead, they force you
-to add explicit *forward declarations* to declare a name before it's fully
+to add explicit _forward declarations_ to declare a name before it's fully
 defined. That was a concession to the limited computing power at the time. They
 wanted to be able to compile a source file in one single pass through the text,
 so those compilers couldn't gather up all of the declarations first before
@@ -649,10 +641,10 @@ processing function bodies.
 
 </aside>
 
-Since making it a *static* error makes recursive declarations too difficult,
+Since making it a _static_ error makes recursive declarations too difficult,
 we'll defer the error to runtime. It's OK to refer to a variable before it's
-defined as long as you don't *evaluate* the reference. That lets the program
-for even and odd numbers work, but you'd get a runtime error in:
+defined as long as you don't _evaluate_ the reference. That lets the program for
+even and odd numbers work, but you'd get a runtime error in:
 
 ```lox
 print a;
@@ -679,7 +671,7 @@ declaration statements.
 
 If the variable has an initializer, we evaluate it. If not, we have another
 choice to make. We could have made this a syntax error in the parser by
-*requiring* an initializer. Most languages don't, though, so it feels a little
+_requiring_ an initializer. Most languages don't, though, so it feels a little
 harsh to do so in Lox.
 
 We could make it a runtime error. We'd let you define an uninitialized variable,
@@ -711,8 +703,8 @@ var b = 2;
 print a + b;
 ```
 
-We can't reuse *code* yet, but we can start to build up programs that reuse
-*data*.
+We can't reuse _code_ yet, but we can start to build up programs that reuse
+_data_.
 
 ## Assignment
 
@@ -790,7 +782,7 @@ rule.
 ^code expression (1 before, 1 after)
 
 Here is where it gets tricky. A single token lookahead recursive descent parser
-can't see far enough to tell that it's parsing an assignment until *after* it
+can't see far enough to tell that it's parsing an assignment until _after_ it
 has gone through the left-hand side and stumbled onto the `=`. You might wonder
 why it even needs to. After all, we don't know we're parsing a `+` expression
 until after we've finished parsing the left operand.
@@ -804,7 +796,7 @@ var a = "before";
 a = "value";
 ```
 
-On the second line, we don't *evaluate* `a` (which would return the string
+On the second line, we don't _evaluate_ `a` (which would return the string
 "before"). We figure out what variable `a` refers to so we know where to store
 the right-hand side expression's value. The [classic terms][l-value] for these
 two <span name="l-value">constructs</span> are **l-value** and **r-value**. All
@@ -815,13 +807,13 @@ l-value "evaluates" to a storage location that you can assign into.
 
 <aside name="l-value">
 
-In fact, the names come from assignment expressions: *l*-values appear on the
-*left* side of the `=` in an assignment, and *r*-values on the *right*.
+In fact, the names come from assignment expressions: _l_-values appear on the
+_left_ side of the `=` in an assignment, and _r_-values on the _right_.
 
 </aside>
 
 We want the syntax tree to reflect that an l-value isn't evaluated like a normal
-expression. That's why the Expr.Assign node has a *Token* for the left-hand
+expression. That's why the Expr.Assign node has a _Token_ for the left-hand
 side, not an Expr. The problem is that the parser doesn't know it's parsing an
 l-value until it hits the `=`. In a complex l-value, that may occur <span
 name="many">many</span> tokens later.
@@ -833,7 +825,7 @@ makeList().head.next = node;
 <aside name="many">
 
 Since the receiver of a field assignment can be any expression, and expressions
-can be as long as you want to make them, it may take an *unbounded* number of
+can be as long as you want to make them, it may take an _unbounded_ number of
 tokens of lookahead to find the `=`.
 
 </aside>
@@ -850,8 +842,8 @@ side and then wrap it all up in an assignment expression tree node.
 
 <aside name="no-throw">
 
-We *report* an error if the left-hand side isn't a valid assignment target, but
-we don't *throw* it because the parser isn't in a confused state where we need
+We _report_ an error if the left-hand side isn't a valid assignment target, but
+we don't _throw_ it because the parser isn't in a confused state where we need
 to go into panic mode and synchronize.
 
 </aside>
@@ -871,11 +863,11 @@ expression. Consider a complex field assignment like:
 <aside name="converse">
 
 You can still use this trick even if there are assignment targets that are not
-valid expressions. Define a **cover grammar**, a looser grammar that accepts
-all of the valid expression *and* assignment target syntaxes. When you hit
-an `=`, report an error if the left-hand side isn't within the valid assignment
-target grammar. Conversely, if you *don't* hit an `=`, report an error if the
-left-hand side isn't a valid *expression*.
+valid expressions. Define a **cover grammar**, a looser grammar that accepts all
+of the valid expression _and_ assignment target syntaxes. When you hit an `=`,
+report an error if the left-hand side isn't within the valid assignment target
+grammar. Conversely, if you _don't_ hit an `=`, report an error if the left-hand
+side isn't a valid _expression_.
 
 </aside>
 
@@ -891,7 +883,7 @@ newPoint(x + 2, 0).y;
 
 The first example sets the field, the second gets it.
 
-This means we can parse the left-hand side *as if it were* an expression and
+This means we can parse the left-hand side _as if it were_ an expression and
 then after the fact produce a syntax tree that turns it into an assignment
 target. If the left-hand side expression isn't a <span name="paren">valid</span>
 assignment target, we fail with a syntax error. That ensures we report an error
@@ -932,7 +924,7 @@ of using `define()` on Environment, it calls this new method:
 ^code environment-assign
 
 The key difference between assignment and definition is that assignment is not
-<span name="new">allowed</span> to create a *new* variable. In terms of our
+<span name="new">allowed</span> to create a _new_ variable. In terms of our
 implementation, that means it's a runtime error if the key doesn't already exist
 in the environment's variable map.
 
@@ -956,8 +948,8 @@ print a = 2; // "2".
 Our interpreter can now create, read, and modify variables. It's about as
 sophisticated as early <span name="basic">BASICs</span>. Global variables are
 simple, but writing a large program when any two chunks of code can accidentally
-step on each other's state is no fun. We want *local* variables, which means
-it's time for *scope*.
+step on each other's state is no fun. We want _local_ variables, which means
+it's time for _scope_.
 
 <aside name="basic">
 
@@ -997,7 +989,8 @@ it. The widely disliked [`with` statement][with] in JavaScript turns properties
 on an object into dynamically scoped variables.
 
 [binding]: http://clojuredocs.org/clojure.core/binding
-[with]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/with
+[with]:
+  https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/with
 
 </aside>
 
@@ -1015,15 +1008,14 @@ For example:
 }
 ```
 
-Here, we have two blocks with a variable `a` declared in each of them. You and
-I can tell just from looking at the code that the use of `a` in the first
-`print` statement refers to the first `a`, and the second one refers to the
-second.
+Here, we have two blocks with a variable `a` declared in each of them. You and I
+can tell just from looking at the code that the use of `a` in the first `print`
+statement refers to the first `a`, and the second one refers to the second.
 
 <img src="image/statements-and-state/blocks.png" alt="An environment for each 'a'." />
 
 This is in contrast to **dynamic scope** where you don't know what a name refers
-to until you execute the code. Lox doesn't have dynamically scoped *variables*,
+to until you execute the code. Lox doesn't have dynamically scoped _variables_,
 but methods and fields on objects are dynamically scoped.
 
 ```lox
@@ -1075,9 +1067,9 @@ A first cut at implementing block scope might work like this:
 2.  After the last statement is executed, tell the environment to delete all of
     those variables.
 
-That would work for the previous example. But remember, one motivation for
-local scope is encapsulation -- a block of code in one corner of the program
-shouldn't interfere with some other block. Check this out:
+That would work for the previous example. But remember, one motivation for local
+scope is encapsulation -- a block of code in one corner of the program shouldn't
+interfere with some other block. Check this out:
 
 ```lox
 // How loud?
@@ -1095,9 +1087,9 @@ volume = 0;
 
 Look at the block where we calculate the volume of the cuboid using a local
 declaration of `volume`. After the block exits, the interpreter will delete the
-*global* `volume` variable. That ain't right. When we exit the block, we should
+_global_ `volume` variable. That ain't right. When we exit the block, we should
 remove any variables declared inside the block, but if there is a variable with
-the same name declared outside of the block, *that's a different variable*. It
+the same name declared outside of the block, _that's a different variable_. It
 shouldn't get touched.
 
 When a local variable has the same name as a variable in an enclosing scope, it
@@ -1110,7 +1102,7 @@ defining a fresh environment for each block containing only the variables
 defined in that scope. When we exit the block, we discard its environment and
 restore the previous one.
 
-We also need to handle enclosing variables that are *not* shadowed.
+We also need to handle enclosing variables that are _not_ shadowed.
 
 ```lox
 var global = "outside";
@@ -1182,7 +1174,7 @@ Assignment works the same way.
 <aside name="recurse">
 
 It's likely faster to iteratively walk the chain, but I think the recursive
-solution is prettier. We'll do something *much* faster in clox.
+solution is prettier. We'll do something _much_ faster in clox.
 
 </aside>
 
@@ -1262,7 +1254,7 @@ it off to this other method:
 This new method executes a list of statements in the context of a given <span
 name="param">environment</span>. Up until now, the `environment` field in
 Interpreter always pointed to the same environment -- the global one. Now, that
-field represents the *current* environment. That's the environment that
+field represents the _current_ environment. That's the environment that
 corresponds to the innermost scope containing the code to be executed.
 
 To execute code within a given scope, this method updates the interpreter's
@@ -1350,9 +1342,9 @@ something resembling a full-featured programming language.
     }
     ```
 
-    What did you *expect* it to do? Is it what you think it should do? What
-    does analogous code in other languages you are familiar with do? What do
-    you think users will expect this to do?
+    What did you _expect_ it to do? Is it what you think it should do? What does
+    analogous code in other languages you are familiar with do? What do you
+    think users will expect this to do?
 
 </div>
 
@@ -1375,25 +1367,25 @@ what happens when it isn't clear about which behavior the user intends. In
 particular, each language must choose how implicit declaration interacts with
 shadowing, and which scope an implicitly declared variable goes into.
 
-*   In Python, assignment always creates a variable in the current function's
-    scope, even if there is a variable with the same name declared outside of
-    the function.
+- In Python, assignment always creates a variable in the current function's
+  scope, even if there is a variable with the same name declared outside of the
+  function.
 
-*   Ruby avoids some ambiguity by having different naming rules for local and
-    global variables. However, blocks in Ruby (which are more like closures than
-    like "blocks" in C) have their own scope, so it still has the problem.
-    Assignment in Ruby assigns to an existing variable outside of the current
-    block if there is one with the same name. Otherwise, it creates a new
-    variable in the current block's scope.
+- Ruby avoids some ambiguity by having different naming rules for local and
+  global variables. However, blocks in Ruby (which are more like closures than
+  like "blocks" in C) have their own scope, so it still has the problem.
+  Assignment in Ruby assigns to an existing variable outside of the current
+  block if there is one with the same name. Otherwise, it creates a new variable
+  in the current block's scope.
 
-*   CoffeeScript, which takes after Ruby in many ways, is similar. It explicitly
-    disallows shadowing by saying that assignment always assigns to a variable
-    in an outer scope if there is one, all the way up to the outermost global
-    scope. Otherwise, it creates the variable in the current function scope.
+- CoffeeScript, which takes after Ruby in many ways, is similar. It explicitly
+  disallows shadowing by saying that assignment always assigns to a variable in
+  an outer scope if there is one, all the way up to the outermost global scope.
+  Otherwise, it creates the variable in the current function scope.
 
-*   In JavaScript, assignment modifies an existing variable in any enclosing
-    scope, if found. If not, it implicitly creates a new variable in the
-    *global* scope.
+- In JavaScript, assignment modifies an existing variable in any enclosing
+  scope, if found. If not, it implicitly creates a new variable in the _global_
+  scope.
 
 The main advantage to implicit declaration is simplicity. There's less syntax
 and no "declaration" concept to learn. Users can just start assigning stuff and
@@ -1408,41 +1400,39 @@ know what I mean".
 
 But is that a good idea? Implicit declaration has some problems.
 
-*   A user may intend to assign to an existing variable, but may have misspelled
-    it. The interpreter doesn't know that, so it goes ahead and silently creates
-    some new variable and the variable the user wanted to assign to still has
-    its old value. This is particularly heinous in JavaScript where a typo will
-    create a *global* variable, which may in turn interfere with other code.
+- A user may intend to assign to an existing variable, but may have misspelled
+  it. The interpreter doesn't know that, so it goes ahead and silently creates
+  some new variable and the variable the user wanted to assign to still has its
+  old value. This is particularly heinous in JavaScript where a typo will create
+  a _global_ variable, which may in turn interfere with other code.
 
-*   JS, Ruby, and CoffeeScript use the presence of an existing variable with the
-    same name -- even in an outer scope -- to determine whether or not an
-    assignment creates a new variable or assigns to an existing one. That means
-    adding a new variable in a surrounding scope can change the meaning of
-    existing code. What was once a local variable may silently turn into an
-    assignment to that new outer variable.
+- JS, Ruby, and CoffeeScript use the presence of an existing variable with the
+  same name -- even in an outer scope -- to determine whether or not an
+  assignment creates a new variable or assigns to an existing one. That means
+  adding a new variable in a surrounding scope can change the meaning of
+  existing code. What was once a local variable may silently turn into an
+  assignment to that new outer variable.
 
-*   In Python, you may *want* to assign to some variable outside of the current
-    function instead of creating a new variable in the current one, but you
-    can't.
+- In Python, you may _want_ to assign to some variable outside of the current
+  function instead of creating a new variable in the current one, but you can't.
 
 Over time, the languages I know with implicit variable declaration ended up
 adding more features and complexity to deal with these problems.
 
-*   Implicit declaration of global variables in JavaScript is universally
-    considered a mistake today. "Strict mode" disables it and makes it a compile
-    error.
+- Implicit declaration of global variables in JavaScript is universally
+  considered a mistake today. "Strict mode" disables it and makes it a compile
+  error.
 
-*   Python added a `global` statement to let you explicitly assign to a global
-    variable from within a function. Later, as functional programming and nested
-    functions became more popular, they added a similar `nonlocal` statement to
-    assign to variables in enclosing functions.
+- Python added a `global` statement to let you explicitly assign to a global
+  variable from within a function. Later, as functional programming and nested
+  functions became more popular, they added a similar `nonlocal` statement to
+  assign to variables in enclosing functions.
 
-*   Ruby extended its block syntax to allow declaring certain variables to be
-    explicitly local to the block even if the same name exists in an outer
-    scope.
+- Ruby extended its block syntax to allow declaring certain variables to be
+  explicitly local to the block even if the same name exists in an outer scope.
 
 Given those, I think the simplicity argument is mostly lost. There is an
-argument that implicit declaration is the right *default* but I personally find
+argument that implicit declaration is the right _default_ but I personally find
 that less compelling.
 
 My opinion is that implicit declaration made sense in years past when most

@@ -3,6 +3,8 @@ import sys
 from pathlib import Path
 
 from .scanner import tokenize
+from .parser import parse
+from .ast_printer import pretty
 
 
 class LoxError(Exception):
@@ -23,10 +25,12 @@ class LoxError(Exception):
 class Lox:
     def run(self, source: str):
         tokens = tokenize(source)
-
-        # For now, just print the tokens.
-        for token in tokens:
-            print(token)
+        expression = parse(tokens)
+        if expression is None:
+            return 
+            
+        # For now, we just print the AST
+        print(pretty(expression))
 
 
 def main():
