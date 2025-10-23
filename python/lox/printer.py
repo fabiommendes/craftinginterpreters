@@ -44,8 +44,8 @@ def parenthesize(name: str, *exprs: Expr) -> str:
 
 
 def main():
-    minus = Token(TT.MINUS, "-", 1)
-    star = Token(TT.STAR, "*", 1)
+    minus = Token("MINUS", "-", 1)
+    star = Token("STAR", "*", 1)
     expr = Binary(Unary(minus, Literal(123)), star, Grouping(Literal(45.67)))
     print(pretty(expr))
 

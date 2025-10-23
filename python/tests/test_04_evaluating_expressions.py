@@ -15,19 +15,19 @@ TEST_BASE = Path(__file__).parent.parent / "examples" / "scanning"
 
 class TestRepresentation:
     OPERATORS = {
-        "!": TT.BANG,
-        "!=": TT.BANG_EQUAL,
-        "==": TT.EQUAL_EQUAL,
-        ">": TT.GREATER,
-        ">=": TT.GREATER_EQUAL,
-        "<": TT.LESS,
-        "<=": TT.LESS_EQUAL,
-        "+": TT.PLUS,
-        "-": TT.MINUS,
-        "*": TT.STAR,
-        "/": TT.SLASH,
-        "and": TT.AND,
-        "or": TT.OR,
+        "!": "BANG",
+        "!=": "BANG_EQUAL",
+        "==": "EQUAL_EQUAL",
+        ">": "GREATER",
+        ">=": "GREATER_EQUAL",
+        "<": "LESS",
+        "<=": "LESS_EQUAL",
+        "+": "PLUS",
+        "-": "MINUS",
+        "*": "STAR",
+        "/": "SLASH",
+        "and": "AND",
+        "or": "OR",
     }
 
     def op(self, symbol: str, lineno: int = 1):

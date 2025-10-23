@@ -39,6 +39,8 @@ class TestRepresentation:
             return value
         elif value in (None, True, False):
             return Literal(value)
+        elif isinstance(value, (str, float)):
+            return Literal(value)
         else:
             raise TypeError(f"cannot convert {value!r} to Expr")
 

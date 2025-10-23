@@ -494,7 +494,7 @@ In Python, that becomes:
 def equality(self) -> Expr:
     expr = self.comparison()
 
-    while self.match(TT.BANG_EQUAL, TT.EQUAL_EQUAL):
+    while self.match("BANG_EQUAL", "EQUAL_EQUAL"):
       operator = self.previous()
       right = self.comparison()
       expr = Binary(expr, operator, right)
@@ -552,7 +552,7 @@ These methods bottom out on the last handful of primitive operations.
 ```python
 # lox/parser.py method of the Parser class
 def is_at_end(self) -> bool:
-    return self.peek().type == TT.EOF
+    return self.peek().type == "EOF"
 
 def peek(self) -> Token:
     return self.tokens[self.current]
@@ -609,8 +609,8 @@ Translated to Python:
 def comparison(self) -> Expr:
     expr = self.term()
 
-    while self.match(TT.GREATER, TT.GREATER_EQUAL, TT.LESS,
-                     TT.LESS_EQUAL):
+    while self.match("GREATER", "GREATER_EQUAL", "LESS",
+                     "LESS_EQUAL"):
         operator = self.previous()
         right = self.term()
         expr = Binary(expr, operator, right)
@@ -639,7 +639,7 @@ types, and an operand method handle to simplify this redundant code.
 def term(self) -> Expr:
     expr = self.factor()
 
-    while self.match(TT.MINUS, TT.PLUS):
+    while self.match("MINUS", "PLUS"):
         operator = self.previous()
         right = self.unary()
         expr = Binary(expr, operator, right)
@@ -654,7 +654,7 @@ And finally, multiplication and division:
 def factor(self) -> Expr:
     expr = self.unary()
 
-    while self.match(TT.SLASH, TT.STAR):
+    while self.match("SLASH", "STAR"):
         operator = self.previous()
         right = self.unary()
         expr = Binary(expr, operator, right)
@@ -676,7 +676,7 @@ The code for this is a little different.
 ```python
 # lox/parser.py method of the Parser class
 def unary(self) -> Expr:
-    if self.match(TT.BANG, TT.MINUS):
+    if self.match("BANG", "MINUS"):
         operator = self.previous()
         right = self.unary()
         return Unary(operator, right)
@@ -710,18 +710,18 @@ straightforward.
 ```python
 # lox/parser.py method of the Parser class
 def primary(self) -> Expr:
-    if self.match(TT.FALSE):
+    if self.match("FALSE"):
         return Literal(False)
-    if self.match(TT.TRUE):
+    if self.match("TRUE"):
         return Literal(True)
-    if self.match(TT.NIL):
+    if self.match("NIL"):
         return Literal(None)
-    if self.match(TT.NUMBER, TT.STRING):
+    if self.match("NUMBER", "STRING"):
         return Literal(self.previous().literal)
-    if self.match(TT.LEFT_PAREN):
+    if self.match("LEFT_PAREN"):
         expr = self.expression()
         msg = "Expect ')' after expression."
-        self.consume(TT.RIGHT_PAREN, msg)
+        self.consume("RIGHT_PAREN", msg)
         return Grouping(expr)
 ```
 
@@ -878,7 +878,7 @@ First, that shows the error to the user by calling:
 ```python
 # lox/parser.py method of the Parser class
 def error(self, token: Token,  message: str):
-    if token.type == TT.EOF:
+    if token.type == "EOF":
         self.report(token.line, " at end", message)
     else:
         self.report(token.line, f" at '{token.lexeme}'", message)
@@ -976,11 +976,11 @@ This method encapsulates that logic:
 # lox/parser.py method of the Parser class
 def synchronize(self):
     self.advance()
-    boundary_tokens = {TT.CLASS, TT.FUN, TT.VAR, TT.FOR, TT.IF,
-                       TT.WHILE, TT.PRINT, TT.RETURN}
+    boundary_tokens = {"CLASS", "FUN", "VAR", "FOR", "IF",
+                       "WHILE", "PRINT", "RETURN"}
 
     while not self.is_at_end():
-        if self.previous().type == TT.SEMICOLON:
+        if self.previous().type == "SEMICOLON":
             return
         if self.peek().type in boundary_tokens:
             return

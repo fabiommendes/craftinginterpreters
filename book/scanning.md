@@ -251,7 +251,7 @@ error reporting into a different class.
 
 <aside name="reporter">
 
-I had exactly that when I first implemented the original jlox in Java. I ended
+I had exactly that when I first implemented the original pylox in Java. I ended
 up tearing it out because it felt over-engineered for the minimal interpreter in
 this book.
 
@@ -504,7 +504,7 @@ def scan_tokens(self) -> list[Token]:
         # We are at the beginning of the next lexeme.
         self.start = self.current
         self.scan_token()
-    self.tokens.append(Token(TT.EOF, "", self.line))
+    self.tokens.append(Token("EOF", "", self.line))
     return self.tokens
 ```
 
@@ -558,25 +558,25 @@ Wondering why `/` isn't in here? Don't worry, we'll get to it.
 def scan_token(self):
     match self.advance():
         case "(":
-            self.add_token(TT.LEFT_PAREN)
+            self.add_token("LEFT_PAREN")
         case ")":
-            self.add_token(TT.RIGHT_PAREN)
+            self.add_token("RIGHT_PAREN")
         case "{":
-            self.add_token(TT.LEFT_BRACE)
+            self.add_token("LEFT_BRACE")
         case "}":
-            self.add_token(TT.RIGHT_BRACE)
+            self.add_token("RIGHT_BRACE")
         case ",":
-            self.add_token(TT.COMMA)
+            self.add_token("COMMA")
         case ".":
-            self.add_token(TT.DOT)
+            self.add_token("DOT")
         case "-":
-            self.add_token(TT.MINUS)
+            self.add_token("MINUS")
         case "+":
-            self.add_token(TT.PLUS)
+            self.add_token("PLUS")
         case ";":
-            self.add_token(TT.SEMICOLON)
+            self.add_token("SEMICOLON")
         case "*":
-            self.add_token(TT.STAR)
+            self.add_token("STAR")
 ```
 
 Again, we need a couple of helper methods.
@@ -610,7 +610,7 @@ collect them as an error token.
 ```python
 # lox/scanner.py at scan_token()'s match/case statement
 case _:
-    self.add_token(TT.INVALID)
+    self.add_token("INVALID")
 ```
 
 Note that the erroneous character is still _consumed_ by the earlier call to
@@ -646,21 +646,21 @@ For all of these, we need to look at the second character.
 ```python
 # lox/scanner.py at scan_token()'s match/case statement
 case "!" if self.match("="):
-    self.add_token(TT.BANG_EQUAL)
+    self.add_token("BANG_EQUAL")
 case "!":
-    self.add_token(TT.BANG)
+    self.add_token("BANG")
 case "=" if self.match("="):
-    self.add_token(TT.EQUAL_EQUAL)
+    self.add_token("EQUAL_EQUAL")
 case "=":
-    self.add_token(TT.EQUAL)
+    self.add_token("EQUAL")
 case "<" if self.match("="):
-    self.add_token(TT.LESS_EQUAL)
+    self.add_token("LESS_EQUAL")
 case "<":
-    self.add_token(TT.LESS)
+    self.add_token("LESS")
 case ">" if self.match("="):
-    self.add_token(TT.GREATER_EQUAL)
+    self.add_token("GREATER_EQUAL")
 case ">":
-    self.add_token(TT.GREATER)
+    self.add_token("GREATER")
 ```
 
 Those cases use this new method:
@@ -694,7 +694,7 @@ case "/" if self.match("/"):
     while self.peek() != '\n' and not self.is_at_end():
         self.advance()
 case "/":
-    self.add_token(TT.SLASH)
+    self.add_token("SLASH")
 ```
 
 This is similar to the other two-character operators, except that when we find a
@@ -782,7 +782,7 @@ def string(self):
         self.advance()
 
     if self.is_at_end():
-        self.add_token(TT.UNTERMINATED_STRING)
+        self.add_token("UNTERMINATED_STRING")
         return
 
     # The closing ".
@@ -790,7 +790,7 @@ def string(self):
 
     # Trim the surrounding quotes.
     value = self.source[self.start + 1 : self.current - 1]
-    self.add_token(TT.STRING, value)
+    self.add_token("STRING", value)
 ```
 
 Like with comments, we consume characters until we hit the `"` that ends the
@@ -879,7 +879,7 @@ def number(self):
         self.advance()
 
     substring = self.source[self.start: self.current]
-    self.add_token(TT.NUMBER, float(substring))
+    self.add_token("NUMBER", float(substring))
 ```
 
 This relies on this little utility:
@@ -945,7 +945,7 @@ multiple-character operators like `<=`.
 ```python
 case "o":
   if self.match("r"):
-    self.add_token(TT.OR)
+    self.add_token("OR")
 ```
 
 Consider what would happen if a user named a variable `orchid`. The scanner
@@ -1008,7 +1008,7 @@ The rest of the code lives over here:
 def identifier(self):
     while is_alpha_numeric(self.peek()):
         self.advance()
-    self.add_token(TT.IDENTIFIER)
+    self.add_token("IDENTIFIER")
 ```
 
 We define that in terms of these helpers:
@@ -1029,22 +1029,22 @@ keyword. We define the set of reserved words in a map.
 ```python
 # lox/scanner.py after the imports
 KEYWORDS = {
-    "and": TT.AND,
-    "class": TT.CLASS,
-    "else": TT.ELSE,
-    "false": TT.FALSE,
-    "for": TT.FOR,
-    "fun": TT.FUN,
-    "if": TT.IF,
-    "nil": TT.NIL,
-    "or": TT.OR,
-    "print": TT.PRINT,
-    "return": TT.RETURN,
-    "super": TT.SUPER,
-    "this": TT.THIS,
-    "true": TT.TRUE,
-    "var": TT.VAR,
-    "while": TT.WHILE,
+    "and": "AND",
+    "class": "CLASS",
+    "else": "ELSE",
+    "false": "FALSE",
+    "for": "FOR",
+    "fun": "FUN",
+    "if": "IF",
+    "nil": "NIL",
+    "or": "OR",
+    "print": "PRINT",
+    "return": "RETURN",
+    "super": "SUPER",
+    "this": "THIS",
+    "true": "TRUE",
+    "var": "VAR",
+    "while": "WHILE",
 }
 ```
 
@@ -1054,7 +1054,7 @@ map.
 ```python
 # lox/scanner.py replace the self.add_token(...) line
     text = self.source[self.start: self.current]
-    kind = KEYWORDS.get(text, TT.IDENTIFIER)
+    kind = KEYWORDS.get(text, "IDENTIFIER")
     self.add_token(kind)
 ```
 

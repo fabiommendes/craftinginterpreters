@@ -28,7 +28,7 @@ class Parser:
     def equality(self) -> Expr:
         expr = self.comparison()
 
-        while self.match(TT.BANG_EQUAL, TT.EQUAL_EQUAL):
+        while self.match("BANG_EQUAL", "EQUAL_EQUAL"):
             operator = self.previous()
             right = self.comparison()
             expr = Binary(expr, operator, right)
@@ -51,7 +51,7 @@ class Parser:
         return self.previous()
     
     def is_at_end(self) -> bool:
-        return self.peek().type == TT.EOF
+        return self.peek().type == "EOF"
 
     def peek(self) -> Token:
         return self.tokens[self.current]
@@ -62,8 +62,8 @@ class Parser:
     def comparison(self) -> Expr:
         expr = self.term()
 
-        while self.match(TT.GREATER, TT.GREATER_EQUAL, TT.LESS,
-                        TT.LESS_EQUAL):
+        while self.match("GREATER", "GREATER_EQUAL", "LESS",
+                        "LESS_EQUAL"):
             operator = self.previous()
             right = self.term()
             expr = Binary(expr, operator, right)
@@ -73,7 +73,7 @@ class Parser:
     def term(self) -> Expr:
         expr = self.factor()
 
-        while self.match(TT.MINUS, TT.PLUS):
+        while self.match("MINUS", "PLUS"):
             operator = self.previous()
             right = self.unary()
             expr = Binary(expr, operator, right)
@@ -83,7 +83,7 @@ class Parser:
     def factor(self) -> Expr:
         expr = self.unary()
 
-        while self.match(TT.SLASH, TT.STAR):
+        while self.match("SLASH", "STAR"):
             operator = self.previous()
             right = self.unary()
             expr = Binary(expr, operator, right)
@@ -91,7 +91,7 @@ class Parser:
         return expr
     
     def unary(self) -> Expr:
-        if self.match(TT.BANG, TT.MINUS):
+        if self.match("BANG", "MINUS"):
             operator = self.previous()
             right = self.unary()
             return Unary(operator, right)
@@ -99,17 +99,17 @@ class Parser:
         return self.primary()
     
     def primary(self) -> Expr:
-        if self.match(TT.FALSE):
+        if self.match("FALSE"):
             return Literal(False)
-        if self.match(TT.TRUE):
+        if self.match("TRUE"):
             return Literal(True)
-        if self.match(TT.NIL):
+        if self.match("NIL"):
             return Literal(None)
-        if self.match(TT.NUMBER, TT.STRING):
+        if self.match("NUMBER", "STRING"):
             return Literal(self.previous().literal)
-        if self.match(TT.LEFT_PAREN):
+        if self.match("LEFT_PAREN"):
             expr = self.expression()
-            self.consume(TT.RIGHT_PAREN, "Expect ')' after expression.")
+            self.consume("RIGHT_PAREN", "Expect ')' after expression.")
             return Grouping(expr)
         raise ParseError(self.peek(), "Expect expression.")
         
@@ -122,18 +122,18 @@ class Parser:
         return ParseError(token, message)
     
     def error(self, token: Token,  message: str):
-        if token.type == TT.EOF:
+        if token.type == "EOF":
             self.report(token.line, " at end", message)
         else:
             self.report(token.line, " at '" + token.lexeme + "'", message)
 
     def synchronize(self):
         self.advance()
-        boundary_tokens = {TT.CLASS, TT.FUN, TT.VAR, TT.FOR, TT.IF,
-                        TT.WHILE, TT.PRINT, TT.RETURN}
+        boundary_tokens = {"CLASS", "FUN", "VAR", "FOR", "IF",
+                        "WHILE", "PRINT", "RETURN"}
 
         while not self.is_at_end():
-            if self.previous().type == TT.SEMICOLON:
+            if self.previous().type == "SEMICOLON":
                 return
             if self.peek().type in boundary_tokens:
                 return

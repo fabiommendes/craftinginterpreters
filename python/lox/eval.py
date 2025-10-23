@@ -1,5 +1,4 @@
 from functools import singledispatch
-from tkinter import E
 from typing import Any
 from .expr import *
 from .tokens import TokenType as TT
@@ -25,9 +24,9 @@ def _(expr: Unary, env):
     right = eval(expr.right, env)
 
     match expr.operator.type :
-        case TT.MINUS:
+        case "MINUS":
             return -as_number_operand(expr.operator, right)
-        case TT.BANG:
+        case "BANG":
             return not is_truthy(right)
     # Unreachable.
 
@@ -37,29 +36,29 @@ def _(expr: Binary, env):
     right = eval(expr.right, env)
 
     match expr.operator.type :
-        case TT.MINUS:
+        case "MINUS":
             check_number_operands(expr.operator, left, right)
             return left - right
-        case TT.SLASH:
+        case "SLASH":
             check_number_operands(expr.operator, left, right)
             return left / right
-        case TT.STAR:
+        case "STAR":
             check_number_operands(expr.operator, left, right)
             return left * right
-        case TT.PLUS:
+        case "PLUS":
             if type(left) == type(right) and type(left) in (float, str):
                 return left + right
             raise LoxRuntimeError(expr.operator, "Operands must be two numbers or two strings")
-        case TT.GREATER:
+        case "GREATER":
             check_number_operands(expr.operator, left, right)
             return left > right
-        case TT.GREATER_EQUAL:
+        case "GREATER_EQUAL":
             check_number_operands(expr.operator, left, right)
             return left >= right
-        case TT.LESS:
+        case "LESS":
             check_number_operands(expr.operator, left, right)
             return left < right
-        case TT.LESS_EQUAL:
+        case "LESS_EQUAL":
             check_number_operands(expr.operator, left, right)
             return left <= right
 

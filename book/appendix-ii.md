@@ -1,28 +1,28 @@
-For your edification, here is the code produced by [the little script
-we built][generator] to automate generating the syntax tree classes for jlox.
+For your edification, here is the code produced by [the little script we
+built][generator] to automate generating the syntax tree classes for pylox.
 
 [generator]: representing-code.html#metaprogramming-the-trees
 
 ## Expressions
 
-Expressions are the first syntax tree nodes we see, introduced in "[Representing
-Code](representing-code.html)". The main Expr class defines the visitor
-interface used to dispatch against the specific expression types, and contains
-the other expression subclasses as nested classes.
+Expressions are the first syntax tree nodes we see, introduced in
+"[Representing Code](representing-code.html)". The main Expr class defines the
+visitor interface used to dispatch against the specific expression types, and
+contains the other expression subclasses as nested classes.
 
 ^code expr
 
 ### Assign expression
 
-Variable assignment is introduced in "[Statements and
-State](statements-and-state.html#assignment)".
+Variable assignment is introduced in
+"[Statements and State](statements-and-state.html#assignment)".
 
 ^code expr-assign
 
 ### Binary expression
 
-Binary operators are introduced in "[Representing
-Code](representing-code.html)".
+Binary operators are introduced in
+"[Representing Code](representing-code.html)".
 
 ^code expr-binary
 
@@ -42,22 +42,22 @@ Property access, or "get" expressions are introduced in
 
 ### Grouping expression
 
-Using parentheses to group expressions is introduced in "[Representing
-Code](representing-code.html)".
+Using parentheses to group expressions is introduced in
+"[Representing Code](representing-code.html)".
 
 ^code expr-grouping
 
 ### Literal expression
 
-Literal value expressions are introduced in "[Representing
-Code](representing-code.html)".
+Literal value expressions are introduced in
+"[Representing Code](representing-code.html)".
 
 ^code expr-literal
 
 ### Logical expression
 
-The logical `and` and `or` operators are introduced in "[Control
-Flow](control-flow.html#logical-operators)".
+The logical `and` and `or` operators are introduced in
+"[Control Flow](control-flow.html#logical-operators)".
 
 ^code expr-logical
 
@@ -89,16 +89,16 @@ Unary operators are introduced in "[Representing Code](representing-code.html)".
 
 ### Variable expression
 
-Variable access expressions are introduced in "[Statements and
-State](statements-and-state.html#variable-syntax)".
+Variable access expressions are introduced in
+"[Statements and State](statements-and-state.html#variable-syntax)".
 
 ^code expr-variable
 
 ## Statements
 
 Statements form a second hierarchy of syntax tree nodes independent of
-expressions. We add the first couple of them in "[Statements and
-State](statements-and-state.html)".
+expressions. We add the first couple of them in
+"[Statements and State](statements-and-state.html)".
 
 ^code stmt
 
@@ -118,8 +118,8 @@ Class declarations are introduced in, unsurprisingly,
 
 ### Expression statement
 
-The expression statement is introduced in "[Statements and
-State](statements-and-state.html#statements)".
+The expression statement is introduced in
+"[Statements and State](statements-and-state.html#statements)".
 
 ^code stmt-expression
 
@@ -132,15 +132,15 @@ Function declarations are introduced in, you guessed it,
 
 ### If statement
 
-The `if` statement is introduced in "[Control
-Flow](control-flow.html#conditional-execution)".
+The `if` statement is introduced in
+"[Control Flow](control-flow.html#conditional-execution)".
 
 ^code stmt-if
 
 ### Print statement
 
-The `print` statement is introduced in "[Statements and
-State](statements-and-state.html#statements)".
+The `print` statement is introduced in
+"[Statements and State](statements-and-state.html#statements)".
 
 ^code stmt-print
 
@@ -153,14 +153,14 @@ You need a function to return from, so `return` statements are introduced in
 
 ### Variable statement
 
-Variable declarations are introduced in "[Statements and
-State](statements-and-state.html#variable-syntax)".
+Variable declarations are introduced in
+"[Statements and State](statements-and-state.html#variable-syntax)".
 
 ^code stmt-var
 
 ### While statement
 
-The `while` statement is introduced in "[Control
-Flow](control-flow.html#while-loops)".
+The `while` statement is introduced in
+"[Control Flow](control-flow.html#while-loops)".
 
 ^code stmt-while

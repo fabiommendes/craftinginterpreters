@@ -22,7 +22,7 @@ you understand how others design and build object systems.
 
 <aside name="hate">
 
-If you *really* hate classes, though, you can skip these two chapters. They are
+If you _really_ hate classes, though, you can skip these two chapters. They are
 fairly isolated from the rest of the book. Personally, I find it's good to learn
 more about the things I dislike. Things look simple at a distance, but as I get
 closer, details emerge and I gain a more nuanced perspective.
@@ -47,7 +47,7 @@ approach.
 
 Multimethods are the approach you're least likely to be familiar with. I'd love
 to talk more about them -- I designed [a hobby language][magpie] around them
-once and they are *super rad* -- but there are only so many pages I can fit in.
+once and they are _super rad_ -- but there are only so many pages I can fit in.
 If you'd like to learn more, take a look at [CLOS][] (the object system in
 Common Lisp), [Dylan][], [Julia][], or [Raku][].
 
@@ -59,20 +59,19 @@ Common Lisp), [Dylan][], [Julia][], or [Raku][].
 
 </aside>
 
-Since you've written about a thousand lines of Java code with me already, I'm
+Since you've written about a thousand lines of Python code with me already, I'm
 assuming you don't need a detailed introduction to object orientation. The main
 goal is to bundle data with the code that acts on it. Users do that by declaring
-a *class* that:
+a _class_ that:
 
 <span name="circle"></span>
 
-1. Exposes a *constructor* to create and initialize new *instances* of the
-   class
+1. Exposes a _constructor_ to create and initialize new _instances_ of the class
 
-1. Provides a way to store and access *fields* on instances
+1. Provides a way to store and access _fields_ on instances
 
-1. Defines a set of *methods* shared by all instances of the class that
-   operate on each instances' state.
+1. Defines a set of _methods_ shared by all instances of the class that operate
+   on each instances' state.
 
 That's about as minimal as it gets. Most object-oriented languages, all the way
 back to Simula, also do inheritance to reuse behavior across classes. We'll add
@@ -84,7 +83,7 @@ together until we have all of the above pieces, so gather your stamina.
 
 <img src="image/classes/circle.png" alt="The relationships between classes, methods, instances, constructors, and fields." />
 
-It's like the circle of life, *sans* Sir Elton John.
+It's like the circle of life, _sans_ Sir Elton John.
 
 </aside>
 
@@ -143,17 +142,15 @@ class declaration. Instances are loose bags of data and you can freely add
 fields to them as you see fit using normal imperative code.
 
 Over in our AST generator, the `classDecl` grammar rule gets its own statement
-<span name="class-ast">node</span>.
+node.
 
-^code class-ast (1 before, 1 after)
-
-<aside name="class-ast">
-
-The generated code for the new node is in [Appendix II][appendix-class].
-
-[appendix-class]: appendix-ii.html#class-statement
-
-</aside>
+```python
+# lox/stmt.py
+@dataclass
+class Class(Stmt):
+    name: Token
+    methods: List[Function]
+```
 
 It stores the class's name and the methods inside its body. Methods are
 represented by the existing Stmt.Function class that we use for function
@@ -163,11 +160,25 @@ method: name, parameter list, and body.
 A class can appear anywhere a named declaration is allowed, triggered by the
 leading `class` keyword.
 
-^code match-class (1 before, 1 after)
+```python
+# lox/parser.py case of Parser.declaration()
+case "CLASS":
+    return self.class_declaration()
+```
 
 That calls out to:
 
-^code parse-class-declaration
+```python
+# lox/parser.py method of Parser
+def class_declaration() -> Class:
+    self.consume("CLASS", "Expect 'class' keyword.")
+    class_name = self.consume("IDENTIFIER", "Expect class name.")
+    methods = []
+    while not self.check("RIGHT_BRACE"):
+        methods.append(self.function("method"))
+    self.consume("RIGHT_BRACE", "Expect '}' after class body.")
+    return Class(class_name, methods=methods)
+```
 
 There's more meat to this than most of the other parsing methods, but it roughly
 follows the grammar. We've already consumed the `class` keyword, so we look for
@@ -184,11 +195,17 @@ closing brace at the end, but it ensures the parser doesn't get stuck in an
 infinite loop if the user has a syntax error and forgets to correctly end the
 class body.
 
-We wrap the name and list of methods into a Stmt.Class node and we're done.
+We wrap the name and list of methods into a stmt.Class node and we're done.
 Previously, we would jump straight into the interpreter, but now we need to
 plumb the node through the resolver first.
 
-^code resolver-visit-class
+```python
+# lox/resolver.py
+@resolve.register
+def _(stmt: Class, resolver: Resolver):
+    resolver.declare(stmt.name)
+    resolver.define(stmt.name)
+```
 
 We aren't going to worry about resolving the methods themselves yet, so for now
 all we need to do is declare the class using its name. It's not common to
@@ -197,21 +214,37 @@ correctly.
 
 Now we interpret the class declaration.
 
-^code interpreter-visit-class
+```python
+# lox/exec.py
+@exec.register
+def _(stmt: Class, env: Environment) -> None:
+    env.define(stmt.name.lexeme)
+    klass = LoxClass(stmt.name.lexeme)
+    env.assign(stmt.name, klass)
+```
 
 This looks similar to how we execute function declarations. We declare the
-class's name in the current environment. Then we turn the class *syntax node*
-into a LoxClass, the *runtime* representation of a class. We circle back and
+class's name in the current environment. Then we turn the class _syntax node_
+into a LoxClass, the _runtime_ representation of a class. We circle back and
 store the class object in the variable we previously declared. That two-stage
 variable binding process allows references to the class inside its own methods.
 
 We will refine it throughout the chapter, but the first draft of LoxClass looks
 like this:
 
-^code lox-class
+```python
+# lox/runtime.py after LoxFunction
+
+@dataclass
+class LoxClass:
+    name: str
+
+    def __str__(self) -> str:
+        return self.name
+```
 
 Literally a wrapper around a name. We don't even store the methods yet. Not
-super useful, but it does have a `toString()` method so we can write a trivial
+super useful, but it does have a `__str__()` method so we can write a trivial
 script and test that class objects are actually being parsed and executed.
 
 ```lox
@@ -239,10 +272,10 @@ the class itself like a function. (JavaScript, ever weird, sort of does both.)
 
 <aside name="turtles">
 
-In Smalltalk, even *classes* are created by calling methods on an existing
+In Smalltalk, even _classes_ are created by calling methods on an existing
 object, usually the desired superclass. It's sort of a turtles-all-the-way-down
 thing. It ultimately bottoms out on a few magical classes like Object and
-Metaclass that the runtime conjures into being *ex nihilo*.
+Metaclass that the runtime conjures into being _ex nihilo_.
 
 </aside>
 
@@ -260,15 +293,26 @@ class Bagel {}
 Bagel();
 ```
 
-You get a runtime error. `visitCallExpr()` checks to see if the called object
-implements `LoxCallable` and reports an error since LoxClass doesn't. Not *yet*,
+You get a runtime error. `eval(Call)` checks to see if the called object
+implements `LoxCallable` and reports an error since LoxClass doesn't. Not _yet_,
 that is.
 
-^code lox-class-callable (2 before, 1 after)
+```python
+# lox/runtime.py replace line in LoxClass
 
-Implementing that interface requires two methods.
+class LoxClass(LoxCallable):
+    ...
+```
 
-^code lox-class-call-arity
+Implementing that interface requires two fields.
+
+```python
+# lox/runtime.py in LoxClass
+arity : int = 0
+
+def call(self, env: "Environment", arguments: List[Any]) -> "LoxInstance":
+    return LoxInstance(self)
+```
 
 The interesting one is `call()`. When you "call" a class, it instantiates a new
 LoxInstance for the called class and returns it. The `arity()` method is how the
@@ -279,7 +323,17 @@ constructors, we'll revisit this.
 That leads us to LoxInstance, the runtime representation of an instance of a Lox
 class. Again, our first implementation starts small.
 
-^code lox-instance
+```python
+lox/runtime.py after LoxClass
+
+@dataclass
+class LoxInstance:
+    klass: LoxClass
+
+    def __str__(self) -> str:
+        return f"{self.klass.name} instance"
+
+```
 
 Like LoxClass, it's pretty bare bones, but we're only getting started. If you
 want to give it a try, here's a script to run:
@@ -290,7 +344,7 @@ var bagel = Bagel();
 print bagel; // Prints "Bagel instance".
 ```
 
-This program doesn't do much, but it's starting to do *something*.
+This program doesn't do much, but it's starting to do _something_.
 
 ## Properties on Instances
 
@@ -300,7 +354,7 @@ properties. We're going to take the latter because, as we'll see, the two get
 entangled in an interesting way and it will be easier to make sense of them if
 we get properties working first.
 
-Lox follows JavaScript and Python in how it handles state. Every instance is an
+Lox follows Python and JavaScript in how it handles state. Every instance is an
 open collection of named values. Methods on the instance's class can access and
 modify properties, but so can <span name="outside">outside</span> code.
 Properties are accessed using a `.` syntax.
@@ -308,7 +362,7 @@ Properties are accessed using a `.` syntax.
 <aside name="outside">
 
 Allowing code outside of the class to directly modify an object's fields goes
-against the object-oriented credo that a class *encapsulates* state. Some
+against the object-oriented credo that a class _encapsulates_ state. Some
 languages take a more principled stance. In Smalltalk, fields are accessed using
 simple identifiers -- essentially, variables that are only in scope inside a
 class's methods. Ruby uses `@` followed by a name to access a field in an
@@ -338,22 +392,34 @@ here on out, we'll call these "get expressions".
 
 ### Get expressions
 
-The <span name="get-ast">syntax tree node</span> is:
+The syntax tree node is:
 
-^code get-ast (1 before, 1 after)
-
-<aside name="get-ast">
-
-The generated code for the new node is in [Appendix II][appendix-get].
-
-[appendix-get]: appendix-ii.html#get-expression
-
-</aside>
+```python
+# lox/expr.py
+@dataclasss
+class Get(Expr):
+    object: Expr
+    name: Token
+```
 
 Following the grammar, the new parsing code goes in our existing `call()`
 method.
 
-^code parse-property (3 before, 4 after)
+```python
+# lox/parser.py inside Parser.call()
+...
+while True:
+    if self.match("LEFT_PAREN"):
+        expr = self.finish_call(expr)
+    elif self.match("DOT"):
+        msg = "Expect property name after '.'."
+        name = self.consume("IDENTIFIER", msg)
+        expr = Get(expr, name)
+    else:
+        break
+return expr
+...
+```
 
 The outer `while` loop there corresponds to the `*` in the grammar rule. We zip
 along the tokens building up a chain of calls and gets as we find parentheses
@@ -363,7 +429,12 @@ and dots, like so:
 
 Instances of the new Expr.Get node feed into the resolver.
 
-^code resolver-visit-get
+```python
+# lox/resolver.py
+@resolve.register
+def _(expr: Get, resolver: Resolver):
+    resolve(expr.object, resolver)
+```
 
 OK, not much to that. Since properties are looked up <span
 name="dispatch">dynamically</span>, they don't get resolved. During resolution,
@@ -377,21 +448,41 @@ process the property name during the static resolution pass.
 
 </aside>
 
-^code interpreter-visit-get
+```python
+# lox/eval.py
+@eval.register
+def _(expr: Get, env: Environment) -> Any:
+    obj = eval(expr.object, env)
+    if isinstance(obj, LoxInstance):
+        return obj.get(expr.name)
+    raise RuntimeError(expr.name, "Only instances have properties.")
+```
 
 First, we evaluate the expression whose property is being accessed. In Lox, only
 instances of classes have properties. If the object is some other type like a
 number, invoking a getter on it is a runtime error.
 
 If the object is a LoxInstance, then we ask it to look up the property. It must
-be time to give LoxInstance some actual state. A map will do fine.
+be time to give LoxInstance some actual state. A dict will do fine.
 
-^code lox-instance-fields (1 before, 2 after)
+```python
+# lox/runtime.py attribute of LoxInstance
+@dataclass
+class LoxInstance(LoxCallable):
+    klass: LoxClass
+    fields: Dict[str, Value] = field(default_factory=dict)
+```
 
 Each key in the map is a property name and the corresponding value is the
 property's value. To look up a property on an instance:
 
-^code lox-instance-get-property
+```python
+# lox/runtime.py method of LoxInstance
+def get(self, name: Token) -> Any:
+    if name.lexeme in self.fields:
+        return self.fields[name.lexeme]
+    raise RuntimeError(name, f"Undefined property '{name.lexeme}'.")
+```
 
 <aside name="hidden">
 
@@ -404,12 +495,13 @@ Paradoxically, many of the optimizations invented to make dynamic languages fast
 rest on the observation that -- even in those languages -- most code is fairly
 static in terms of the types of objects it works with and their fields.
 
-[hidden classes]: http://richardartoul.github.io/jekyll/update/2015/04/26/hidden-classes.html
+[hidden classes]:
+  http://richardartoul.github.io/jekyll/update/2015/04/26/hidden-classes.html
 
 </aside>
 
 An interesting edge case we need to handle is what happens if the instance
-doesn't *have* a property with the given name. We could silently return some
+doesn't _have_ a property with the given name. We could silently return some
 dummy value like `nil`, but my experience with languages like JavaScript is that
 this behavior masks bugs more often than it does anything useful. Instead, we'll
 make it a runtime error.
@@ -419,7 +511,7 @@ given name. Only then do we return it. Otherwise, we raise an error.
 
 Note how I switched from talking about "properties" to "fields". There is a
 subtle difference between the two. Fields are named bits of state stored
-directly in an instance. Properties are the named, uh, *things*, that a get
+directly in an instance. Properties are the named, uh, _things_, that a get
 expression may return. Every field is a property, but as we'll see <span
 name="foreshadowing">later</span>, not every property is a field.
 
@@ -452,26 +544,24 @@ assignment     → ( call "." )? IDENTIFIER "=" assignment
 
 Unlike getters, setters don't chain. However, the reference to `call` allows any
 high-precedence expression before the last dot, including any number of
-*getters*, as in:
+_getters_, as in:
 
 <img src="image/classes/setter.png" alt="breakfast.omelette.filling.meat = ham" />
 
-Note here that only the *last* part, the `.meat` is the *setter*. The
-`.omelette` and `.filling` parts are both *get* expressions.
+Note here that only the _last_ part, the `.meat` is the _setter_. The
+`.omelette` and `.filling` parts are both _get_ expressions.
 
 Just as we have two separate AST nodes for variable access and variable
-assignment, we need a <span name="set-ast">second setter node</span> to
-complement our getter node.
+assignment, we need a second setter node to complement our getter node.
 
-^code set-ast (1 before, 1 after)
-
-<aside name="set-ast">
-
-The generated code for the new node is in [Appendix II][appendix-set].
-
-[appendix-set]: appendix-ii.html#set-expression
-
-</aside>
+```python
+# lox/expr.py
+@dataclass
+class Set(Expr):
+    object: Expr
+    name: Token
+    value: Expr
+```
 
 In case you don't remember, the way we handle assignment in the parser is a
 little funny. We can't easily tell that a series of tokens is the left-hand side
@@ -485,23 +575,44 @@ Then, when we stumble onto the equal sign after it, we take the expression we
 already parsed and transform it into the correct syntax tree node for the
 assignment.
 
-We add another clause to that transformation to handle turning an Expr.Get
-expression on the left into the corresponding Expr.Set.
+We add another clause to that transformation to handle turning an expr.Get
+expression on the left into the corresponding expr.Set.
 
-^code assign-set (1 before, 1 after)
+```python
+# lox/parser.py inside Parser.assignment()
+...
+elif isinstance(expr, Get):
+    return Set(expr.object, expr.name, value)
+...
+```
 
 That's parsing our syntax. We push that node through into the resolver.
 
-^code resolver-visit-set
+```python
+# lox/resolver.py
+@resolve.register
+def _(expr: Set, resolver: Resolver):
+    resolve(expr.object, resolver)
+    resolve(expr.value, resolver)
+```
 
-Again, like Expr.Get, the property itself is dynamically evaluated, so there's
+Again, like expr.Get, the property itself is dynamically evaluated, so there's
 nothing to resolve there. All we need to do is recurse into the two
-subexpressions of Expr.Set, the object whose property is being set, and the
+subexpressions of expr.Set, the object whose property is being set, and the
 value it's being set to.
 
 That leads us to the interpreter.
 
-^code interpreter-visit-set
+```python
+# lox/eval.py
+@eval.register
+def _(expr: Set, env: Environment) -> Any:
+    obj = eval(expr.object, env)
+    if not isinstance(obj, LoxInstance):
+        raise RuntimeError("Only instances have fields.")
+    value = eval(expr.value, env)
+    obj.set(expr.name, value)
+```
 
 We evaluate the object whose property is being set and check to see if it's a
 LoxInstance. If not, that's a runtime error. Otherwise, we evaluate the value
@@ -524,21 +635,25 @@ order.
 
 </aside>
 
-^code lox-instance-set-property
+```python
+# lox/runtime.py method of LoxInstance
+def set(self, name: Token, value: Value) -> None:
+    self.fields[name.lexeme] = value
+```
 
-No real magic here. We stuff the values straight into the Java map where fields
-live. Since Lox allows freely creating new fields on instances, there's no need
-to see if the key is already present.
+No real magic here. We stuff the values straight into the Python dict where
+fields live. Since Lox allows freely creating new fields on instances, there's
+no need to see if the key is already present.
 
 ## Methods on Classes
 
 You can create instances of classes and stuff data into them, but the class
-itself doesn't really *do* anything. Instances are just maps and all instances
-are more or less the same. To make them feel like instances *of classes*, we
+itself doesn't really _do_ anything. Instances are just maps and all instances
+are more or less the same. To make them feel like instances _of classes_, we
 need behavior -- methods.
 
 Our helpful parser already parses method declarations, so we're good there. We
-also don't need to add any new parser support for method *calls*. We already
+also don't need to add any new parser support for method _calls_. We already
 have `.` (getters) and `()` (function calls). A "method call" simply chains
 those together.
 
@@ -599,18 +714,18 @@ breakfast(eggs, sausage);
 ```
 
 And it does the same thing. Likewise, since the `.` and the `()` in a method
-call *are* two separate expressions, it seems you should be able to hoist the
-*lookup* part into a variable and then call it <span
-name="callback">later</span>. We need to think carefully about what the *thing*
+call _are_ two separate expressions, it seems you should be able to hoist the
+_lookup_ part into a variable and then call it <span
+name="callback">later</span>. We need to think carefully about what the _thing_
 you get when you look up a method is, and how it behaves, even in weird cases
 like:
 
 <aside name="callback">
 
 A motivating use for this is callbacks. Often, you want to pass a callback whose
-body simply invokes a method on some object. Being able to look up the method and
-pass it directly saves you the chore of manually declaring a function to wrap
-it. Compare this:
+body simply invokes a method on some object. Being able to look up the method
+and pass it directly saves you the chore of manually declaring a function to
+wrap it. Compare this:
 
 ```lox
 fun callback(a, b, c) {
@@ -665,7 +780,7 @@ bill.sayName = jane.sayName;
 bill.sayName(); // ?
 ```
 
-Does that last line print "Bill" because that's the instance that we *called*
+Does that last line print "Bill" because that's the instance that we _called_
 the method through, or "Jane" because it's the instance where we first grabbed
 the method?
 
@@ -694,7 +809,13 @@ cases for a bit. We'll get back to those. For now, let's get basic method calls
 working. We're already parsing the method declarations inside the class body, so
 the next step is to resolve them.
 
-^code resolve-methods (1 before, 1 after)
+```python
+# lox/resolver.py at resolver(Class)
+...
+for method in stmt.methods:
+    function_type = FunctionType.METHOD
+    resolver.resolve_function(method, declaration)
+```
 
 <aside name="local">
 
@@ -707,12 +828,27 @@ We iterate through the methods in the class body and call the
 `resolveFunction()` method we wrote for handling function declarations already.
 The only difference is that we pass in a new FunctionType enum value.
 
-^code function-type-method (1 before, 1 after)
+```python
+# lox/resolver.py inside Resolver
+class FunctionType(Enum):
+    NONE = auto()
+    FUNCTION = auto()
+    METHOD = auto()
+```
 
 That's going to be important when we resolve `this` expressions. For now, don't
 worry about it. The interesting stuff is in the interpreter.
 
-^code interpret-methods (1 before, 1 after)
+```python
+# lox/exec.py at exec(Class) between env.define() and env.assign()
+...
+methods = {}
+for method in stmt.methods:
+    function = LoxFunction(method, env)
+    methods[method.name.lexeme] = function
+klass = LoxClass(stmt.name.lexeme, methods)
+...
+```
 
 When we interpret a class declaration statement, we turn the syntactic
 representation of the class -- its AST node -- into its runtime representation.
@@ -722,13 +858,25 @@ method declaration blossoms into a LoxFunction object.
 We take all of those and wrap them up into a map, keyed by the method names.
 That gets stored in LoxClass.
 
-^code lox-class-methods (1 before, 3 after)
+```python
+# lox/runtime.py attributes of LoxClass
+...
+methods: dict[str, LoxFunction]
+...
+```
 
 Where an instance stores state, the class stores behavior. LoxInstance has its
-map of fields, and LoxClass gets a map of methods. Even though methods are
-owned by the class, they are still accessed through instances of that class.
+map of fields, and LoxClass gets a map of methods. Even though methods are owned
+by the class, they are still accessed through instances of that class.
 
-^code lox-instance-get-method (5 before, 2 after)
+```python
+# lox/runtime.py at LoxInstance.get() before raising the error
+...
+method = self.klass.find_method(name.lexeme)
+if method is not None:
+    return method
+...
+```
 
 When looking up a property on an instance, if we don't <span
 name="shadow">find</span> a matching field, we look for a method with that name
@@ -746,7 +894,11 @@ important semantic point.
 
 </aside>
 
-^code lox-class-find-method
+```python
+# lox/runtime.py at LoxClass
+def find_method(self, name: str) -> LoxFunction | None:
+    return self.methods.get(name)
+```
 
 You can probably guess this method is going to get more interesting later. For
 now, a simple map lookup on the class's method table is enough to get us
@@ -778,9 +930,9 @@ yet. Inside a method, we have no way to access the fields of the "current"
 object -- the instance that the method was called on -- nor can we call other
 methods on that same object.
 
-To get at that instance, it needs a <span name="i">name</span>. Smalltalk,
-Ruby, and Swift use "self". Simula, C++, Java, and others use "this". Python
-uses "self" by convention, but you can technically call it whatever you like.
+To get at that instance, it needs a <span name="i">name</span>. Smalltalk, Ruby,
+and Swift use "self". Simula, C++, Java, and others use "this". Python uses
+"self" by convention, but you can technically call it whatever you like.
 
 <aside name="i">
 
@@ -793,7 +945,7 @@ choices of our forebears.
 For Lox, since we generally hew to Java-ish style, we'll go with "this". Inside
 a method body, a `this` expression evaluates to the instance that the method was
 called on. Or, more specifically, since methods are accessed and then invoked as
-two steps, it will refer to the object that the method was *accessed* from.
+two steps, it will refer to the object that the method was _accessed_ from.
 
 That makes our job harder. Peep at:
 
@@ -810,13 +962,13 @@ method();
 
 On the second-to-last line, we grab a reference to the `speak()` method off an
 instance of the class. That returns a function, and that function needs to
-remember the instance it was pulled off of so that *later*, on the last line, it
+remember the instance it was pulled off of so that _later_, on the last line, it
 can still find it when the function is called.
 
 We need to take `this` at the point that the method is accessed and attach it to
 the function somehow so that it stays around as long as we need it to. Hmm... a
 way to store some extra data that hangs around a function, eh? That sounds an
-awful lot like a *closure*, doesn't it?
+awful lot like a _closure_, doesn't it?
 
 If we defined `this` as a sort of hidden variable in an environment that
 surrounds the function returned when looking up a method, then uses of `this` in
@@ -840,21 +992,21 @@ cake.taste(); // Prints "The German chocolate cake is delicious!".
 
 When we first evaluate the class definition, we create a LoxFunction for
 `taste()`. Its closure is the environment surrounding the class, in this case
-the global one. So the LoxFunction we store in the class's method map looks
-like so:
+the global one. So the LoxFunction we store in the class's method map looks like
+so:
 
 <img src="image/classes/closure.png" alt="The initial closure for the method." />
 
 When we evaluate the `cake.taste` get expression, we create a new environment
 that binds `this` to the object the method is accessed from (here, `cake`). Then
-we make a *new* LoxFunction with the same code as the original one but using
+we make a _new_ LoxFunction with the same code as the original one but using
 that new environment as its closure.
 
 <img src="image/classes/bound-method.png" alt="The new closure that binds 'this'." />
 
 This is the LoxFunction that gets returned when evaluating the get expression
-for the method name. When that function is later called by a `()` expression,
-we create an environment for the method body as usual.
+for the method name. When that function is later called by a `()` expression, we
+create an environment for the method body as usual.
 
 <img src="image/classes/call.png" alt="Calling the bound method and creating a new environment for the method body." />
 
@@ -885,71 +1037,104 @@ callback may want to hang on to and retain access to the original object -- the
 `this` value -- that the method was associated with. Our existing support for
 closures and environment chains should do all this correctly.
 
-Let's code it up. The first step is adding <span name="this-ast">new
-syntax</span> for `this`.
+Let's code it up. The first step is adding new syntax for `this`.
 
-^code this-ast (1 before, 1 after)
+```python
+# lox/expr.py
+@dataclass
+class This(Expr):
+    keyword: Token
+```
 
-<aside name="this-ast">
+Parsing is simple since it's a single token which our lexer already recognizes
+as a reserved word.
 
-The generated code for the new node is in [Appendix II][appendix-this].
-
-[appendix-this]: appendix-ii.html#this-expression
-
-</aside>
-
-Parsing is simple since it's a single token which our lexer already
-recognizes as a reserved word.
-
-^code parse-this (2 before, 2 after)
+```python
+# lox/parser.py inside Parser.primary()
+...
+case "THIS":
+    return This(self.next())
+```
 
 You can start to see how `this` works like a variable when we get to the
 resolver.
 
-^code resolver-visit-this
+```python
+# lox/resolver.py
+@resolve.register
+def _(expr: This, resolver: Resolver):
+    resolver.resolve_local(expr, expr.keyword)
+```
 
 We resolve it exactly like any other local variable using "this" as the name for
 the "variable". Of course, that's not going to work right now, because "this"
-*isn't* declared in any scope. Let's fix that over in `visitClassStmt()`.
+_isn't_ declared in any scope. Let's fix that over in `resolve(Class)`.
 
-^code resolver-begin-this-scope (2 before, 1 after)
+```python
+# lox/resolver.py inside resolve(Class)
+... # after resolver.define(stmt.name)
+resolver.begin_scope()
+resolver.scopes[-1]["this"] = True
+```
 
 Before we step in and start resolving the method bodies, we push a new scope and
 define "this" in it as if it were a variable. Then, when we're done, we discard
 that surrounding scope.
 
-^code resolver-end-this-scope (2 before, 1 after)
+```python
+# lox/resolver.py at end of resolve(Class)
+...
+resolver.end_scope()
+```
 
 Now, whenever a `this` expression is encountered (at least inside a method) it
 will resolve to a "local variable" defined in an implicit scope just outside of
 the block for the method body.
 
-The resolver has a new *scope* for `this`, so the interpreter needs to create a
-corresponding *environment* for it. Remember, we always have to keep the
+The resolver has a new _scope_ for `this`, so the interpreter needs to create a
+corresponding _environment_ for it. Remember, we always have to keep the
 resolver's scope chains and the interpreter's linked environments in sync with
 each other. At runtime, we create the environment after we find the method on
 the instance. We replace the previous line of code that simply returned the
 method's LoxFunction with this:
 
-^code lox-instance-bind-method (1 before, 3 after)
+```python
+# lox/eval.py inside eval(Get) before returning the method
+...
+if method is not None:
+    return method.bind(obj)
+...
+```
 
 Note the new call to `bind()`. That looks like so:
 
-^code bind-instance
+```python
+# lox/runtime.py method of LoxFunction
+def bind(self, instance: "LoxInstance") -> "LoxFunction":
+    env = Environment(self.closure)
+    env.define("this", instance)
+    return LoxFunction(self.params, self.body, env)
+```
 
 There isn't much to it. We create a new environment nestled inside the method's
 original closure. Sort of a closure-within-a-closure. When the method is called,
 that will become the parent of the method body's environment.
 
 We declare "this" as a variable in that environment and bind it to the given
-instance, the instance that the method is being accessed from. *Et voilà*, the
+instance, the instance that the method is being accessed from. _Et voilà_, the
 returned LoxFunction now carries around its own little persistent world where
 "this" is bound to the object.
 
 The remaining task is interpreting those `this` expressions. Similar to the
 resolver, it is the same as interpreting a variable expression.
 
-^code interpreter-visit-this
+```python
+# lox/eval.py
+@eval.register
+def _(expr: This, env: Environment) -> Any:
+    # TODO: resolver with env.look_up_variable()
+    return env.get(expr.keyword)
+```
 
 Go ahead and give it a try using that cake example from earlier. With less than
 twenty lines of code, our interpreter handles `this` inside methods even in all
@@ -958,7 +1143,7 @@ handles to methods, etc.
 
 ### Invalid uses of this
 
-Wait a minute. What happens if you try to use `this` *outside* of a method? What
+Wait a minute. What happens if you try to use `this` _outside_ of a method? What
 about:
 
 ```lox
@@ -983,7 +1168,13 @@ detects `return` statements outside of functions. We'll do something similar for
 `this`. In the vein of our existing FunctionType enum, we define a new ClassType
 one.
 
-^code class-type (1 before, 1 after)
+```python
+# lox/resolver.py inside Resolver
+# at top of Resolver
+class ClassType(Enum):
+    NONE = auto()
+    CLASS = auto()
+```
 
 Yes, it could be a Boolean. When we get to inheritance, it will get a third
 value, hence the enum right now. We also add a corresponding field,
@@ -991,25 +1182,61 @@ value, hence the enum right now. We also add a corresponding field,
 declaration while traversing the syntax tree. It starts out `NONE` which means
 we aren't in one.
 
+```python
+# lox/resolver.py inside Resolver
+class Resolver:
+    current_class = ClassType.NONE
+```
+
 When we begin to resolve a class declaration, we change that.
 
-^code set-current-class (1 before, 1 after)
+```python
+# lox/resolver.py at the start of resolve(Class)
+    ...
+    enclosing_class = resolver.current_class
+    resolver.current_class = ClassType.CLASS
+    ...
+```
 
-As with `currentFunction`, we store the previous value of the field in a local
-variable. This lets us piggyback onto the JVM to keep a stack of `currentClass`
+As with `current_function`, we store the previous value of the field in a local
+variable. This lets us piggyback onto the JVM to keep a stack of `current_class`
 values. That way we don't lose track of the previous value if one class nests
 inside another.
 
 Once the methods have been resolved, we "pop" that stack by restoring the old
 value.
 
-^code restore-current-class (2 before, 1 after)
+```python
+# lox/resolver.py at the endof resolve(Class)
+    ...
+    resolver.current_class = enclosing_class
+```
+
+As with `current_function`, we store the previous value of the field in a local
+variable. This lets us piggyback onto the JVM to keep a stack of `current_class`
+values. That way we don't lose track of the previous value if one class nests
+inside another.
+
+Once the methods have been resolved, we "pop" that stack by restoring the old
+value.
+
+```python
+# lox/resolver.py inside Resolver
+    ...
+    resolver.current_class = enclosing_class
+```
 
 When we resolve a `this` expression, the `currentClass` field gives us the bit
 of data we need to report an error if the expression doesn't occur nestled
 inside a method body.
 
-^code this-outside-of-class (1 before, 1 after)
+```python
+# lox/resolver.py at the end of resolve(This)
+    ...
+    if resolver.current_class == ClassType.NONE:
+        msg = "Cannot use 'this' outside of a class."
+        raise ResolverError(expr.keyword, msg)
+```
 
 That should help users use `this` correctly, and it saves us from having to
 handle misuse at runtime in the interpreter.
@@ -1018,8 +1245,8 @@ handle misuse at runtime in the interpreter.
 
 We can do almost everything with classes now, and as we near the end of the
 chapter we find ourselves strangely focused on a beginning. Methods and fields
-let us encapsulate state and behavior together so that an object always *stays*
-in a valid configuration. But how do we ensure a brand new object *starts* in a
+let us encapsulate state and behavior together so that an object always _stays_
+in a valid configuration. But how do we ensure a brand new object _starts_ in a
 good state?
 
 For that, we need constructors. I find them one of the trickiest parts of a
@@ -1031,14 +1258,14 @@ intrinsically messy about the moment of birth.
 <aside name="cracks">
 
 A few examples: In Java, even though final fields must be initialized, it is
-still possible to read one *before* it has been. Exceptions -- a huge, complex
+still possible to read one _before_ it has been. Exceptions -- a huge, complex
 feature -- were added to C++ mainly as a way to emit errors from constructors.
 
 </aside>
 
 "Constructing" an object is actually a pair of operations:
 
-1.  The runtime <span name="allocate">*allocates*</span> the memory required for
+1.  The runtime <span name="allocate">_allocates_</span> the memory required for
     a fresh instance. In most languages, this operation is at a fundamental
     level beneath what user code is able to access.
 
@@ -1049,7 +1276,7 @@ feature -- were added to C++ mainly as a way to emit errors from constructors.
 
     </aside>
 
-2.  Then, a user-provided chunk of code is called which *initializes* the
+2.  Then, a user-provided chunk of code is called which _initializes_ the
     unformed object.
 
 [placement new]: https://en.wikipedia.org/wiki/Placement_syntax
@@ -1066,7 +1293,15 @@ and Python call it `init()`. The latter is nice and short, so we'll do that.
 
 In LoxClass's implementation of LoxCallable, we add a few more lines.
 
-^code lox-class-call-initializer (2 before, 1 after)
+```python
+# lox/runtime.py in LoxClass.call()
+# replace the return statement
+    ...
+    init = self.find_method("init")
+    if init is not None:
+        init.bind(instance).call(interpreter, arguments)
+    return instance
+```
 
 When a class is called, after the LoxInstance is created, we look for an "init"
 method. If we find one, we immediately bind and invoke it just like a normal
@@ -1074,10 +1309,18 @@ method call. The argument list is forwarded along.
 
 That argument list means we also need to tweak how a class declares its arity.
 
-^code lox-initializer-arity (1 before, 1 after)
+```python
+# lox/runtime.py replace LoxClass.arity
+@property
+def arity(self) -> int:
+    init = self.find_method("init")
+    if init is None:
+        return 0
+    return init.arity
+```
 
 If there is an initializer, that method's arity determines how many arguments
-you must pass when you call the class itself. We don't *require* a class to
+you must pass when you call the class itself. We don't _require_ a class to
 define an initializer, though, as a convenience. If you don't have an
 initializer, the arity is still zero.
 
@@ -1106,47 +1349,73 @@ Can you "re-initialize" an object by directly calling its `init()` method? If
 you do, what does it return? A <span name="compromise">reasonable</span> answer
 would be `nil` since that's what it appears the body returns.
 
-However -- and I generally dislike compromising to satisfy the
-implementation -- it will make clox's implementation of constructors much
-easier if we say that `init()` methods always return `this`, even when
-directly called. In order to keep jlox compatible with that, we add a little
-special case code in LoxFunction.
+However -- and I generally dislike compromising to satisfy the implementation --
+it will make clox's implementation of constructors much easier if we say that
+`init()` methods always return `this`, even when directly called. In order to
+keep pylox compatible with that, we add a little special case code in
+LoxFunction.
 
 <aside name="compromise">
 
 Maybe "dislike" is too strong a claim. It's reasonable to have the constraints
 and resources of your implementation affect the design of the language. There
-are only so many hours in the day, and if a cut corner here or there lets you get
-more features to users in less time, it may very well be a net win for their
-happiness and productivity. The trick is figuring out *which* corners to cut
+are only so many hours in the day, and if a cut corner here or there lets you
+get more features to users in less time, it may very well be a net win for their
+happiness and productivity. The trick is figuring out _which_ corners to cut
 that won't cause your users and future self to curse your shortsightedness.
 
 </aside>
 
-^code return-this (2 before, 1 after)
+```python
+# lox/runtime.py in LoxFunction.call() before returning the value
+    ...
+    if self.is_initializer:
+        return self.closure.get_at(0, "this")
+    return value
+```
 
 If the function is an initializer, we override the actual return value and
-forcibly return `this`. That relies on a new `isInitializer` field.
+forcibly return `this`. That relies on a new `is_initializer` field.
 
-^code is-initializer-field (2 before, 2 after)
+```python
+# lox/runtime.py in LoxFunction after all property declarations
+@dataclass
+class LoxFunction(LoxCallable):
+    ...
+    is_initializer: bool = False
+```
 
 We can't simply see if the name of the LoxFunction is "init" because the user
-could have defined a *function* with that name. In that case, there *is* no
-`this` to return. To avoid *that* weird edge case, we'll directly store whether
+could have defined a _function_ with that name. In that case, there _is_ no
+`this` to return. To avoid _that_ weird edge case, we'll directly store whether
 the LoxFunction represents an initializer method. That means we need to go back
 and fix the few places where we create LoxFunctions.
 
-^code construct-function (1 before, 1 after)
+Since we gave a default value of `False` to the is_initializer field, we don't
+need to change the code that creates LoxFunctions for normal function
+declarations. We only need to change the code that creates them for methods.
 
-For actual function declarations, `isInitializer` is always false. For methods,
-we check the name.
-
-^code interpreter-method-initializer (1 before, 1 after)
+```python
+# lox/exec.py in exec(Class)
+# replace the line that creates the LoxFunction
+    ...
+    function = LoxFunction(
+        method,
+        env,
+        is_initializer=(method.name.lexeme == "init"),
+    )
+    ...
+```
 
 And then in `bind()` where we create the closure that binds `this` to a method,
 we pass along the original method's value.
 
-^code lox-function-bind-with-initializer (1 before, 1 after)
+```python
+# lox/runtime.py in LoxFunction.bind()
+# replace the return statement
+    ...
+    return LoxFunction(self.params, self.body, env, self.is_initializer)
+```
 
 ### Returning from init()
 
@@ -1165,19 +1434,39 @@ class Foo {
 It's definitely not going to do what they want, so we may as well make it a
 static error. Back in the resolver, we add another case to FunctionType.
 
-^code function-type-initializer (1 before, 1 after)
+```python
+# lox/resolver.py inside Resolver
+class FunctionType(Enum):
+    NORMAL = auto()
+    INITIALIZER = auto()
+    METHOD = auto()
+```
 
 We use the visited method's name to determine if we're resolving an initializer
 or not.
 
-^code resolver-initializer-type (1 before, 1 after)
+```python
+# lox/resolver.py at the start of resolve(Class)
+# after defining the "declaration" variable
+    ...
+    if stmt.name.lexeme == "init":
+        declaration = FunctionType.INITIALIZER
+    ...
+```
 
 When we later traverse into a `return` statement, we check that field and make
 it an error to return a value from inside an `init()` method.
 
-^code return-in-initializer (1 before, 1 after)
+```python
+# lox/resolver.py at the start of resolve(Function)
+    ...
+    if stmt.value is not None:
+      if env.current_function == FunctionType.INITIALIZER:
+        error(stmt.keyword, "Cannot return a value from an initializer.")
+    ...
+```
 
-We're *still* not done. We statically disallow returning a *value* from an
+We're _still_ not done. We statically disallow returning a _value_ from an
 initializer, but you can still use an empty early `return`.
 
 ```lox
@@ -1192,7 +1481,14 @@ That is actually kind of useful sometimes, so we don't want to disallow it
 entirely. Instead, it should return `this` instead of `nil`. That's an easy fix
 over in LoxFunction.
 
-^code early-return-this (1 before, 1 after)
+```python
+# lox/runtime.py in LoxFunction.call()
+# after catching the LoxReturn exception
+    ...
+    if self.is_initializer:
+        return self.closure.get_at(0, "this")
+
+```
 
 If we're in an initializer and execute a `return` statement, instead of
 returning the value (which will always be `nil`), we again return `this`.
@@ -1221,8 +1517,8 @@ interpreter has grown an entire programming paradigm. Classes, methods, fields,
     ```
 
     You can solve this however you like, but the "[metaclasses][]" used by
-    Smalltalk and Ruby are a particularly elegant approach. *Hint: Make LoxClass
-    extend LoxInstance and go from there.*
+    Smalltalk and Ruby are a particularly elegant approach. _Hint: Make LoxClass
+    extend LoxInstance and go from there._
 
 2.  Most modern languages support "getters" and "setters" -- members on a class
     that look like field reads and writes but that actually execute user-defined
@@ -1270,7 +1566,7 @@ LoxInstance? In that case, we wouldn't need LoxClass at all. LoxInstance would
 be a complete package for defining the behavior and state of an object.
 
 We'd still want some way, without classes, to reuse behavior across multiple
-instances. We could let a LoxInstance [*delegate*][delegate] directly to another
+instances. We could let a LoxInstance [_delegate_][delegate] directly to another
 LoxInstance to reuse its fields and methods, sort of like inheritance.
 
 Users would model their program as a constellation of objects, some of which
@@ -1300,13 +1596,13 @@ Including [more than a handful][prototypes] by yours truly.
 I won't get into whether or not I think prototypes are a good idea for a
 language. I've made languages that are [prototypal][finch] and
 [class-based][wren], and my opinions of both are complex. What I want to discuss
-is the role of *simplicity* in a language.
+is the role of _simplicity_ in a language.
 
 Prototypes are simpler than classes -- less code for the language implementer to
 write, and fewer concepts for the user to learn and understand. Does that make
 them better? We language nerds have a tendency to fetishize minimalism.
 Personally, I think simplicity is only part of the equation. What we really want
-to give the user is *power*, which I define as:
+to give the user is _power_, which I define as:
 
 ```text
 power = breadth × ease ÷ complexity
@@ -1315,33 +1611,33 @@ power = breadth × ease ÷ complexity
 None of these are precise numeric measures. I'm using math as analogy here, not
 actual quantification.
 
-*   **Breadth** is the range of different things the language lets you express.
-    C has a lot of breadth -- it's been used for everything from operating
-    systems to user applications to games. Domain-specific languages like
-    AppleScript and Matlab have less breadth.
+- **Breadth** is the range of different things the language lets you express. C
+  has a lot of breadth -- it's been used for everything from operating systems
+  to user applications to games. Domain-specific languages like AppleScript and
+  Matlab have less breadth.
 
-*   **Ease** is how little effort it takes to make the language do what you
-    want. "Usability" might be another term, though it carries more baggage than
-    I want to bring in. "Higher-level" languages tend to have more ease than
-    "lower-level" ones. Most languages have a "grain" to them where some things
-    feel easier to express than others.
+- **Ease** is how little effort it takes to make the language do what you want.
+  "Usability" might be another term, though it carries more baggage than I want
+  to bring in. "Higher-level" languages tend to have more ease than
+  "lower-level" ones. Most languages have a "grain" to them where some things
+  feel easier to express than others.
 
-*   **Complexity** is how big the language (including its runtime, core libraries,
-    tools, ecosystem, etc.) is. People talk about how many pages are in a
-    language's spec, or how many keywords it has. It's how much the user has to
-    load into their wetware before they can be productive in the system. It is
-    the antonym of simplicity.
+- **Complexity** is how big the language (including its runtime, core libraries,
+  tools, ecosystem, etc.) is. People talk about how many pages are in a
+  language's spec, or how many keywords it has. It's how much the user has to
+  load into their wetware before they can be productive in the system. It is the
+  antonym of simplicity.
 
 [proto]: https://en.wikipedia.org/wiki/Prototype-based_programming
 
-Reducing complexity *does* increase power. The smaller the denominator, the
+Reducing complexity _does_ increase power. The smaller the denominator, the
 larger the resulting value, so our intuition that simplicity is good is valid.
 However, when reducing complexity, we must take care not to sacrifice breadth or
 ease in the process, or the total power may go down. Java would be a strictly
-*simpler* language if it removed strings, but it probably wouldn't handle text
+_simpler_ language if it removed strings, but it probably wouldn't handle text
 manipulation tasks well, nor would it be as easy to get things done.
 
-The art, then, is finding *accidental* complexity that can be omitted --
+The art, then, is finding _accidental_ complexity that can be omitted --
 language features and interactions that don't carry their weight by increasing
 the breadth or ease of using the language.
 

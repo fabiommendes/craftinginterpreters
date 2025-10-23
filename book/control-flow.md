@@ -12,8 +12,8 @@ reward is surprisingly large.
 Right now, our interpreter is little more than a calculator. A Lox program can
 only do a fixed amount of work before completing. To make it run twice as long
 you have to make the source code twice as lengthy. We're about to fix that. In
-this chapter, our interpreter takes a big step towards the programming
-language major leagues: *Turing-completeness*.
+this chapter, our interpreter takes a big step towards the programming language
+major leagues: _Turing-completeness_.
 
 ## Turing Machines (Briefly)
 
@@ -21,10 +21,11 @@ In the early part of last century, mathematicians stumbled into a series of
 confusing <span name="paradox">paradoxes</span> that led them to doubt the
 stability of the foundation they had built their work upon. To address that
 [crisis][], they went back to square one. Starting from a handful of axioms,
-logic, and set theory, they hoped to rebuild mathematics on top of an
-impervious foundation.
+logic, and set theory, they hoped to rebuild mathematics on top of an impervious
+foundation.
 
-[crisis]: https://en.wikipedia.org/wiki/Foundations_of_mathematics#Foundational_crisis
+[crisis]:
+  https://en.wikipedia.org/wiki/Foundations_of_mathematics#Foundational_crisis
 
 <aside name="paradox">
 
@@ -33,7 +34,7 @@ allowed you to define any sort of set. If you could describe it in English, it
 was valid. Naturally, given mathematicians' predilection for self-reference,
 sets can contain other sets. So Russell, rascal that he was, came up with:
 
-*R is the set of all sets that do not contain themselves.*
+_R is the set of all sets that do not contain themselves._
 
 Does R contain itself? If it doesn't, then according to the second half of the
 definition it should. But if it does, then it no longer meets the definition.
@@ -66,7 +67,7 @@ minimum set of machinery that is still powerful enough to compute any of a
 <aside name="uncomputable">
 
 They proved the answer to the first question is "no" by showing that the
-function that returns the truth value of a given statement is *not* a computable
+function that returns the truth value of a given statement is _not_ a computable
 one.
 
 </aside>
@@ -80,7 +81,7 @@ calculus at their core.
 <aside name="turing">
 
 Turing called his inventions "a-machines" for "automatic". He wasn't so
-self-aggrandizing as to put his *own* name on them. Later mathematicians did
+self-aggrandizing as to put his _own_ name on them. Later mathematicians did
 that for him. That's how you get famous while still retaining some modesty.
 
 </aside>
@@ -90,7 +91,7 @@ that for him. That's how you get famous while still retaining some modesty.
 Turing machines have better name recognition -- there's no Hollywood film about
 Alonzo Church yet -- but the two formalisms are [equivalent in power][thesis].
 In fact, any programming language with some minimal level of expressiveness is
-powerful enough to compute *any* computable function.
+powerful enough to compute _any_ computable function.
 
 [thesis]: https://en.wikipedia.org/wiki/Church%E2%80%93Turing_thesis
 
@@ -101,15 +102,15 @@ function into a Turing machine, and then run that on your simulator.
 
 If your language is expressive enough to do that, it's considered
 **Turing-complete**. Turing machines are pretty dang simple, so it doesn't take
-much power to do this. You basically need arithmetic, a little control flow,
-and the ability to allocate and use (theoretically) arbitrary amounts of memory.
+much power to do this. You basically need arithmetic, a little control flow, and
+the ability to allocate and use (theoretically) arbitrary amounts of memory.
 We've got the first. By the end of this chapter, we'll have the <span
 name="memory">second</span>.
 
 <aside name="memory">
 
-We *almost* have the third too. You can create and concatenate strings of
-arbitrary size, so you can *store* unbounded memory. But we don't have any way
+We _almost_ have the third too. You can create and concatenate strings of
+arbitrary size, so you can _store_ unbounded memory. But we don't have any way
 to access parts of a string.
 
 </aside>
@@ -119,14 +120,14 @@ to access parts of a string.
 Enough history, let's jazz up our language. We can divide control flow roughly
 into two kinds:
 
-*   **Conditional** or **branching control flow** is used to *not* execute
-    some piece of code. Imperatively, you can think of it as jumping *ahead*
-    over a region of code.
+- **Conditional** or **branching control flow** is used to _not_ execute some
+  piece of code. Imperatively, you can think of it as jumping _ahead_ over a
+  region of code.
 
-*   **Looping control flow** executes a chunk of code more than once. It jumps
-    *back* so that you can do something again. Since you don't usually want
-    *infinite* loops, it typically has some conditional logic to know when to
-    stop looping as well.
+- **Looping control flow** executes a chunk of code more than once. It jumps
+  _back_ so that you can do something again. Since you don't usually want
+  _infinite_ loops, it typically has some conditional logic to know when to stop
+  looping as well.
 
 Branching is simpler, so we'll start there. C-derived languages have two main
 conditional execution features, the `if` statement and the perspicaciously named
@@ -165,12 +166,20 @@ be one that ends in a semicolon.
 
 </aside>
 
-An `if` statement has an expression for the condition, then a statement to execute
-if the condition is truthy. Optionally, it may also have an `else` keyword and a
-statement to execute if the condition is falsey. The <span name="if-ast">syntax
-tree node</span> has fields for each of those three pieces.
+An `if` statement has an expression for the condition, then a statement to
+execute if the condition is truthy. Optionally, it may also have an `else`
+keyword and a statement to execute if the condition is falsey. The
+<span name="if-ast">syntax tree node</span> has fields for each of those three
+pieces.
 
-^code if-ast (1 before, 1 after)
+```python
+# lox/stmt.py
+@dataclass
+class If(Stmt):
+    condition: Expr
+    then_branch: Stmt
+    else_branch: Stmt | None
+```
 
 <aside name="if-ast">
 
@@ -183,31 +192,48 @@ The generated code for the new node is in [Appendix II][appendix-if].
 Like other statements, the parser recognizes an `if` statement by the leading
 `if` keyword.
 
-^code match-if (1 before, 1 after)
+```python
+# lox/parser.py case in Parser.statement()
+case "IF":
+    return self.if_statement()
+```
 
 When it finds one, it calls this new method to parse the rest:
 
-^code if-statement
+```python
+# lox/parser.py method of the Parser class
+def if_statement(self) -> Stmt:
+    self.consume("IF", "Expect 'if'.")
+    self.consume("LEFT_PAREN", "Expect '(' after 'if'.")
+    condition = self.expression()
+    self.consume("RIGHT_PAREN", "Expect ')' after if condition.")
+    then_branch = self.statement()
+    else_branch = None
+    if self.match("ELSE"):
+        else_branch = self.statement()
+    return If(condition, then_branch, else_branch)
+```
 
 <aside name="parens">
 
 The parentheses around the condition are only half useful. You need some kind of
-delimiter *between* the condition and the then statement, otherwise the parser
+delimiter _between_ the condition and the then statement, otherwise the parser
 can't tell when it has reached the end of the condition expression. But the
-*opening* parenthesis after `if` doesn't do anything useful. Dennis Ritchie put
+_opening_ parenthesis after `if` doesn't do anything useful. Dennis Ritchie put
 it there so he could use `)` as the ending delimiter without having unbalanced
 parentheses.
 
 Other languages like Lua and some BASICs use a keyword like `then` as the ending
 delimiter and don't have anything before the condition. Go and Swift instead
 require the statement to be a braced block. That lets them use the `{` at the
-beginning of the statement to tell when the condition is done.
+beginning of the statement to tell when the condition is done. Python uses the
+colon (`:`) at the end of the line to mark the end of the condition.
 
 </aside>
 
 As usual, the parsing code hews closely to the grammar. It detects an else
 clause by looking for the preceding `else` keyword. If there isn't one, the
-`elseBranch` field in the syntax tree is `null`.
+`else_branch` field in the syntax tree is `None`.
 
 That seemingly innocuous optional else has, in fact, opened up an ambiguity in
 our grammar. Consider:
@@ -220,11 +246,11 @@ Here's the riddle: Which `if` statement does that else clause belong to? This
 isn't just a theoretical question about how we notate our grammar. It actually
 affects how the code executes:
 
-*   If we attach the else to the first `if` statement, then `whenFalse()` is
-    called if `first` is falsey, regardless of what value `second` has.
+- If we attach the else to the first `if` statement, then `whenFalse()` is
+  called if `first` is falsey, regardless of what value `second` has.
 
-*   If we attach it to the second `if` statement, then `whenFalse()` is only
-    called if `first` is truthy and `second` is falsey.
+- If we attach it to the second `if` statement, then `whenFalse()` is only
+  called if `first` is truthy and `second` is falsey.
 
 Since else clauses are optional, and there is no explicit delimiter marking the
 end of the `if` statement, the grammar is ambiguous when you nest `if`s in this
@@ -244,7 +270,7 @@ the human reader.
 
 </aside>
 
-It *is* possible to define a context-free grammar that avoids the ambiguity
+It _is_ possible to define a context-free grammar that avoids the ambiguity
 directly, but it requires splitting most of the statement rules into pairs, one
 that allows an `if` with an `else` and one that doesn't. It's annoying.
 
@@ -253,20 +279,25 @@ matter what hack they use to get themselves out of the trouble, they always
 choose the same interpretation -- the `else` is bound to the nearest `if` that
 precedes it.
 
-Our parser conveniently does that already. Since `ifStatement()` eagerly looks
+Our parser conveniently does that already. Since `if_statement()` eagerly looks
 for an `else` before returning, the innermost call to a nested series will claim
 the else clause for itself before returning to the outer `if` statements.
 
 Syntax in hand, we are ready to interpret.
 
-^code visit-if
-
-The interpreter implementation is a thin wrapper around the self-same Java code.
-It evaluates the condition. If truthy, it executes the then branch. Otherwise,
-if there is an else branch, it executes that.
+```python
+# lox/exec.py implementation of exec()
+@exec.register
+def _(stmt: If, env: Environment) -> None:
+    condition = eval(stmt.condition, env)
+    if is_truthy(condition):
+        exec(stmt.then_branch, env)
+    elif stmt.else_branch is not None:
+        exec(stmt.else_branch, env)
+```
 
 If you compare this code to how the interpreter handles other syntax we've
-implemented, the part that makes control flow special is that Java `if`
+implemented, the part that makes control flow special is that Python `if`
 statement. Most other syntax trees always evaluate their subtrees. Here, we may
 not evaluate the then or else statement. If either of those has a side effect,
 the choice not to evaluate it becomes user visible.
@@ -314,13 +345,13 @@ logic_and      → equality ( "and" equality )* ;
 
 Instead of falling back to `equality`, `assignment` now cascades to `logic_or`.
 The two new rules, `logic_or` and `logic_and`, are <span
-name="same">similar</span> to other binary operators. Then `logic_and` calls
-out to `equality` for its operands, and we chain back to the rest of the
-expression rules.
+name="same">similar</span> to other binary operators. Then `logic_and` calls out
+to `equality` for its operands, and we chain back to the rest of the expression
+rules.
 
 <aside name="same">
 
-The *syntax* doesn't care that they short-circuit. That's a semantic concern.
+The _syntax_ doesn't care that they short-circuit. That's a semantic concern.
 
 </aside>
 
@@ -331,38 +362,70 @@ code path to handle the short circuiting. I think it's cleaner to define a <span
 name="logical-ast">new class</span> for these operators so that they get their
 own visit method.
 
-^code logical-ast (1 before, 1 after)
-
-<aside name="logical-ast">
-
-The generated code for the new node is in [Appendix II][appendix-logical].
-
-[appendix-logical]: appendix-ii.html#logical-expression
-
-</aside>
+```python
+# lox/expr.py
+@dataclass
+class Logical(Expr):
+    left: Expr
+    operator: Token
+    right: Expr
+```
 
 To weave the new expressions into the parser, we first change the parsing code
-for assignment to call `or()`.
+for assignment to call `logic_or()`.
 
-^code or-in-assignment (1 before, 2 after)
+```python
+# lox/parser.py modify Parser.assignment()
+def assignment(self) -> Expr:
+    expr = self.logic_or() # instead of self.equality()
+    ...
+```
 
 The code to parse a series of `or` expressions mirrors other binary operators.
 
-^code or
+```python
+# lox/parser.py method of the Parser class
+def logic_or(self) -> Expr:
+    expr = self.logic_and()
+    while self.match("OR"):
+        operator = self.previous()
+        right = self.logic_and()
+        expr = Logical(expr, operator, right)
+    return expr
+```
 
-Its operands are the next higher level of precedence, the new `and` expression.
+Its operands are the next higher level of precedence, the new `logic_and()`
+expression.
 
-^code and
+```python
+# lox/parser.py method of Parser class
+def logic_and(self) -> Expr:
+    expr = self.equality()
+    while self.match("AND"):
+        operator = self.previous()
+        right = self.equality()
+        expr = Logical(expr, operator, right)
+    return expr
+```
 
 That calls `equality()` for its operands, and with that, the expression parser
 is all tied back together again. We're ready to interpret.
 
-^code visit-logical
+```python
+# lox/eval.py method of the eval() function
+@eval.register
+def _(expr: Logical, env: Environment) -> Any:
+    left = eval(expr.left, env)
+    match (expr.operator.type, is_truthy(left)):
+        case ("OR", True) | ("AND", False):
+            return left
+    return eval(expr.right, env)
+```
 
-If you compare this to the [earlier chapter's][evaluating] `visitBinaryExpr()`
-method, you can see the difference. Here, we evaluate the left operand first. We
-look at its value to see if we can short-circuit. If not, and only then, do we
-evaluate the right operand.
+If you compare this to the [earlier chapter's][evaluating] `Binary` objects, you
+can see the difference. Here, we evaluate the left operand first. We look at its
+value to see if we can short-circuit. If not, and only then, do we evaluate the
+right operand.
 
 [evaluating]: evaluating-expressions.html
 
@@ -385,7 +448,7 @@ that. On the second line, `nil` is falsey, so it evaluates and returns the
 second operand, `"yes"`.
 
 That covers all of the branching primitives in Lox. We're ready to jump ahead to
-loops. You see what I did there? *Jump. Ahead.* Get it? See, it's like a
+loops. You see what I did there? _Jump. Ahead._ Get it? See, it's like a
 reference to... oh, forget it.
 
 ## While Loops
@@ -408,15 +471,13 @@ while. It takes a `while` keyword, followed by a parenthesized condition
 expression, then a statement for the body. That new grammar rule gets a <span
 name="while-ast">syntax tree node</span>.
 
-^code while-ast (1 before, 1 after)
-
-<aside name="while-ast">
-
-The generated code for the new node is in [Appendix II][appendix-while].
-
-[appendix-while]: appendix-ii.html#while-statement
-
-</aside>
+```python
+# lox/stmt.py
+@dataclass
+class While(Stmt):
+    condition: Expr
+    body: Stmt
+```
 
 The node stores the condition and body. Here you can see why it's nice to have
 separate base classes for expressions and statements. The field declarations
@@ -426,18 +487,38 @@ Over in the parser, we follow the same process we used for `if` statements.
 First, we add another case in `statement()` to detect and match the leading
 keyword.
 
-^code match-while (1 before, 1 after)
+```python
+# lox/parser.py case in Parser.statement()
+case "WHILE":
+    return self.while_statement()
+```
 
 That delegates the real work to this method:
 
-^code while-statement
+```python
+# lox/parser.py method of the Parser class
+def while_statement(self) -> Stmt:
+    self.consume("WHILE", "Expect 'while'.")
+    self.consume("LEFT_PAREN", "Expect '(' after 'while'.")
+    condition = self.expression()
+    self.consume("RIGHT_PAREN", "Expect ')' after condition.")
+    body = self.statement()
+    return While(condition, body)
+```
 
-The grammar is dead simple and this is a straight translation of it to Java.
-Speaking of translating straight to Java, here's how we execute the new syntax:
+The grammar is dead simple and this is a straight translation of it to Python.
+Speaking of translating straight to Python, here's how we execute the new
+syntax:
 
-^code visit-while
+```python
+# lox/exec.py implementation of exec()
+@exec.register
+def _(stmt: While, env: Environment) -> None:
+    while is_truthy(eval(stmt.condition, env)):
+        exec(stmt.body, env)
+```
 
-Like the visit method for `if`, this visitor uses the corresponding Java
+Like the visit method for `if`, this visitor uses the corresponding Python
 feature. This method isn't complex, but it makes Lox much more powerful. We can
 finally write a program whose running time isn't strictly bound by the length of
 the source code.
@@ -484,17 +565,17 @@ flow statements.
 
 Inside the parentheses, you have three clauses separated by semicolons:
 
-1.  The first clause is the *initializer*. It is executed exactly once, before
+1.  The first clause is the _initializer_. It is executed exactly once, before
     anything else. It's usually an expression, but for convenience, we also
     allow a variable declaration. In that case, the variable is scoped to the
     rest of the `for` loop -- the other two clauses and the body.
 
-2.  Next is the *condition*. As in a `while` loop, this expression controls when
+2.  Next is the _condition_. As in a `while` loop, this expression controls when
     to exit the loop. It's evaluated once at the beginning of each iteration,
     including the first. If the result is truthy, it executes the loop body.
     Otherwise, it bails.
 
-3.  The last clause is the *increment*. It's an arbitrary expression that does
+3.  The last clause is the _increment_. It's an arbitrary expression that does
     some work at the end of each loop iteration. The result of the expression is
     discarded, so it must have a side effect to be useful. In practice, it
     usually increments a variable.
@@ -510,7 +591,7 @@ initializer clauses, you could just put the initializer expression before the
 `for` statement. Without an increment clause, you could simply put the increment
 expression at the end of the body yourself.
 
-In other words, Lox doesn't *need* `for` loops, they just make some common code
+In other words, Lox doesn't _need_ `for` loops, they just make some common code
 patterns more pleasant to write. These kinds of features are called <span
 name="sugar">**syntactic sugar**</span>. For example, the previous `for` loop
 could be rewritten like so:
@@ -557,24 +638,42 @@ metaphor if you aren't going to stick with it?
 We're going to desugar `for` loops to the `while` loops and other statements the
 interpreter already handles. In our simple interpreter, desugaring really
 doesn't save us much work, but it does give me an excuse to introduce you to the
-technique. So, unlike the previous statements, we *won't* add a new syntax tree
-node. Instead, we go straight to parsing. First, add an import we'll need soon.
-
-^code import-arrays (1 before, 1 after)
+technique. So, unlike the previous statements, we _won't_ add a new syntax tree
+node. Instead, we go straight to parsing.
 
 Like every statement, we start parsing a `for` loop by matching its keyword.
 
-^code match-for (1 before, 1 after)
+```python
+# lox/parser.py case in Parser.statement()
+case "FOR":
+    return self.for_statement()
+```
 
 Here is where it gets interesting. The desugaring is going to happen here, so
 we'll build this method a piece at a time, starting with the opening parenthesis
 before the clauses.
 
-^code for-statement
+```python
+# lox/parser.py case in Parser.for_statement()
+def for_statement(self):
+    self.consume("FOR", "Expect 'for'.")
+    self.consume("LEFT_PAREN", "Expect '(' after 'for'.")
+    ...
+```
 
 The first clause following that is the initializer.
 
-^code for-initializer (2 before, 1 after)
+```python
+# lox/parser.py continuation of Parser.for_statement()
+    ...
+    if self.match("SEMICOLON"):
+        initializer = None
+    elif self.match("VAR"):
+        initializer = self.var_declaration()
+    else:
+        initializer = self.expression_statement()
+    ...
+```
 
 If the token following the `(` is a semicolon then the initializer has been
 omitted. Otherwise, we check for a `var` keyword to see if it's a <span
@@ -586,30 +685,51 @@ that the initializer is always of type Stmt.
 
 In a previous chapter, I said we can split expression and statement syntax trees
 into two separate class hierarchies because there's no single place in the
-grammar that allows both an expression and a statement. That wasn't *entirely*
+grammar that allows both an expression and a statement. That wasn't _entirely_
 true, I guess.
 
 </aside>
 
 Next up is the condition.
 
-^code for-condition (2 before, 1 after)
+```python
+# lox/parser.py continuation of Parser.for_statement()
+    ...
+    condition = None
+    if not self.check("SEMICOLON"):
+        condition = self.expression()
+    self.consume("SEMICOLON", "Expect ';' after loop condition.")
+    ...
+```
 
 Again, we look for a semicolon to see if the clause has been omitted. The last
 clause is the increment.
 
-^code for-increment (1 before, 1 after)
+```python
+# lox/parser.py continuation of Parser.for_statement()
+    ...
+    increment = None
+    if not self.check("RIGHT_PAREN"):
+        increment = self.expression()
+    self.consume("RIGHT_PAREN", "Expect ')' after for clauses.")
+    ...
+```
 
 It's similar to the condition clause except this one is terminated by the
 closing parenthesis. All that remains is the <span name="body">body</span>.
 
 <aside name="body">
 
-Is it just me or does that sound morbid? "All that remained... was the *body*".
+Is it just me or does that sound morbid? "All that remained... was the _body_".
 
 </aside>
 
-^code for-body (1 before, 1 after)
+```python
+# lox/parser.py continuation of Parser.for_statement()
+    ...
+    body = self.statement()
+    ...
+```
 
 We've parsed all of the various pieces of the `for` loop and the resulting AST
 nodes are sitting in a handful of Java local variables. This is where the
@@ -620,31 +740,50 @@ showed you earlier.
 The code is a little simpler if we work backward, so we start with the increment
 clause.
 
-^code for-desugar-increment (2 before, 1 after)
+```python
+# lox/parser.py continuation of Parser.for_statement()
+    ...
+    if increment is not None:
+        body = Block([body, Expression(increment)])
+    ...
+```
 
 The increment, if there is one, executes after the body in each iteration of the
 loop. We do that by replacing the body with a little block that contains the
 original body followed by an expression statement that evaluates the increment.
 
-^code for-desugar-condition (2 before, 1 after)
+```python
+# lox/parser.py continuation of Parser.for_statement()
+    ...
+    if condition is None:
+        condition = Literal(True)
+    body = While(condition, body)
+    ...
+```
 
 Next, we take the condition and the body and build the loop using a primitive
 `while` loop. If the condition is omitted, we jam in `true` to make an infinite
 loop.
 
-^code for-desugar-initializer (2 before, 1 after)
+```python
+# lox/parser.py continuation of Parser.for_statement()
+    ...
+    if initializer is not None:
+        body = Block([initializer, body])
+
+    return body
+```
 
 Finally, if there is an initializer, it runs once before the entire loop. We do
 that by, again, replacing the whole statement with a block that runs the
 initializer and then executes the loop.
 
 That's it. Our interpreter now supports C-style `for` loops and we didn't have
-to touch the Interpreter class at all. Since we desugared to nodes the
-interpreter already knows how to visit, there is no more work to do.
+to touch the `exec()` method at all. Since we desugared to nodes the interpreter
+already knows how to visit, there is no more work to do.
 
 Finally, Lox is powerful enough to entertain us, at least for a few minutes.
-Here's a tiny program to print the first 21 elements in the Fibonacci
-sequence:
+Here's a tiny program to print the first 21 elements in the Fibonacci sequence:
 
 ```lox
 var a = 0;
@@ -662,7 +801,7 @@ for (var b = 1; a < 10000; b = temp + b) {
 ## Challenges
 
 1.  A few chapters from now, when Lox supports first-class functions and dynamic
-    dispatch, we technically won't *need* branching statements built into the
+    dispatch, we technically won't _need_ branching statements built into the
     language. Show how conditional execution can be implemented in terms of
     those. Name a language that uses this technique for its control flow.
 
@@ -695,7 +834,7 @@ inhabit all points along this continuum.
 On the extreme acrid end are those with ruthlessly minimal syntax like Lisp,
 Forth, and Smalltalk. Lispers famously claim their language "has no syntax",
 while Smalltalkers proudly show that you can fit the entire grammar on an index
-card. This tribe has the philosophy that the *language* doesn't need syntactic
+card. This tribe has the philosophy that the _language_ doesn't need syntactic
 sugar. Instead, the minimal syntax and semantics it provides are powerful enough
 to let library code be as expressive as if it were part of the language itself.
 

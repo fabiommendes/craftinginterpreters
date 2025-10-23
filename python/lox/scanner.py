@@ -5,22 +5,22 @@ from .tokens import Token
 from .tokens import TokenType as TT
 
 KEYWORDS = {
-    "and": TT.AND,
-    "class": TT.CLASS,
-    "else": TT.ELSE,
-    "false": TT.FALSE,
-    "for": TT.FOR,
-    "fun": TT.FUN,
-    "if": TT.IF,
-    "nil": TT.NIL,
-    "or": TT.OR,
-    "print": TT.PRINT,
-    "return": TT.RETURN,
-    "super": TT.SUPER,
-    "this": TT.THIS,
-    "true": TT.TRUE,
-    "var": TT.VAR,
-    "while": TT.WHILE,
+    "and": "AND",
+    "class": "CLASS",
+    "else": "ELSE",
+    "false": "FALSE",
+    "for": "FOR",
+    "fun": "FUN",
+    "if": "IF",
+    "nil": "NIL",
+    "or": "OR",
+    "print": "PRINT",
+    "return": "RETURN",
+    "super": "SUPER",
+    "this": "THIS",
+    "true": "TRUE",
+    "var": "VAR",
+    "while": "WHILE",
 }
 
 
@@ -37,7 +37,7 @@ class Scanner:
             # We are at the beginning of the next lexeme.
             self.start = self.current
             self.scan_token()
-        self.tokens.append(Token(TT.EOF, "", self.line))
+        self.tokens.append(Token("EOF", "", self.line))
         return self.tokens
 
     def is_at_end(self) -> bool:
@@ -46,47 +46,47 @@ class Scanner:
     def scan_token(self):
         match self.advance():
             case "(":
-                self.add_token(TT.LEFT_PAREN)
+                self.add_token("LEFT_PAREN")
             case ")":
-                self.add_token(TT.RIGHT_PAREN)
+                self.add_token("RIGHT_PAREN")
             case "{":
-                self.add_token(TT.LEFT_BRACE)
+                self.add_token("LEFT_BRACE")
             case "}":
-                self.add_token(TT.RIGHT_BRACE)
+                self.add_token("RIGHT_BRACE")
             case ",":
-                self.add_token(TT.COMMA)
+                self.add_token("COMMA")
             case ".":
-                self.add_token(TT.DOT)
+                self.add_token("DOT")
             case "-":
-                self.add_token(TT.MINUS)
+                self.add_token("MINUS")
             case "+":
-                self.add_token(TT.PLUS)
+                self.add_token("PLUS")
             case ";":
-                self.add_token(TT.SEMICOLON)
+                self.add_token("SEMICOLON")
             case "*":
-                self.add_token(TT.STAR)
+                self.add_token("STAR")
             case "!" if self.match("="):
-                self.add_token(TT.BANG_EQUAL)
+                self.add_token("BANG_EQUAL")
             case "!":
-                self.add_token(TT.BANG)
+                self.add_token("BANG")
             case "=" if self.match("="):
-                self.add_token(TT.EQUAL_EQUAL)
+                self.add_token("EQUAL_EQUAL")
             case "=":
-                self.add_token(TT.EQUAL)
+                self.add_token("EQUAL")
             case "<" if self.match("="):
-                self.add_token(TT.LESS_EQUAL)
+                self.add_token("LESS_EQUAL")
             case "<":
-                self.add_token(TT.LESS)
+                self.add_token("LESS")
             case ">" if self.match("="):
-                self.add_token(TT.GREATER_EQUAL)
+                self.add_token("GREATER_EQUAL")
             case ">":
-                self.add_token(TT.GREATER)
+                self.add_token("GREATER")
             case "/" if self.match("/"):
                 # A comment goes until the end of the line.
                 while self.peek() != "\n" and not self.is_at_end():
                     self.advance()
             case "/":
-                self.add_token(TT.SLASH)
+                self.add_token("SLASH")
             case " " | "\r" | "\t":
                 pass  # Ignore whitespace.
             case "\n":
@@ -137,7 +137,7 @@ class Scanner:
 
         # Trim the surrounding quotes.
         value = self.source[self.start + 1 : self.current - 1]
-        self.add_token(TT.STRING, value)
+        self.add_token("STRING", value)
 
     def number(self):
         while is_digit(self.peek()):
@@ -152,13 +152,13 @@ class Scanner:
             self.advance()
 
         substring = self.source[self.start : self.current]
-        self.add_token(TT.NUMBER, float(substring))
+        self.add_token("NUMBER", float(substring))
 
     def identifier(self):
         while is_alpha_numeric(self.peek()):
             self.advance()
         text = self.source[self.start : self.current]
-        kind = KEYWORDS.get(text, TT.IDENTIFIER)
+        kind = KEYWORDS.get(text, "IDENTIFIER")
         self.add_token(kind)
 
 

@@ -18,12 +18,12 @@ the deepest, dampest corners of the semantics.
 We will spend this entire chapter exploring that leak, and then carefully
 patching it up. In the process, we will gain a more rigorous understanding of
 lexical scoping as used by Lox and other languages in the C tradition. We'll
-also get a chance to learn about *semantic analysis* -- a powerful technique for
+also get a chance to learn about _semantic analysis_ -- a powerful technique for
 extracting meaning from the user's source code without having to run it.
 
 ## Static Scope
 
-A quick refresher: Lox, like most modern languages, uses *lexical* scoping. This
+A quick refresher: Lox, like most modern languages, uses _lexical_ scoping. This
 means that you can figure out which declaration a variable name refers to just
 by reading the text of the program. For example:
 
@@ -36,9 +36,9 @@ var a = "outer";
 ```
 
 Here, we know that the `a` being printed is the variable declared on the
-previous line, and not the global one. Running the program doesn't -- *can't* --
-affect this. The scope rules are part of the *static* semantics of the language,
-which is why they're also called *static scope*.
+previous line, and not the global one. Running the program doesn't -- _can't_ --
+affect this. The scope rules are part of the _static_ semantics of the language,
+which is why they're also called _static scope_.
 
 I haven't spelled out those scope rules, but now is the time for <span
 name="precise">precision</span>:
@@ -62,73 +62,73 @@ innermost scope that encloses the expression where the variable is used.**
 
 There's a lot to unpack in that:
 
-*   I say "variable usage" instead of "variable expression" to cover both
-    variable expressions and assignments. Likewise with "expression where the
-    variable is used".
+- I say "variable usage" instead of "variable expression" to cover both variable
+  expressions and assignments. Likewise with "expression where the variable is
+  used".
 
-*   "Preceding" means appearing before *in the program text*.
+- "Preceding" means appearing before _in the program text_.
 
-    ```lox
-    var a = "outer";
-    {
-      print a;
-      var a = "inner";
-    }
-    ```
+  ```lox
+  var a = "outer";
+  {
+    print a;
+    var a = "inner";
+  }
+  ```
 
-    Here, the `a` being printed is the outer one since it appears <span
-    name="hoisting">before</span> the `print` statement that uses it. In most
-    cases, in straight line code, the declaration preceding in *text* will also
-    precede the usage in *time*. But that's not always true. As we'll see,
-    functions may defer a chunk of code such that its *dynamic temporal*
-    execution no longer mirrors the *static textual* ordering.
+  Here, the `a` being printed is the outer one since it appears <span
+  name="hoisting">before</span> the `print` statement that uses it. In most
+  cases, in straight line code, the declaration preceding in _text_ will also
+  precede the usage in _time_. But that's not always true. As we'll see,
+  functions may defer a chunk of code such that its _dynamic temporal_ execution
+  no longer mirrors the _static textual_ ordering.
 
-    <aside name="hoisting">
+  <aside name="hoisting">
 
-    In JavaScript, variables declared using `var` are implicitly "hoisted" to
-    the beginning of the block. Any use of that name in the block will refer to
-    that variable, even if the use appears before the declaration. When you
-    write this in JavaScript:
+  In JavaScript, variables declared using `var` are implicitly "hoisted" to the
+  beginning of the block. Any use of that name in the block will refer to that
+  variable, even if the use appears before the declaration. When you write this
+  in JavaScript:
 
-    ```js
-    {
-      console.log(a);
-      var a = "value";
-    }
-    ```
+  ```js
+  {
+    console.log(a);
+    var a = "value";
+  }
+  ```
 
-    It behaves like:
+  It behaves like:
 
-    ```js
-    {
-      var a; // Hoist.
-      console.log(a);
-      a = "value";
-    }
-    ```
+  ```js
+  {
+    var a; // Hoist.
+    console.log(a);
+    a = "value";
+  }
+  ```
 
-    That means that in some cases you can read a variable before its initializer
-    has run -- an annoying source of bugs. The alternate `let` syntax for
-    declaring variables was added later to address this problem.
+  That means that in some cases you can read a variable before its initializer
+  has run -- an annoying source of bugs. The alternate `let` syntax for
+  declaring variables was added later to address this problem.
 
-    </aside>
+  </aside>
 
-*   "Innermost" is there because of our good friend shadowing. There may be more
-    than one variable with the given name in enclosing scopes, as in:
+- "Innermost" is there because of our good friend shadowing. There may be more
+  than one variable with the given name in enclosing scopes, as in:
 
-    ```lox
-    var a = "outer";
-    {
-      var a = "inner";
-      print a;
-    }
-    ```
+  ```lox
+  var a = "outer";
+  {
+    var a = "inner";
+    print a;
+  }
+  ```
 
-    Our rule disambiguates this case by saying the innermost scope wins.
+  Our rule disambiguates this case by saying the innermost scope wins.
 
 Since this rule makes no mention of any runtime behavior, it implies that a
 variable expression always refers to the same declaration through the entire
-execution of the program. Our interpreter so far *mostly* implements the rule
+execution of the program. Our interpreter so far _mostly_ implements the rule
 correctly. But when we added closures, an error snuck in.
 
 ```lox
@@ -145,11 +145,11 @@ var a = "global";
 ```
 
 <span name="tricky">Before</span> you type this in and run it, decide what you
-think it *should* print.
+think it _should_ print.
 
 <aside name="tricky">
 
-I know, it's a totally pathological, contrived program. It's just *weird*. No
+I know, it's a totally pathological, contrived program. It's just _weird_. No
 reasonable person would ever write code like this. Alas, more of your life than
 you'd expect will be spent dealing with bizarro snippets of code like this if
 you stay in the programming language game for long.
@@ -208,9 +208,8 @@ parent of that environment is the function's closure -- the outer block
 environment.
 
 Inside the body of `showA()`, we print the value of `a`. The interpreter looks
-up this value by walking the chain of environments. It gets all the way
-to the global environment before finding it there and printing `"global"`.
-Great.
+up this value by walking the chain of environments. It gets all the way to the
+global environment before finding it there and printing `"global"`. Great.
 
 Next, we declare the second `a`, this time inside the block.
 
@@ -224,7 +223,7 @@ to. This is where it gets interesting. We call `showA()` again.
 
 We create a new empty environment for the body of `showA()` again, wire it up to
 that closure, and run the body. When the interpreter walks the chain of
-environments to find `a`, it now discovers the *new* `a` in the block
+environments to find `a`, it now discovers the _new_ `a` in the block
 environment. Boo.
 
 I chose to implement environments in a way that I hoped would agree with your
@@ -264,11 +263,11 @@ variable is in scope. There is no implicit "rest of the block".
 But in our implementation, environments do act like the entire block is one
 scope, just a scope that changes over time. Closures do not like that. When a
 function is declared, it captures a reference to the current environment. The
-function *should* capture a frozen snapshot of the environment *as it existed at
-the moment the function was declared*. But instead, in the Java code, it has a
+function _should_ capture a frozen snapshot of the environment _as it existed at
+the moment the function was declared_. But instead, in the Java code, it has a
 reference to the actual mutable environment object. When a variable is later
 declared in the scope that environment corresponds to, the closure sees the new
-variable, even though the declaration does *not* precede the function.
+variable, even though the declaration does _not_ precede the function.
 
 ### Persistent environments
 
@@ -288,7 +287,7 @@ data between the different "copies".
 </aside>
 
 If we were to apply that technique to Environment, then every time you declared
-a variable it would return a *new* environment that contained all of the
+a variable it would return a _new_ environment that contained all of the
 previously declared variables along with the one new name. Declaring a variable
 would do the implicit "split" where you have an environment before the variable
 is declared and one after:
@@ -306,7 +305,7 @@ going back and changing a pile of existing code.
 
 I won't drag you through that. We'll keep the way we represent environments the
 same. Instead of making the data more statically structured, we'll bake the
-static resolution into the access *operation* itself.
+static resolution into the access _operation_ itself.
 
 ## Semantic Analysis
 
@@ -320,18 +319,18 @@ declaration, which can be determined just by looking at the text. Given that,
 why are we doing it dynamically every time? Doing so doesn't just open the hole
 that leads to our annoying bug, it's also needlessly slow.
 
-A better solution is to resolve each variable use *once*. Write a chunk of code
+A better solution is to resolve each variable use _once_. Write a chunk of code
 that inspects the user's program, finds every variable mentioned, and figures
 out which declaration each refers to. This process is an example of a **semantic
 analysis**. Where a parser tells only if a program is grammatically correct (a
-*syntactic* analysis), semantic analysis goes farther and starts to figure out
+_syntactic_ analysis), semantic analysis goes farther and starts to figure out
 what pieces of the program actually mean. In this case, our analysis will
-resolve variable bindings. We'll know not just that an expression *is* a
-variable, but *which* variable it is.
+resolve variable bindings. We'll know not just that an expression _is_ a
+variable, but _which_ variable it is.
 
 There are a lot of ways we could store the binding between a variable and its
-declaration. When we get to the C interpreter for Lox, we'll have a *much* more
-efficient way of storing and accessing local variables. But for jlox, I want to
+declaration. When we get to the C interpreter for Lox, we'll have a _much_ more
+efficient way of storing and accessing local variables. But for pylox, I want to
 minimize the collateral damage we inflict on our existing codebase. I'd hate to
 throw out a bunch of mostly fine code.
 
@@ -347,21 +346,21 @@ declared in a block scope, it shadows the global one.
 
 <img src="image/resolving-and-binding/environment-5.png" alt="An empty environment for showA()'s body linking to the previous two. 'a' is resolved in the block environment." />
 
-The next lookup walks the chain, finds `a` in the *second* environment and
-stops there. Each environment corresponds to a single lexical scope where
-variables are declared. If we could ensure a variable lookup always walked the
-*same* number of links in the environment chain, that would ensure that it
-found the same variable in the same scope every time.
+The next lookup walks the chain, finds `a` in the _second_ environment and stops
+there. Each environment corresponds to a single lexical scope where variables
+are declared. If we could ensure a variable lookup always walked the _same_
+number of links in the environment chain, that would ensure that it found the
+same variable in the same scope every time.
 
 To "resolve" a variable usage, we only need to calculate how many "hops" away
 the declared variable will be in the environment chain. The interesting question
-is *when* to do this calculation -- or, put differently, where in our
+is _when_ to do this calculation -- or, put differently, where in our
 interpreter's implementation do we stuff the code for it?
 
 Since we're calculating a static property based on the structure of the source
 code, the obvious answer is in the parser. That is the traditional home, and is
-where we'll put it later in clox. It would work here too, but I want an excuse to
-show you another technique. We'll write our resolver as a separate pass.
+where we'll put it later in clox. It would work here too, but I want an excuse
+to show you another technique. We'll write our resolver as a separate pass.
 
 ### A variable resolution pass
 
@@ -377,55 +376,76 @@ Our variable resolution pass works like a sort of mini-interpreter. It walks the
 tree, visiting each node, but a static analysis is different from a dynamic
 execution:
 
-*   **There are no side effects.** When the static analysis visits a print
-    statement, it doesn't actually print anything. Calls to native functions or
-    other operations that reach out to the outside world are stubbed out and
-    have no effect.
+- **There are no side effects.** When the static analysis visits a print
+  statement, it doesn't actually print anything. Calls to native functions or
+  other operations that reach out to the outside world are stubbed out and have
+  no effect.
 
-*   **There is no control flow.** Loops are visited only <span
-    name="fix">once</span>. Both branches are visited in `if` statements. Logic
-    operators are not short-circuited.
+- **There is no control flow.** Loops are visited only <span
+  name="fix">once</span>. Both branches are visited in `if` statements. Logic
+  operators are not short-circuited.
 
 <aside name="fix">
 
-Variable resolution touches each node once, so its performance is *O(n)* where
-*n* is the number of syntax tree nodes. More sophisticated analyses may have
+Variable resolution touches each node once, so its performance is _O(n)_ where
+_n_ is the number of syntax tree nodes. More sophisticated analyses may have
 greater complexity, but most are carefully designed to be linear or not far from
 it. It's an embarrassing faux pas if your compiler gets exponentially slower as
 the user's program grows.
 
 </aside>
 
-## A Resolver Class
+## A Resolver Method
 
-Like everything in Java, our variable resolution pass is embodied in a class.
+Our variable resolution pass is similar to the `eval/exec` methods of our
+interpreter. It is, afterall, a partial kind of interpretation -- one that only
+simulates the overall structure of execution without actually running each
+command in detail.
 
-^code resolver
+Like we did before, the resolver is implemented as a singledispatch function.
 
-Since the resolver needs to visit every node in the syntax tree, it implements
-the visitor abstraction we already have in place. Only a few kinds of nodes are
+```python
+# lox/resolver.py
+from functools import singledispatch
+from .expr import *
+from .stmt import *
+
+@singledispatch
+def resolve(node: Expr | Stmt, env: Environment) -> None:
+    raise TypeError(f"Unknown node type: {type(node)}")
+```
+
+Since the resolver needs to visit every node in the syntax tree, it implements a
+similar abstraction as exec() and eval() . Only a few kinds of nodes are
 interesting when it comes to resolving variables:
 
-*   A block statement introduces a new scope for the statements it contains.
+- A block statement introduces a new scope for the statements it contains.
 
-*   A function declaration introduces a new scope for its body and binds its
-    parameters in that scope.
+- A function declaration introduces a new scope for its body and binds its
+  parameters in that scope.
 
-*   A variable declaration adds a new variable to the current scope.
+- A variable declaration adds a new variable to the current scope.
 
-*   Variable and assignment expressions need to have their variables resolved.
+- Variable and assignment expressions need to have their variables resolved.
 
 The rest of the nodes don't do anything special, but we still need to implement
-visit methods for them that traverse into their subtrees. Even though a `+`
-expression doesn't *itself* have any variables to resolve, either of its
-operands might.
+methods for them that traverse into their subtrees. Even though a `+` expression
+doesn't _itself_ have any variables to resolve, either of its operands might.
 
 ### Resolving blocks
 
 We start with blocks since they create the local scopes where all the magic
 happens.
 
-^code visit-block-stmt
+```python
+# lox/resolver.py continuation
+
+@resolve.register
+def _(stmt: Block, env: Environment) -> None:
+    begin_scope(env)
+    resolve_statements(stmt.statements, env)
+    end_scope(env)
+```
 
 This begins a new scope, traverses into the statements inside the block, and
 then discards the scope. The fun stuff lives in those helper methods. We start
@@ -494,7 +514,7 @@ What happens when the initializer for a local variable refers to a variable with
 the same name as the variable being declared? We have a few options:
 
 1.  **Run the initializer, then put the new variable in scope.** Here, the new
-    local `a` would be initialized with "outer", the value of the *global* one.
+    local `a` would be initialized with "outer", the value of the _global_ one.
     In other words, the previous declaration would desugar to:
 
     ```lox
@@ -519,10 +539,10 @@ the same name as the variable being declared? We have a few options:
     mentions the variable being initialized.
 
 Do either of those first two options look like something a user actually
-*wants*? Shadowing is rare and often an error, so initializing a shadowing
+_wants_? Shadowing is rare and often an error, so initializing a shadowing
 variable based on the value of the shadowed one seems unlikely to be deliberate.
 
-The second option is even less useful. The new variable will *always* have the
+The second option is even less useful. The new variable will _always_ have the
 value `nil`. There is never any point in mentioning it by name. You could use an
 explicit `nil` instead.
 
@@ -550,7 +570,7 @@ expression is done, the variable is ready for prime time. We do that by
 ^code define
 
 We set the variable's value in the scope map to `true` to mark it as fully
-initialized and available for use. It's alive! 
+initialized and available for use. It's alive!
 
 ### Resolving variable expressions
 
@@ -572,8 +592,8 @@ This looks, for good reason, a lot like the code in Environment for evaluating a
 variable. We start at the innermost scope and work outwards, looking in each map
 for a matching name. If we find the variable, we resolve it, passing in the
 number of scopes between the current innermost scope and the scope where the
-variable was found. So, if the variable was found in the current scope, we
-pass in 0. If it's in the immediately enclosing scope, 1. You get the idea.
+variable was found. So, if the variable was found in the current scope, we pass
+in 0. If it's in the immediately enclosing scope, 1. You get the idea.
 
 If we walk through all of the block scopes and never find the variable, we leave
 it unresolved and assume it's global. We'll get to the implementation of that
@@ -614,9 +634,9 @@ we add classes later. It creates a new scope for the body and then binds
 variables for each of the function's parameters.
 
 Once that's ready, it resolves the function body in that scope. This is
-different from how the interpreter handles function declarations. At *runtime*,
+different from how the interpreter handles function declarations. At _runtime_,
 declaring a function doesn't do anything with the function's body. The body
-doesn't get touched until later when the function is called. In a *static*
+doesn't get touched until later when the function is called. In a _static_
 analysis, we immediately traverse into the body right then and there.
 
 ### Resolving the other syntax tree nodes
@@ -645,9 +665,9 @@ for the branches.
 ^code visit-if-stmt
 
 Here, we see how resolution is different from interpretation. When we resolve an
-`if` statement, there is no control flow. We resolve the condition and *both*
-branches. Where a dynamic execution steps only into the branch that *is* run, a
-static analysis is conservative -- it analyzes any branch that *could* be run.
+`if` statement, there is no control flow. We resolve the condition and _both_
+branches. Where a dynamic execution steps only into the branch that _is_ run, a
+static analysis is conservative -- it analyzes any branch that _could_ be run.
 Since either one could be reached at runtime, we resolve both.
 
 Like expression statements, a `print` statement contains a single subexpression.
@@ -705,7 +725,7 @@ take a break, have a snack, maybe a little nap.
 Let's see what our resolver is good for. Each time it visits a variable, it
 tells the interpreter how many scopes there are between the current scope and
 the scope where the variable is defined. At runtime, this corresponds exactly to
-the number of *environments* between the current one and the enclosing one where
+the number of _environments_ between the current one and the enclosing one where
 the interpreter can find the variable's value. The resolver hands that number to
 the interpreter by calling this:
 
@@ -723,7 +743,7 @@ with its resolved data.
 
 <aside name="side">
 
-I *think* I've heard this map called a "side table" since it's a tabular data
+I _think_ I've heard this map called a "side table" since it's a tabular data
 structure that stores data separately from the objects it relates to. But
 whenever I try to Google for that term, I get pages about furniture.
 
@@ -732,7 +752,7 @@ whenever I try to Google for that term, I get pages about furniture.
 Interactive tools like IDEs often incrementally reparse and re-resolve parts of
 the user's program. It may be hard to find all of the bits of state that need
 recalculating when they're hiding in the foliage of the syntax tree. A benefit
-of storing this data outside of the nodes is that it makes it easy to *discard*
+of storing this data outside of the nodes is that it makes it easy to _discard_
 it -- simply clear the map.
 
 ^code locals-field (1 before, 2 after)
@@ -763,13 +783,13 @@ That delegates to:
 ^code look-up-variable
 
 There are a couple of things going on here. First, we look up the resolved
-distance in the map. Remember that we resolved only *local* variables. Globals
+distance in the map. Remember that we resolved only _local_ variables. Globals
 are treated specially and don't end up in the map (hence the name `locals`). So,
-if we don't find a distance in the map, it must be global. In that case, we
-look it up, dynamically, directly in the global environment. That throws a
-runtime error if the variable isn't defined.
+if we don't find a distance in the map, it must be global. In that case, we look
+it up, dynamically, directly in the global environment. That throws a runtime
+error if the variable isn't defined.
 
-If we *do* get a distance, we have a local variable, and we get to take
+If we _do_ get a distance, we have a local variable, and we get to take
 advantage of the results of our static analysis. Instead of calling `get()`, we
 call this new method on Environment:
 
@@ -796,8 +816,8 @@ the variable correctly. This implies a deep coupling between these two classes.
 In the resolver, each line of code that touches a scope must have its exact
 match in the interpreter for modifying an environment.
 
-I felt that coupling firsthand because as I wrote the code for the book, I
-ran into a couple of subtle bugs where the resolver and interpreter code were
+I felt that coupling firsthand because as I wrote the code for the book, I ran
+into a couple of subtle bugs where the resolver and interpreter code were
 slightly out of sync. Tracking those down was difficult. One tool to make that
 easier is to have the interpreter explicitly assert -- using Java's assert
 statements or some other validation tool -- the contract it expects the resolver
@@ -827,7 +847,7 @@ unchanged.
 
 ### Running the resolver
 
-We do need to actually *run* the resolver, though. We insert the new pass after
+We do need to actually _run_ the resolver, though. We insert the new pass after
 the parser does its magic.
 
 ^code create-resolver (3 before, 1 after)
@@ -839,7 +859,7 @@ reference to the interpreter and pokes the resolution data directly into it as
 it walks over variables. When the interpreter runs next, it has everything it
 needs.
 
-At least, that's true if the resolver *succeeds*. But what about errors during
+At least, that's true if the resolver _succeeds_. But what about errors during
 resolution?
 
 ## Resolution Errors
@@ -855,10 +875,10 @@ fun bad() {
 }
 ```
 
-We do allow declaring multiple variables with the same name in the *global*
+We do allow declaring multiple variables with the same name in the _global_
 scope, but doing so in a local scope is probably a mistake. If they knew the
 variable already existed, they would have assigned to it instead of using `var`.
-And if they *didn't* know it existed, they probably didn't intend to overwrite
+And if they _didn't_ know it existed, they probably didn't intend to overwrite
 the previous one.
 
 We can detect this mistake statically while resolving.
@@ -878,7 +898,7 @@ return "at top level";
 ```
 
 This executes a `return` statement, but it's not even inside a function at all.
-It's top-level code. I don't know what the user *thinks* is going to happen, but
+It's top-level code. I don't know what the user _thinks_ is going to happen, but
 I don't think we want Lox to allow this.
 
 We can extend the resolver to detect this statically. Much like we track scopes
@@ -904,7 +924,7 @@ before resolving the body.
 
 We stash the previous value of the field in a local variable first. Remember,
 Lox has local functions, so you can nest function declarations arbitrarily
-deeply. We need to track not just that we're in a function, but *how many* we're
+deeply. We need to track not just that we're in a function, but _how many_ we're
 in.
 
 We could use an explicit stack of FunctionType values for that, but instead
@@ -923,11 +943,11 @@ Neat, right?
 
 There's one more piece. Back in the main Lox class that stitches everything
 together, we are careful to not run the interpreter if any parse errors are
-encountered. That check runs *before* the resolver so that we don't try to
+encountered. That check runs _before_ the resolver so that we don't try to
 resolve syntactically invalid code.
 
 But we also need to skip the interpreter if there are resolution errors, so we
-add *another* check.
+add _another_ check.
 
 ^code resolution-error (1 before, 2 after)
 
@@ -935,7 +955,7 @@ You could imagine doing lots of other analysis in here. For example, if we added
 `break` statements to Lox, we would probably want to ensure they are only used
 inside loops.
 
-We could go farther and report warnings for code that isn't necessarily *wrong*
+We could go farther and report warnings for code that isn't necessarily _wrong_
 but probably isn't useful. For example, many IDEs will warn if you have
 unreachable code after a `return` statement, or a local variable whose value is
 never read. All of that would be pretty easy to add to our static visiting pass,
@@ -978,7 +998,7 @@ surprising that it took this much work to do it.
 
 1.  Extend the resolver to report an error if a local variable is never used.
 
-1.  Our resolver calculates *which* environment the variable is found in, but
+1.  Our resolver calculates _which_ environment the variable is found in, but
     it's still looked up by name in that map. A more efficient environment
     representation would store local variables in an array and look them up by
     index.

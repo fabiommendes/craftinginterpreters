@@ -116,7 +116,22 @@ That means a new base class for statements. As our elders did before us, we will
 use the cryptic name "Stmt". Just as before, we will define them using
 dataclasses.
 
-^code stmt-ast (2 before, 1 after)
+```python
+# lox/stmt.py
+from dataclasses import dataclass
+from .expr import Expr
+
+class Stmt:
+    pass
+
+@dataclass
+class Expression(Stmt):
+    expression: Expr
+
+@dataclass
+class Print(Stmt):
+    expression: Expr
+```
 
 <aside name="stmt-ast">
 
@@ -135,11 +150,22 @@ to add the file to your IDE project or makefile or whatever.
 
 ### Parsing statements
 
-The parser's `parse()` method that parses and returns a single expression was a
-temporary hack to get the last chapter up and running. Now that our grammar has
-the correct starting rule, `program`, we can turn `parse()` into the real deal.
+The parser's `parse()` function that parses and returns a single expression was
+a temporary hack to get the last chapter up and running. Now that our grammar
+has the correct starting rule, `program`, we can turn `parse()` into the real
+deal.
 
-^code parse
+```python
+# lox/parser.py replace the parse() function
+from .stmt import Stmt
+
+def parse(tokens: list[Token]) -> list[Stmt]:
+    parser = Parser(tokens)
+    statements = []
+    while not parser.is_at_end():
+        statements.append(parser.statement())
+    return statements
+```
 
 <aside name="parse-error-handling">
 
@@ -151,15 +177,20 @@ statement types.
 
 This parses a series of statements, as many as it can find until it hits the end
 of the input. This is a pretty direct translation of the `program` rule into
-recursive descent style. We must also chant a minor prayer to the Java verbosity
-gods since we are using ArrayList now.
-
-^code parser-imports (2 before, 1 after)
+recursive descent style.
 
 A program is a list of statements, and we parse one of those statements using
 this method:
 
-^code parse-statement
+```python
+# lox/parser.py method of the Parser class
+def statement(self) -> Stmt:
+    match self.peek().type:
+        case "PRINT":
+            return self.print_statement()
+        case _:
+            return self.expression_statement()
+```
 
 A little bare bones, but we'll fill it in with more statement types later. We
 determine which specific statement rule is matched by looking at the current
@@ -172,15 +203,40 @@ its first token.
 
 Each statement kind gets its own method. First `print`:
 
-^code parse-print-statement
+```python
+# lox/parser.py add the print_statement() method
+def print_statement(self) -> Stmt:
+    self.consume("PRINT", "Expect 'print' keyword.")
+    value = self.expression()
+    self.consume("SEMICOLON", "Expect ';' after value.")
+    return Print(value)
+```
 
-Since we already matched and consumed the `print` token itself, we don't need to
-do that here. We parse the subsequent expression, consume the terminating
-semicolon, and emit the syntax tree.
+Since we usually call `print_statement()` from a within `statement()`, we could
+simply consume the first token knowning that it would be a `print`. Parsing the
+whole statement without such assumptions, makes things easier to isolate for
+testing and reuse, albeit with at a very small cost in performance. We parse the
+subsequent expression, consume the terminating semicolon, and emit the syntax
+tree.
+
+Remember we must import the new Stmt submodule at the top of parser.py. We will
+use star imports again, but in production code you should probably specify each
+class individually.
+
+```python
+# lox/parser.py at the top
+from .stmt import *
+```
 
 If we didn't match a `print` statement, we must have one of these:
 
-^code parse-expression-statement
+```python
+# lox/parser.py method of the Parser class
+def expression_statement(self) -> Stmt:
+    expr = self.expression()
+    self.consume("SEMICOLON", "Expect ';' after expression.")
+    return Expression(expr)
+```
 
 Similar to the previous method, we parse an expression followed by a semicolon.
 We wrap that Expr in a Stmt of the right type and return it.
@@ -189,28 +245,40 @@ We wrap that Expr in a Stmt of the right type and return it.
 
 We're running through the previous couple of chapters in microcosm, working our
 way through the front end. Our parser can now produce statement syntax trees, so
-the next and final step is to interpret them. As in expressions, we use the
-Visitor pattern, but we have a new visitor interface, Stmt.Visitor, to implement
-since statements have their own base class.
+the next and final step is to interpret them. As in expressions, we use
+singledistpatch, but now we have a slightly different interface: statements do
+not produce returning values, so we need to adapt our `eval`-like function to
+account for this.
 
-We add that to the list of interfaces Interpreter implements.
+Rather than patching `eval` to handle `Stmt` arguments, we will create an
+entirely different funtion called `exec`. This is consistent with Python's own
+nomeclature in which the builtin `eval` handles Python code that represents
+expressions and `exec` handles Python code that represent whole programs.
 
-^code interpreter (1 after)
+```python
+# lox/exec.py
+from functools import singledispatch
+from .eval import eval, Environment
+from .stmt import Stmt
+from .expr import Expr
+from .tokens import TokenType as TT
 
-<aside name="void">
+@singledispatch
+def exec(stmt: Stmt, env: Environment) -> None:
+    msg = f"exec not implemented for {type(stmt)}"
+    raise TypeError(msg)
 
-Java doesn't let you use lowercase "void" as a generic type argument for obscure
-reasons having to do with type erasure and the stack. Instead, there is a
-separate "Void" type specifically for this use. Sort of a "boxed void", like
-"Integer" is for "int".
+```
 
-</aside>
+We have two statement types, and we need an implementation method for each. The
+easiest is expression statements.
 
-Unlike expressions, statements produce no values, so the return type of the
-visit methods is Void, not Object. We have two statement types, and we need a
-visit method for each. The easiest is expression statements.
-
-^code visit-expression-stmt
+```python
+# lox/exec.py
+@exec.register
+def _(stmt: Stmt.Expression, env: Environment):
+    eval(stmt.expression)
+```
 
 We evaluate the inner expression using our existing `evaluate()` method and
 <span name="discard">discard</span> the value. Then we return `null`. Java
@@ -220,42 +288,49 @@ what can you do?
 <aside name="discard">
 
 Appropriately enough, we discard the value returned by `evaluate()` by placing
-that call inside a _Java_ expression statement.
+that call inside a _Python_ expression statement.
 
 </aside>
 
 The `print` statement's visit method isn't much different.
 
-^code visit-print
+```python
+# lox/exec.py
+@exec.register
+def _(stmt: Stmt.Print, env: Environment) -> None:
+    value = eval(stmt.expression, env)
+    print(stringify(value))
+```
 
 Before discarding the expression's value, we convert it to a string using the
-`stringify()` method we introduced in the last chapter and then dump it to
+`stringify()` function we introduced in the last chapter and then dump it to
 stdout.
 
-Our interpreter is able to visit statements now, but we have some work to do to
+Our interpreter is able to handle statements now, but we have some work to do to
 feed them to it. First, modify the old `interpret()` method in the Interpreter
 class to accept a list of statements -- in other words, a program.
 
-^code interpret
-
-This replaces the old code which took a single expression. The new code relies
-on this tiny helper method:
-
-^code execute
+```python
+#TODO
+#
+```
 
 That's the statement analogue to the `evaluate()` method we have for
-expressions. Since we're working with lists now, we need to let Java know.
-
-^code import-list (2 before, 2 after)
+expressions.
 
 The main Lox class is still trying to parse a single expression and pass it to
 the interpreter. We fix the parsing line like so:
 
+```python
+#TODO
 ^code parse-statements (1 before, 2 after)
+```
 
 And then replace the call to the interpreter with this:
 
-^code interpret-statements (2 before, 1 after)
+```python
+self.interpret(statements)
+```
 
 Basically just plumbing the new syntax through. OK, fire up the interpreter and
 give it a try. At this point, it's worth sketching out a little Lox program in a
@@ -400,7 +475,13 @@ These new grammar rules get their corresponding syntax trees. Over in the AST
 generator, we add a <span name="var-stmt-ast">new statement</span> node for a
 variable declaration.
 
-^code var-stmt-ast (1 before, 1 after)
+```python
+# lox/stmt.py
+@dataclass
+class Var(Stmt):
+    name: Token
+    initializer: Expr
+```
 
 <aside name="var-stmt-ast">
 
@@ -415,11 +496,15 @@ initializer expression. (If there isn't an initializer, that field is `null`.)
 
 Then we add an expression node for accessing a variable.
 
-^code var-expr (1 before, 1 after)
+```python
+# lox/expr.py
+@dataclass
+class Variable(Expr):
+    name: Token
+```
 
 <span name="var-expr-ast">It's</span> simply a wrapper around the token for the
-variable name. That's it. As always, don't forget to run the AST generator
-script so that you get updated "Expr.java" and "Stmt.java" files.
+variable name. That's it.
 
 <aside name="var-expr-ast">
 
@@ -435,11 +520,28 @@ Before we parse variable statements, we need to shift around some code to make
 room for the new `declaration` rule in the grammar. The top level of a program
 is now a list of declarations, so the entrypoint method to the parser changes.
 
-^code parse-declaration (3 before, 4 after)
+```python
+# lox/parser.py replace lines in the parse() function
+...
+while not parser.is_at_end():
+    statements.append(parser.declaration())
+...
+```
 
 That calls this new method:
 
-^code declaration
+```python
+# lox/parser.py method of the Parser class
+def declaration(self):
+    try:
+       match self.peek().type:
+          case "VAR":
+              return self.var_declaration()
+          case _:
+              return self.statement()
+    except ParseError:
+        self.synchronize()
+```
 
 Hey, do you remember way back in that [earlier chapter][parsing] when we put the
 infrastructure in place to do error recovery? We are finally ready to hook that
@@ -467,21 +569,38 @@ error if a valid declaration or statement isn't parsed.
 
 When the parser matches a `var` token, it branches to:
 
-^code parse-var-declaration
+```python
+# lox/parser.py method of the Parser class
+def var_declaration(self) -> Stmt:
+    self.consume("VAR", "Expect 'var' keyword.")
+    name = self.consume("IDENTIFIER", "Expect variable name.")
 
-As always, the recursive descent code follows the grammar rule. The parser has
-already matched the `var` token, so next it requires and consumes an identifier
-token for the variable name.
+    if self.match("EQUAL"):
+        initializer = self.expression()
+    else:
+        initializer = Literal(None)
+
+    self.consume("SEMICOLON", "Expect ';' after variable declaration.")
+    return Var(name, initializer)
+
+```
+
+As always, the recursive descent code follows the grammar rule. It first
+consumes the `var` keyword and then the identifier token for the variable name.
 
 Then, if it sees an `=` token, it knows there is an initializer expression and
-parses it. Otherwise, it leaves the initializer `null`. Finally, it consumes the
-required semicolon at the end of the statement. All this gets wrapped in a
-Stmt.Var syntax tree node and we're groovy.
+parses it. Otherwise, it creates an initializer that represents `null`. Finally,
+it consumes the required semicolon at the end of the statement. All this gets
+wrapped in a Var syntax tree node and we're groovy.
 
 Parsing a variable expression is even easier. In `primary()`, we look for an
 identifier token.
 
-^code parse-identifier (2 before, 2 after)
+```python
+# lox/parser.py case of the Parser.statement method
+    case "IDENTIFIER":
+        return Variable(self.advance())
+```
 
 That gives us a working front end for declaring and using variables. All that's
 left is to feed it into the interpreter. Before we get to that, we need to talk
@@ -512,25 +631,37 @@ Start a new file and add:
 
 <aside name="map">
 
-Java calls them **maps** or **hashmaps**. Other languages call them **hash
-tables**, **dictionaries** (Python and C#), **hashes** (Ruby and Perl),
-**tables** (Lua), or **associative arrays** (PHP). Way back when, they were
-known as **scatter tables**.
+Python calls them **dictionaries** or **dicts**. Other languages call them
+**hash tables**, **maps**, **hashmaps**, **hashes** (Ruby and Perl), **tables**
+(Lua), or **associative arrays** (PHP). Way back when, they were known as
+**scatter tables**.
 
 </aside>
 
-^code environment-class
+```python
+# lox/environment.py
+from dataclasses import dataclass, field
+from typing import Any
+@dataclass
+class Environment:
+    values: dict[str, Any] = field(default_factory=dict )
+```
 
-There's a Java Map in there to store the bindings. It uses bare strings for the
-keys, not tokens. A token represents a unit of code at a specific place in the
-source text, but when it comes to looking up variables, all identifier tokens
-with the same name should refer to the same variable (ignoring scope for now).
-Using the raw string ensures all of those tokens refer to the same map key.
+There's a Python dict in there to store the bindings. It uses bare strings for
+the keys, not tokens. A token represents a unit of code at a specific place in
+the source text, but when it comes to looking up variables, all identifier
+tokens with the same name should refer to the same variable (ignoring scope for
+now). Using the raw string ensures all of those tokens refer to the same map
+key.
 
 There are two operations we need to support. First, a variable definition binds
 a new name to a value.
 
-^code environment-define
+```python
+# lox/environment.py method of the Environment class
+def define(self, name: str, value: Any) -> None:
+    self.values[name] = value
+```
 
 Not exactly brain surgery, but we have made one interesting semantic choice.
 When we add the key to the map, we don't check to see if it's already present.
@@ -570,7 +701,13 @@ Scheme allows redefining variables at the top level.
 So, to keep the two modes consistent, we'll allow it -- at least for global
 variables. Once a variable exists, we need a way to look it up.
 
-^code environment-get (2 before, 1 after)
+```python
+# lox/environment.py method of the Environment class
+def get(self, name: str) -> Any:
+    if name in self.values:
+        return self.values[name]
+    raise RuntimeError(f"Undefined variable '{name}'.")
+```
 
 This is a little more semantically interesting. If the variable is found, it
 simply returns the value bound to it. But what if it's not? Again, we have a
@@ -657,17 +794,26 @@ tell the user where in their code they messed up.
 
 ### Interpreting global variables
 
-The Interpreter class gets an instance of the new Environment class.
+We now plug the real Environment class into the lox/eval.py module.
 
-^code environment-field (2 before, 1 after)
+```python
+# lox/eval.py replace the Environment import
+from .environment import Environment
+```
 
-We store it as a field directly in Interpreter so that the variables stay in
-memory as long as the interpreter is still running.
+Don't forget delete the line `type Environment = Any`, which we were using
+temporarely to create a stand-in for the real class.
 
-We have two new syntax trees, so that's two new visit methods. The first is for
-declaration statements.
+We have two new syntax trees, so that's two new `exec` method implementations.
+The first is for declaration statements.
 
-^code visit-var
+```python
+# lox/exec.py
+@exec.register
+def _(stmt: Stmt.Var, env: Environment) -> None:
+    value = eval(stmt.initializer, env)
+    env.define(stmt.name.lexeme, value)
+```
 
 If the variable has an initializer, we evaluate it. If not, we have another
 choice to make. We could have made this a syntax error in the parser by
@@ -691,7 +837,12 @@ the variable to that value.
 
 Next, we evaluate a variable expression.
 
-^code visit-variable
+```python
+# lox/eval.py
+@exec.register
+def _(expr: Variable, env: Environment) -> Any:
+    return env.get(expr.name.lexeme)
+```
 
 This simply forwards to the environment which does the heavy lifting to make
 sure the variable is defined. With that, we've got rudimentary variables
@@ -764,7 +915,13 @@ instance.field = "value";
 
 The easy part is adding the <span name="assign-ast">new syntax tree node</span>.
 
-^code assign-expr (1 before, 1 after)
+```python
+# lox/expr.py
+@dataclass
+class Assign(Expr):
+    name: Token
+    value: Expr
+```
 
 <aside name="assign-ast">
 
@@ -779,7 +936,11 @@ value. After you run the AstGenerator to get the new Expr.Assign class, swap out
 the body of the parser's existing `expression()` method to match the updated
 rule.
 
-^code expression (1 before, 1 after)
+```python
+# lox/parser.py replace the Parser.expression() method
+def expression(self) -> Expr:
+    return self.assignment()
+```
 
 Here is where it gets tricky. A single token lookahead recursive descent parser
 can't see far enough to tell that it's parsing an assignment until _after_ it
@@ -833,7 +994,22 @@ tokens of lookahead to find the `=`.
 We have only a single token of lookahead, so what do we do? We use a little
 trick, and it looks like this:
 
-^code parse-assignment
+```python
+# lox/parser.py method of the Parser class
+def assignment(self) -> Expr:
+    expr = self.equality()
+
+    if self.match("EQUAL"):
+        equals = self.previous()
+        value = self.assignment()
+
+        if isinstance(expr, Variable):
+            name = expr.name
+            return Assign(name, value)
+
+        self.error(equals, "Invalid assignment target.")
+    return expr
+```
 
 Most of the code for parsing an assignment expression looks similar to that of
 the other binary operators like `+`. We parse the left-hand side, which can be
@@ -915,13 +1091,25 @@ being assigned. All with only a single token of lookahead and no backtracking.
 
 We have a new syntax tree node, so our interpreter gets a new visit method.
 
-^code visit-assign
+```python
+# lox/eval.py
+def _(expr: Assign, env: Environment) -> Any:
+    value = eval(expr.value, env)
+    env.assign(expr.name.lexeme, value)
+    return value
+```
 
 For obvious reasons, it's similar to variable declaration. It evaluates the
 right-hand side to get the value, then stores it in the named variable. Instead
 of using `define()` on Environment, it calls this new method:
 
-^code environment-assign
+```python
+# lox/env.py method of the Environment class
+def assign(self, name: str, value: Any):
+    if name in self.values:
+        self.values[name] = value
+    raise RuntimeError(f"Undefined variable '{name}'.")
+```
 
 The key difference between assignment and definition is that assignment is not
 <span name="new">allowed</span> to create a _new_ variable. In terms of our
@@ -1146,11 +1334,13 @@ Before we add block syntax to the grammar, we'll beef up our Environment class
 with support for this nesting. First, we give each environment a reference to
 its enclosing one.
 
-^code enclosing-field (1 before, 1 after)
-
-This field needs to be initialized, so we add a couple of constructors.
-
-^code environment-constructors
+```python
+# lox/environment.py
+@dataclass
+class Environment:
+    values: dict[str, Any] = field(default_factory=dict )
+    enclosing: "Environment" | None = None
+```
 
 The no-argument constructor is for the global scope's environment, which ends
 the chain. The other constructor creates a new local scope nested inside the
@@ -1161,7 +1351,13 @@ declared in the current innermost scope. But variable lookup and assignment work
 with existing variables and they need to walk the chain to find them. First,
 lookup:
 
-^code environment-get-enclosing (2 before, 3 after)
+```python
+# lox/environment.py before raising in Envinronment.get()
+...
+if self.enclosing is not None:
+    return self.enclosing.get(name)
+raise RuntimeError(f"Undefined variable '{name}'.")
+```
 
 If the variable isn't found in this environment, we simply try the enclosing
 one. That in turn does the same thing <span name="recurse">recursively</span>,
@@ -1178,7 +1374,13 @@ solution is prettier. We'll do something _much_ faster in clox.
 
 </aside>
 
-^code environment-assign-enclosing (4 before, 1 after)
+```python
+# lox/environment.py before raising in Envinronment.assign()
+...
+if self.enclosing is not None:
+    return self.enclosing.assign(name, value)
+raise RuntimeError(f"Undefined variable '{name}'.")
+```
 
 Again, if the variable isn't in this environment, it checks the outer one,
 recursively.
@@ -1200,7 +1402,12 @@ A block is a (possibly empty) series of statements or declarations surrounded by
 curly braces. A block is itself a statement and can appear anywhere a statement
 is allowed. The <span name="block-ast">syntax tree</span> node looks like this:
 
-^code block-ast (1 before, 1 after)
+```python
+# lox/stmt.py
+@dataclass
+class Block(Stmt):
+    statements: list[Stmt]
+```
 
 <aside name="block-ast">
 
@@ -1221,11 +1428,24 @@ As always, don't forget to run "GenerateAst.java".
 
 </aside>
 
-^code parse-block (1 before, 2 after)
+```python
+# lox/parser.py case of Parser.statement()
+case self.match("LEFT_BRACE"):
+    return Block(self.block())
+```
 
 All the real work happens here:
 
-^code block
+```python
+# lox/parser.py method of the Parser class
+def block(self) -> list[Stmt]:
+    self.consume("LEFT_BRACE", "Expect '{' to open block.")
+    statements: list[Stmt] = []
+    while not self.check("RIGHT_BRACE") and not self.is_at_end():
+        statements.append(self.declaration())
+    self.consume("RIGHT_BRACE", "Expect '}' after block.")
+    return statements
+```
 
 We <span name="list">create</span> an empty list and then parse statements and
 add them to the list until we reach the end of the block, marked by the closing
@@ -1242,28 +1462,30 @@ want that body wrapped in a Stmt.Block.
 
 </aside>
 
-That's it for syntax. For semantics, we add another visit method to Interpreter.
+That's it for syntax. For semantics, we add another visit method to exec.
 
-^code visit-block
-
-To execute a block, we create a new environment for the block's scope and pass
-it off to this other method:
-
-^code execute-block
+```python
+# lox/exec.py
+@exec.register
+def _(stmt: Stmt.Block, env: Environment) -> None:
+    env = Environment(enclosing=env)
+    for statement in stmt.statements:
+        exec(statement, env)
+```
 
 This new method executes a list of statements in the context of a given <span
-name="param">environment</span>. Up until now, the `environment` field in
-Interpreter always pointed to the same environment -- the global one. Now, that
-field represents the _current_ environment. That's the environment that
-corresponds to the innermost scope containing the code to be executed.
+name="param">environment</span>. Up until now, the `env` argument always pointed
+to the same environment -- the global one. Now, that field represents the
+_current_ environment. That's the environment that corresponds to the innermost
+scope containing the code to be executed.
 
-To execute code within a given scope, this method updates the interpreter's
-`environment` field, visits all of the statements, and then restores the
-previous value. As is always good practice in Java, it restores the previous
-environment using a finally clause. That way it gets restored even if an
-exception is thrown.
+To execute code within a given scope, this method encloses the `env` passed to
+all inner statements and then discards the enclosing environment at the end of
+execution.
 
 <aside name="param">
+
+# TODO
 
 Manually changing and restoring a mutable `environment` field feels inelegant.
 Another classic approach is to explicitly pass the environment as a parameter to
@@ -1272,7 +1494,7 @@ recurse down the tree. You don't have to restore the old one, since the new one
 lives on the Java stack and is implicitly discarded when the interpreter returns
 from the block's visit method.
 
-I considered that for jlox, but it's kind of tedious and verbose adding an
+I considered that for pylox, but it's kind of tedious and verbose adding an
 environment parameter to every single visit method. To keep the book a little
 simpler, I went with the mutable field.
 

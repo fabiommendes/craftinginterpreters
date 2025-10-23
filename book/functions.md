@@ -30,12 +30,12 @@ average(1, 2);
 But the <span name="pascal">name</span> of the function being called isn't
 actually part of the call syntax. The thing being called -- the **callee** --
 can be any expression that evaluates to a function. (Well, it does have to be a
-pretty *high precedence* expression, but parentheses take care of that.) For
+pretty _high precedence_ expression, but parentheses take care of that.) For
 example:
 
 <aside name="pascal">
 
-The name *is* part of the call syntax in Pascal. You can call only named
+The name _is_ part of the call syntax in Pascal. You can call only named
 functions or functions stored directly in variables.
 
 </aside>
@@ -77,7 +77,7 @@ argument, returns yet another function, and so on. Eventually, once all of the
 arguments are consumed, the last function completes the operation.
 
 This style, called **currying**, after Haskell Curry (the same guy whose first
-name graces that *other* well-known functional language), is baked directly into
+name graces that _other_ well-known functional language), is baked directly into
 the language syntax so it's not as weird looking as it would be here.
 
 </aside>
@@ -98,15 +98,14 @@ language specs I've seen, it is this cumbersome.
 Over in our syntax tree generator, we add a <span name="call-ast">new
 node</span>.
 
-^code call-expr (1 before, 1 after)
-
-<aside name="call-ast">
-
-The generated code for the new node is in [Appendix II][appendix-call].
-
-[appendix-call]: appendix-ii.html#call-expression
-
-</aside>
+```python
+# lox/expr.py
+@dataclass
+class Call(Expr):
+    callee: Expr
+    paren: Token
+    arguments: list[Expr]
+```
 
 It stores the callee expression and a list of expressions for the arguments. It
 also stores the token for the closing parenthesis. We'll use that token's
@@ -115,19 +114,35 @@ location when we report a runtime error caused by a function call.
 Crack open the parser. Where `unary()` used to jump straight to `primary()`,
 change it to call, well, `call()`.
 
-^code unary-call (3 before, 1 after)
+```python
+# lox/parser.py at Parser.unary
+    ...
+    return self.call()  # replace self.unary()
+```
 
 Its definition is:
 
-^code call
+```python
+# lox/parser.py method of Parser
+def call(self) -> Expr:
+    expr = self.primary()
+
+    while True:
+        if self.match("LEFT_PAREN"):
+            expr = self.finish_call(expr)
+        else:
+            break
+
+    return expr
+```
 
 The code here doesn't quite line up with the grammar rules. I moved a few things
 around to make the code cleaner -- one of the luxuries we have with a
 handwritten parser. But it's roughly similar to how we parse infix operators.
 First, we parse a primary expression, the "left operand" to the call. Then, each
-time we see a `(`, we call `finishCall()` to parse the call expression using the
-previously parsed expression as the callee. The returned expression becomes the
-new `expr` and we loop to see if the result is itself called.
+time we see a `(`, we call `finish_call()` to parse the call expression using
+the previously parsed expression as the callee. The returned expression becomes
+the new `expr` and we loop to see if the result is itself called.
 
 <aside name="while-true">
 
@@ -139,7 +154,18 @@ parser later to handle properties on objects.
 
 The code to parse the argument list is in this helper:
 
-^code finish-call
+```python
+# lox/parser.py method of Parser
+def finish_call(self) -> Expr:
+    arguments = []
+    if not self.check("RIGHT_PAREN"):
+        arguments.append(self.expression())
+        while self.match("COMMA"):
+            arguments.append(self.expression())
+    paren = self.consume("RIGHT_PAREN", "Expect ')' after arguments.")
+
+    return Call(callee, paren, arguments)
+```
 
 This is more or less the `arguments` grammar rule translated to code, except
 that we also handle the zero-argument case. We check for that case first by
@@ -158,9 +184,9 @@ function and pass a million arguments to it, the parser would have no problem
 with it. Do we want to limit that?
 
 Other languages have various approaches. The C standard says a conforming
-implementation has to support *at least* 127 arguments to a function, but
+implementation has to support _at least_ 127 arguments to a function, but
 doesn't say there's any upper limit. The Java specification says a method can
-accept *no more than* <span name="254">255</span> arguments.
+accept _no more than_ <span name="254">255</span> arguments.
 
 <aside name="254">
 
@@ -173,14 +199,21 @@ implicitly passed to the method, so it claims one of the slots.
 Our Java interpreter for Lox doesn't really need a limit, but having a maximum
 number of arguments will simplify our bytecode interpreter in [Part III][]. We
 want our two interpreters to be compatible with each other, even in weird corner
-cases like this, so we'll add the same limit to jlox.
+cases like this, so we'll add the same limit to pylox.
 
 [part iii]: a-bytecode-virtual-machine.html
 
-^code check-max-arity (1 before, 1 after)
+```python
+# lox/parser.py inside Parser.finish_call()
+    ...
+    # inside the while block
+    if len(arguments) >= 255:
+        self.error(paren, "Can't have more than 255 arguments.")
+    ...
+```
 
-Note that the code here *reports* an error if it encounters too many arguments,
-but it doesn't *throw* the error. Throwing is how we kick into panic mode which
+Note that the code here _reports_ an error if it encounters too many arguments,
+but it doesn't _throw_ the error. Throwing is how we kick into panic mode which
 is what we want if the parser is in a confused state and doesn't know where it
 is in the grammar anymore. But here, the parser is still in a perfectly valid
 state -- it just found too many arguments. So it reports the error and keeps on
@@ -189,15 +222,17 @@ keepin' on.
 ### Interpreting function calls
 
 We don't have any functions we can call, so it seems weird to start implementing
-calls first, but we'll worry about that when we get there. First, our
-interpreter needs a new import.
+calls first, but we'll worry about that when we get there. As always,
+interpretation starts with a new visit method for our new call expression node.
 
-^code import-array-list (1 after)
-
-As always, interpretation starts with a new visit method for our new call
-expression node.
-
-^code visit-call
+```python
+# lox/eval.py implementation of eval()
+@eval.register
+def _(expr: Call, env: Environment) -> Value:
+    callee = eval(expr.callee, env)
+    arguments = [eval(arg, env) for arg in expr.arguments]
+    return callee.call(env, arguments)
+```
 
 First, we evaluate the expression for the callee. Typically, this expression is
 just an identifier that looks up the function by its name, but it could be
@@ -217,7 +252,7 @@ unpleasantly surprised if arguments aren't evaluated in the order they expect.
 Once we've got the callee and the arguments ready, all that remains is to
 perform the call. We do that by casting the callee to a <span
 name="callable">LoxCallable</span> and then invoking a `call()` method on it.
-The Java representation of any Lox object that can be called like a function
+The Python representation of any Lox object that can be called like a function
 will implement this interface. That includes user-defined functions, naturally,
 but also class objects since classes are "called" to construct new instances.
 We'll also use it for one more purpose shortly.
@@ -231,9 +266,19 @@ own Callable interface. Alas, all the good simple names are already taken.
 
 There isn't too much to this new interface.
 
-^code callable
+```python
+# lox/types.py
+import abc
 
-We pass in the interpreter in case the class implementing `call()` needs it. We
+class LoxCallable(abc.ABC):
+    @abc.abstractmethod
+    def call(self,
+             env: Environment,
+             arguments: list[Value]) -> Value:
+        ...
+```
+
+We pass in the environment in case the class implementing `call()` needs it. We
 also give it the list of evaluated argument values. The implementer's job is
 then to return the value that the call expression produces.
 
@@ -249,11 +294,18 @@ you can call? What if you try to do this:
 ```
 
 Strings aren't callable in Lox. The runtime representation of a Lox string is a
-Java string, so when we cast that to LoxCallable, the JVM will throw a
-ClassCastException. We don't want our interpreter to vomit out some nasty Java
+Python string, so when we cast that to LoxCallable, the Python interpreter will
+throw a TypeError. We don't want our interpreter to vomit out some nasty Python
 stack trace and die. Instead, we need to check the type ourselves first.
 
-^code check-is-callable (2 before, 1 after)
+```python
+# lox/eval.py before the return statement in eval(Call)
+    ...
+    if not isinstance(callee, LoxCallable):
+        msg = "Can only call functions and classes."
+        raise LoxRuntimeError(expr.paren, msg)
+    ...
+```
 
 We still throw an exception, but now we're throwing our own exception type, one
 that the interpreter knows to catch and report gracefully.
@@ -271,8 +323,8 @@ fun add(a, b, c) {
 }
 ```
 
-This function defines three parameters, `a`, `b`, and `c`, so its arity is
-three and it expects three arguments. So what if you try to call it like this:
+This function defines three parameters, `a`, `b`, and `c`, so its arity is three
+and it expects three arguments. So what if you try to call it like this:
 
 ```lox
 add(1, 2, 3, 4); // Too many.
@@ -293,13 +345,25 @@ the sooner the implementation draws my attention to it, the better. So for Lox,
 we'll take Python's approach. Before invoking the callable, we check to see if
 the argument list's length matches the callable's arity.
 
-^code check-arity (1 before, 1 after)
+```python
+# lox/eval.py before the return statement in eval(Call)
+...
+if len(arguments) != callee.arity:
+    msg = f"Expected {callee.arity()} arguments but got {len(arguments)}."
+    raise LoxRuntimeError(expr.paren, msg)
+...
+```
 
-That requires a new method on the LoxCallable interface to ask it its arity.
+That requires a new attribute on the LoxCallable interface to ask it its arity.
 
-^code callable-arity (1 before, 1 after)
+```python
+# lox/types.py method of LoxCallable
+class LoxCallable:
+    arity: int
+    ...
+```
 
-We *could* push the arity checking into the concrete implementation of `call()`.
+We _could_ push the arity checking into the concrete implementation of `call()`.
 But, since we'll have multiple classes implementing LoxCallable, that would end
 up with redundant validation spread across a few classes. Hoisting it up into
 the visit method lets us do it in one place.
@@ -311,7 +375,7 @@ Before we get to user-defined functions, now is a good time to introduce a vital
 but often overlooked facet of language implementations -- <span
 name="native">**native functions**</span>. These are functions that the
 interpreter exposes to user code but that are implemented in the host language
-(in our case Java), not the language being implemented (Lox).
+(in our case Python), not the language being implemented (Lox).
 
 Sometimes these are called **primitives**, **external functions**, or **foreign
 functions**. Since these functions can be called while the user's program is
@@ -324,12 +388,12 @@ They're mostly grunt work.
 Curiously, two names for these functions -- "native" and "foreign" -- are
 antonyms. Maybe it depends on the perspective of the person choosing the term.
 If you think of yourself as "living" within the runtime's implementation (in our
-case, Java) then functions written in that are "native". But if you have the
-mindset of a *user* of your language, then the runtime is implemented in some
+case, Python) then functions written in that are "native". But if you have the
+mindset of a _user_ of your language, then the runtime is implemented in some
 other "foreign" language.
 
 Or it may be that "native" refers to the machine code language of the underlying
-hardware. In Java, "native" methods are ones implemented in C or C++ and
+hardware. In Python, "native" methods are ones implemented in C or C++ and
 compiled to native machine code.
 
 <img src="image/functions/foreign.png" class="above" alt="All a matter of perspective." />
@@ -354,7 +418,7 @@ print syntax and replacing it with a native function. But that would mean that
 examples early in the book wouldn't run on the interpreter from later chapters
 and vice versa. So, for the book, I'll leave it alone.
 
-If you're building an interpreter for your *own* language, though, you may want
+If you're building an interpreter for your _own_ language, though, you may want
 to consider it.
 
 </aside>
@@ -364,8 +428,8 @@ mechanism for doing so is called a **foreign function interface** (**FFI**),
 **native extension**, **native interface**, or something along those lines.
 These are nice because they free the language implementer from providing access
 to every single capability the underlying platform supports. We won't define an
-FFI for jlox, but we will add one native function to give you an idea of what it
-looks like.
+FFI for pylox, but we will add one native function to give you an idea of what
+it looks like.
 
 ### Telling time
 
@@ -392,19 +456,36 @@ successive invocations tells you how much time elapsed between the two calls.
 This function is defined in the global scope, so let's ensure the interpreter
 has access to that.
 
-^code global-environment (2 before, 2 after)
+We create a new implementation of LoxCallable that handles native Python
+functions.
 
-The `environment` field in the interpreter changes as we enter and exit local
-scopes. It tracks the *current* environment. This new `globals` field holds a
-fixed reference to the outermost global environment.
+```python
+# lox/runtime.py
+from dataclasses import dataclass
 
-When we instantiate an Interpreter, we stuff the native function in that global
-scope.
+@dataclass
+class NativeFunction(LoxCallable):
+    function: Callable[..., Value]
+    arity: int
 
-^code interpreter-constructor (2 before, 1 after)
+    def call(self,
+             env: Environment,
+             arguments: list[Value]) -> Value:
+        return self.function(*arguments)
+```
+
+Now we create a new constructor in our Environment populated with Lox's standard
+lib with its single `clock` function.
+
+```python
+# lox/environment.py method of Environment
+@classmethod
+def globals(cls) -> "Environment":
+    return cls({"clock": NativeFunction(time.time, arity=0)})
+```
 
 This defines a <span name="lisp-1">variable</span> named "clock". Its value is a
-Java anonymous class that implements LoxCallable. The `clock()` function takes
+Python anonymous class that implements LoxCallable. The `clock()` function takes
 no arguments, so its arity is zero. The implementation of `call()` calls the
 corresponding Java function and converts the result to a double value in
 seconds.
@@ -425,11 +506,11 @@ totally opaque, those names have since stuck. Lox is a Lisp-1.
 </aside>
 
 If we wanted to add other native functions -- reading input from the user,
-working with files, etc. -- we could add them each as their own anonymous class
-that implements LoxCallable. But for the book, this one is really all we need.
+working with files, etc. -- we could add them each as their own instance of
+NativeFunction. But for the book, this one is really all we need.
 
-Let's get ourselves out of the function-defining business and let our users
-take over...
+Let's get ourselves out of the function-defining business and let our users take
+over...
 
 ## Function Declarations
 
@@ -470,7 +551,7 @@ function       → IDENTIFIER "(" parameters? ")" block ;
 ```
 
 The main `funDecl` rule uses a separate helper rule `function`. A function
-*declaration statement* is the `fun` keyword followed by the actual function-y
+_declaration statement_ is the `fun` keyword followed by the actual function-y
 stuff. When we get to classes, we'll reuse that `function` rule for declaring
 methods. Those look similar to function declarations, but aren't preceded by
 <span name="fun">`fun`</span>.
@@ -493,15 +574,14 @@ It's like the earlier `arguments` rule, except that each parameter is an
 identifier, not an expression. That's a lot of new syntax for the parser to chew
 through, but the resulting AST <span name="fun-ast">node</span> isn't too bad.
 
-^code function-ast (1 before, 1 after)
-
-<aside name="fun-ast">
-
-The generated code for the new node is in [Appendix II][appendix-fun].
-
-[appendix-fun]: appendix-ii.html#function-statement
-
-</aside>
+```python
+# lox/stmt.py
+@dataclass
+class Function(Stmt):
+    name: Token
+    params: list[Token]
+    body: list[Stmt]
+```
 
 A function node has a name, a list of parameters (their names), and then the
 body. We store the body as the list of statements contained inside the curly
@@ -509,14 +589,27 @@ braces.
 
 Over in the parser, we weave in the new declaration.
 
-^code match-fun (1 before, 1 after)
+```python
+# lox/parser.py case of Parser.declaration()
+    ...
+    case "FUN":
+        return self.function("function")
+    ...
+```
 
 Like other statements, a function is recognized by the leading keyword. When we
 encounter `fun`, we call `function`. That corresponds to the `function` grammar
 rule since we already matched and consumed the `fun` keyword. We'll build the
 method up a piece at a time, starting with this:
 
-^code parse-function
+```python
+# lox/parser.py method of Parser
+def function(self, kind: str) -> Stmt:
+    if kind == "function":
+        self.consume("FUN", f"Expect function declaration.")
+    name = self.consume("IDENTIFIER", f"Expect {kind} name.")
+    ...
+```
 
 Right now, it only consumes the identifier token for the function's name. You
 might be wondering about that funny little `kind` parameter. Just like we reuse
@@ -526,25 +619,37 @@ error messages are specific to the kind of declaration being parsed.
 
 Next, we parse the parameter list and the pair of parentheses wrapped around it.
 
-^code parse-parameters (1 before, 1 after)
+```python
+# lox/parser.py inside Parser.function()
+    ...
+    self.consume("LEFT_PAREN", f"Expect '(' after {kind} name.")
+    parameters = []
+    if not self.check("RIGHT_PAREN"):
+        argument = self.consume("IDENTIFIER", "Expect parameter name.")
+        parameters.append(argument)
+        while self.match("COMMA"):
+            argument = self.consume("IDENTIFIER", "Expect parameter name.")
+            parameters.append(argument)
+    self.consume("RIGHT_PAREN", "Expect ')' after parameters.")
+    ...
+```
 
 This is like the code for handling arguments in a call, except not split out
 into a helper method. The outer `if` statement handles the zero parameter case,
 and the inner `while` loop parses parameters as long as we find commas to
 separate them. The result is the list of tokens for each parameter's name.
 
-Just like we do with arguments to function calls, we validate at parse time
-that you don't exceed the maximum number of parameters a function is allowed to
-have.
+Just like we do with arguments to function calls, we validate at parse time that
+you don't exceed the maximum number of parameters a function is allowed to have.
 
 Finally, we parse the body and wrap it all up in a function node.
 
-^code parse-body (1 before, 1 after)
-
-Note that we consume the `{` at the beginning of the body here before calling
-`block()`. That's because `block()` assumes the brace token has already been
-matched. Consuming it here lets us report a more precise error message if the
-`{` isn't found since we know it's in the context of a function declaration.
+```python
+# lox/parser.py inside Parser.function()
+    ...
+    body = self.block()
+    return Function(name, parameters, body)
+```
 
 ## Function Objects
 
@@ -560,11 +665,29 @@ we can call it. We don't want the runtime phase of the interpreter to bleed into
 the front end's syntax classes so we don't want Stmt.Function itself to
 implement that. Instead, we wrap it in a new class.
 
-^code lox-function
+```python
+# lox/function.py
+@dataclass
+class LoxFunction(LoxCallable):
+    declaration: Function
+```
 
 We implement the `call()` of LoxCallable like so:
 
-^code function-call
+```python
+# lox/function.py method of LoxFunction
+def call(self,
+         env: Environment,
+         arguments: list[Value]) -> Value:
+    # Create a new environment for the function's parameters.
+    env = Environment(enclosing=env)
+    for param, arg in zip(self.declaration.parameters, arguments):
+        env.define(param.lexeme, arg)
+
+    for stmt in self.declaration.body:
+         exec(stmt, env)
+    return None
+```
 
 This handful of lines of code is one of the most fundamental, powerful pieces of
 our interpreter. As we saw in [the chapter on statements and <span
@@ -582,13 +705,13 @@ We'll dig even deeper into environments in the [next chapter][].
 </aside>
 
 Parameters are core to functions, especially the fact that a function
-*encapsulates* its parameters -- no other code outside of the function can see
+_encapsulates_ its parameters -- no other code outside of the function can see
 them. This means each function gets its own environment where it stores those
 variables.
 
-Further, this environment must be created dynamically. Each function *call* gets
+Further, this environment must be created dynamically. Each function _call_ gets
 its own environment. Otherwise, recursion would break. If there are multiple
-calls to the same function in play at the same time, each needs its *own*
+calls to the same function in play at the same time, each needs its _own_
 environment, even though they are all calls to the same function.
 
 For example, here's a convoluted way to count to three:
@@ -610,8 +733,8 @@ innermost, like:
 
 <img src="image/functions/recursion.png" alt="A separate environment for each recursive call." />
 
-That's why we create a new environment at each *call*, not at the function
-*declaration*. The `call()` method we saw earlier does that. At the beginning of
+That's why we create a new environment at each _call_, not at the function
+_declaration_. The `call()` method we saw earlier does that. At the beginning of
 the call, it creates a new environment. Then it walks the parameter and argument
 lists in lockstep. For each pair, it creates a new variable with the parameter's
 name and binds it to the argument's value.
@@ -637,8 +760,8 @@ environment where the function was being called. Now, we teleport from there
 inside the new parameter space we've created for the function.
 
 This is all that's required to pass data into the function. By using different
-environments when we execute the body, calls to the same function with the
-same code can produce different results.
+environments when we execute the body, calls to the same function with the same
+code can produce different results.
 
 Once the body of the function has finished executing, `executeBlock()` discards
 that function-local environment and restores the previous one that was active
@@ -646,8 +769,8 @@ back at the callsite. Finally, `call()` returns `null`, which returns `nil` to
 the caller. (We'll add return values later.)
 
 Mechanically, the code is pretty simple. Walk a couple of lists. Bind some new
-variables. Call a method. But this is where the crystalline *code* of the
-function declaration becomes a living, breathing *invocation*. This is one of my
+variables. Call a method. But this is where the crystalline _code_ of the
+function declaration becomes a living, breathing _invocation_. This is one of my
 favorite snippets in this entire book. Feel free to take a moment to meditate on
 it if you're so inclined.
 
@@ -656,12 +779,21 @@ lists have the same length. This is safe because `visitCallExpr()` checks the
 arity before calling `call()`. It relies on the function reporting its arity to
 do that.
 
-^code function-arity
+```python
+# lox/function.py method of LoxFunction
+@property
+def arity(self) -> int:
+    return len(self.declaration.parameters)
+```
 
 That's most of our object representation. While we're in here, we may as well
-implement `toString()`.
+implement `__str__()`.
 
-^code function-to-string
+```python
+# lox/function.py method of LoxFunction
+def __str__(self) -> str:
+    return f"<fn {self.declaration.name.lexeme}>"
+```
 
 This gives nicer output if a user decides to print a function value.
 
@@ -678,15 +810,21 @@ print add; // "<fn add>".
 We'll come back and refine LoxFunction soon, but that's enough to get started.
 Now we can visit a function declaration.
 
-^code visit-function
+```python
+# lox/exec.py implementation of exec(Function)
+@exec.register
+def _(stmt: Function, env: Environment):
+    function = LoxFunction(stmt)
+    env.define(stmt.name.lexeme, function)
+```
 
 This is similar to how we interpret other literal expressions. We take a
-function *syntax node* -- a compile-time representation of the function -- and
+function _syntax node_ -- a compile-time representation of the function -- and
 convert it to its runtime representation. Here, that's a LoxFunction that wraps
 the syntax node.
 
 Function declarations are different from other literal nodes in that the
-declaration *also* binds the resulting object to a new variable. So, after
+declaration _also_ binds the resulting object to a new variable. So, after
 creating the LoxFunction, we create a new binding in the current environment and
 store a reference to it there.
 
@@ -707,7 +845,7 @@ language to me.
 ## Return Statements
 
 We can get data into functions by passing parameters, but we've got no way to
-get results back <span name="hotel">*out*</span>. If Lox were an
+get results back <span name="hotel">_out_</span>. If Lox were an
 expression-oriented language like Ruby or Scheme, the body would be an
 expression whose value is implicitly the function's result. But in Lox, the body
 of a function is a list of statements which don't produce values, so we need
@@ -752,7 +890,7 @@ var result = procedure();
 print result; // ?
 ```
 
-This means every Lox function must return *something*, even if it contains no
+This means every Lox function must return _something_, even if it contains no
 `return` statements at all. We use `nil` for this, which is why LoxFunction's
 implementation of `call()` returns `null` at the end. In that same vein, if you
 omit the value in a `return` statement, we simply treat it as equivalent to:
@@ -763,30 +901,43 @@ return nil;
 
 Over in our AST generator, we add a <span name="return-ast">new node</span>.
 
-^code return-ast (1 before, 1 after)
-
-<aside name="return-ast">
-
-The generated code for the new node is in [Appendix II][appendix-return].
-
-[appendix-return]: appendix-ii.html#return-statement
-
-</aside>
+```python
+# lox/stmt.py
+@dataclass
+class Return(Stmt):
+    keyword: Token
+    value: Expr | None
+```
 
 It keeps the `return` keyword token so we can use its location for error
 reporting, and the value being returned, if any. We parse it like other
 statements, first by recognizing the initial keyword.
 
-^code match-return (1 before, 1 after)
+```python
+# lox/parser.py case in Parser.statement()
+    ...
+    case "RETURN":
+        return self.return_statement()
+    ...
+```
 
 That branches out to:
 
-^code parse-return-statement
+```python
+# lox/parser.py method of Parser
+def return_statement(self):
+    keyword = self.consume("RETURN", "Expect 'return' keyword.")
+    value = None
+    if not self.check("SEMICOLON"):
+        value = self.expression()
+    self.consume(TokenType.SEMICOLON, "Expect ';' after return value.")
+    return Return(keyword, value)
+```
 
 After snagging the previously consumed `return` keyword, we look for a value
 expression. Since many different tokens can potentially start an expression,
-it's hard to tell if a return value is *present*. Instead, we check if it's
-*absent*. Since a semicolon can't begin an expression, if the next token is
+it's hard to tell if a return value is _present_. Instead, we check if it's
+_absent_. Since a semicolon can't begin an expression, if the next token is
 that, we know there must not be a value.
 
 ### Returning from calls
@@ -812,17 +963,15 @@ fun count(n) {
 count(1);
 ```
 
-The Java call stack currently looks roughly like this:
+The Python call stack currently looks roughly like this:
 
-```text
-Interpreter.visitReturnStmt()
-Interpreter.visitIfStmt()
-Interpreter.executeBlock()
-Interpreter.visitBlockStmt()
-Interpreter.visitWhileStmt()
-Interpreter.executeBlock()
+```python
+exec(Return)
+exec(If)
+exec(Block)
+exec(While)
 LoxFunction.call()
-Interpreter.visitCallExpr()
+exec(Call)
 ```
 
 We need to get from the top of the stack all the way back to `call()`. I don't
@@ -833,18 +982,32 @@ executing the body.
 
 The visit method for our new AST node looks like this:
 
-^code visit-return
+```python
+# lox/exec.py implementation of exec(Return)
+@exec.register
+def _(stmt: Return, env: Environment):
+    value = None
+    if stmt.value is not None:
+        value = eval(stmt.value, env)
+    raise ReturnException(value)
+```
 
 If we have a return value, we evaluate it, otherwise, we use `nil`. Then we take
 that value and wrap it in a custom exception class and throw it.
 
-^code return-exception
+```python
+# lox/exec.py implementation of ReturnException
+class LoxReturn(Exception):
+    def __init__(self, value):
+        super().__init__()
+        self.value = value
+```
 
-This class wraps the return value with the accoutrements Java requires for a
-runtime exception class. The weird super constructor call with those `null` and
-`false` arguments disables some JVM machinery that we don't need. Since we're
-using our exception class for <span name="exception">control flow</span> and not
-actual error handling, we don't need overhead like stack traces.
+This class wraps the return value with a Python runtime exception class. The
+constructor is called to initialize the exception property. Since we're using
+our exception class for <span name="exception">control flow</span> and not
+actual error handling, we don't need the overhead of constructing strings with
+error messages.
 
 <aside name="exception">
 
@@ -859,16 +1022,28 @@ exceptions are a handy tool for that.
 We want this to unwind all the way to where the function call began, the
 `call()` method in LoxFunction.
 
-^code catch-return (3 before, 1 after)
+```python
+# lox/function.py method of LoxFunction
+def call(self,
+         env: Environment,
+         arguments: list[Value]) -> Value:
+    ...
+    try:
+        for stmt in self.declaration.body:
+             exec(stmt, env)
+    except LoxReturn as result:
+        return result.value
+    return None
+```
 
-We wrap the call to `executeBlock()` in a try-catch block. When it catches a
-return exception, it pulls out the value and makes that the return value from
-`call()`. If it never catches one of these exceptions, it means the function
-reached the end of its body without hitting a `return` statement. In that case,
-it implicitly returns `nil`.
+We wrap the call to the statements in the function body in a try-except block.
+When it catches a return exception, it pulls out the value and makes that the
+return value from `call()`. If it never catches one of these exceptions, it
+means the function reached the end of its body without hitting a `return`
+statement. In that case, it implicitly returns `nil`.
 
-Let's try it out. We finally have enough power to support this classic
-example -- a recursive function to calculate Fibonacci numbers:
+Let's try it out. We finally have enough power to support this classic example
+-- a recursive function to calculate Fibonacci numbers:
 
 <span name="slow"></span>
 
@@ -890,8 +1065,8 @@ variables, functions, function calls, parameter binding, and returns.
 <aside name="slow">
 
 You might notice this is pretty slow. Obviously, recursion isn't the most
-efficient way to calculate Fibonacci numbers, but as a microbenchmark, it does
-a good job of stress testing how fast our interpreter implements function calls.
+efficient way to calculate Fibonacci numbers, but as a microbenchmark, it does a
+good job of stress testing how fast our interpreter implements function calls.
 
 As you can see, the answer is "not very fast". That's OK. Our C interpreter will
 be faster.
@@ -906,7 +1081,9 @@ up, but we can get started here.
 
 LoxFunction's implementation of `call()` creates a new environment where it
 binds the function's parameters. When I showed you that code, I glossed over one
-important point: What is the *parent* of that environment?
+important point: What is the _parent_ of that environment?
+
+# FIXME:
 
 Right now, it is always `globals`, the top-level global environment. That way,
 if an identifier isn't defined inside the function body itself, the interpreter
@@ -914,7 +1091,7 @@ can look outside the function in the global scope to find it. In the Fibonacci
 example, that's how the interpreter is able to look up the recursive call to
 `fib` inside the function's own body -- `fib` is a global variable.
 
-But recall that in Lox, function declarations are allowed *anywhere* a name can
+But recall that in Lox, function declarations are allowed _anywhere_ a name can
 be bound. That includes the top level of a Lox script, but also the inside of
 blocks or other functions. Lox supports **local functions** that are defined
 inside another function, or nested inside a block.
@@ -971,7 +1148,7 @@ environment. Since the interpreter doesn't keep the environment surrounding
 This data structure is called a <span name="closure">**closure**</span> because
 it "closes over" and holds on to the surrounding variables where the function is
 declared. Closures have been around since the early Lisp days, and language
-hackers have come up with all manner of ways to implement them. For jlox, we'll
+hackers have come up with all manner of ways to implement them. For pylox, we'll
 do the simplest thing that works. In LoxFunction, we add a field to store an
 environment.
 
@@ -983,22 +1160,37 @@ grunts and pawing hand gestures.
 
 </aside>
 
-^code closure-field (1 before, 1 after)
-
-We initialize that in the constructor.
-
-^code closure-constructor (1 after)
+```python
+# lox/function.py add line to LoxFunction class
+@dataclass
+class LoxFunction
+    ...
+    closure: Environment
+```
 
 When we create a LoxFunction, we capture the current environment.
 
-^code visit-closure (1 before, 1 after)
+```python
+# lox/exec.py modify implementation of exec(Function)
+@exec.register
+def _(stmt: Function, env: Environment):
+    function = LoxFunction(stmt, closure=env)
+    ...
+```
 
-This is the environment that is active when the function is *declared* not when
-it's *called*, which is what we want. It represents the lexical scope
+This is the environment that is active when the function is _declared_ not when
+it's _called_, which is what we want. It represents the lexical scope
 surrounding the function declaration. Finally, when we call the function, we use
 that environment as the call's parent instead of going straight to `globals`.
 
-^code call-closure (1 before, 1 after)
+```python
+# lox/function.py modify method of LoxFunction.call()
+def call(self,
+         env: Environment,
+         arguments: list[Value]) -> Value:
+    env = Environment(enclosing=self.closure)
+    ...
+```
 
 This creates an environment chain that goes from the function's body out through
 the environments where the function is declared, all the way out to the global
@@ -1030,8 +1222,8 @@ scope and close that hole.
 
 1.  Lox's function declaration syntax performs two independent operations. It
     creates a function and also binds it to a name. This improves usability for
-    the common case where you do want to associate a name with the function.
-    But in functional-styled code, you often want to create a function to
+    the common case where you do want to associate a name with the function. But
+    in functional-styled code, you often want to create a function to
     immediately pass it to some other function or return it. In that case, it
     doesn't need a name.
 
@@ -1070,8 +1262,8 @@ scope and close that hole.
     }
     ```
 
-    In other words, are a function's parameters in the *same* scope as its local
+    In other words, are a function's parameters in the _same_ scope as its local
     variables, or in an outer scope? What does Lox do? What about other
-    languages you are familiar with? What do you think a language *should* do?
+    languages you are familiar with? What do you think a language _should_ do?
 
 </div>

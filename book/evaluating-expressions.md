@@ -233,7 +233,7 @@ def _(expr: Unary, env):
     right = eval(expr.right, env)
 
     match expr.operator.type :
-        case TT.MINUS:
+        case "MINUS":
             return -right
 
     # Unreachable.
@@ -252,7 +252,7 @@ The other unary operator is logical not.
 
 ```python
 # lox/eval.py match/case expression of eval(Unary)
-case TT.BANG:
+case "BANG":
     return not is_truthy(right)
 ```
 
@@ -314,13 +314,13 @@ def _(expr: Binary, env):
     right = eval(expr.right, env)
 
     match expr.operator.type :
-        case TT.PLUS:
+        case "PLUS":
             return left + right
-        case TT.MINUS:
+        case "MINUS":
             return left - right
-        case TT.SLASH:
+        case "SLASH":
             return left / right
-        case TT.STAR:
+        case "STAR":
             return left * right
     # Unreachable.
 ```
@@ -359,13 +359,13 @@ Next up are the comparison operators.
 
 ```python
 # lox/eval.py match/case expression of eval(Binary)
-case TT.GREATER:
+case "GREATER":
     return left > right
-case TT.GREATER_EQUAL:
+case "GREATER_EQUAL":
     return left >= right
-case TT.LESS:
+case "LESS":
     return left < right
-case TT.LESS_EQUAL:
+case "LESS_EQUAL":
     return left <= right
 ```
 
@@ -377,9 +377,9 @@ The last pair of operators are equality.
 
 ```python
 # lox/eval.py match/case expression of eval(Binary)
-case TT.BANG_EQUAL:
+case "BANG_EQUAL":
     return is_equal(left, right)
-case TT.EQUAL_EQUAL:
+case "EQUAL_EQUAL":
     return is_equal(left, right)
 ```
 
@@ -519,7 +519,7 @@ unary `-`, we change the implementation:
 
 ```python
 # lox/eval.py match/case expression of eval(Unary)
-case TT.MINUS:
+case "MINUS":
       return -as_number_operand(expr.operator, right)
 ```
 
@@ -530,19 +530,19 @@ The code to check the operand is:
 def as_number_operand(operator: Token, operand: Any) -> float:
     if isinstance(operand, float):
         return operand
-    raise LoxRuntimeError(operator, "Operand must be a number")
+    raise lox_error(operator, "Operand must be a number")
 ```
 
-When the check fails, it throws one of these:
+When the check fails, it produces a LoxError using information stored in the
+token object
 
 ```python
-# lox/errors.py
+# lox/eval.py at the top-level
 from .tokens import Token
+from .lox import LoxError
 
-class LoxRuntimeError(Exception):
-    def __init__(self, token: Token, message: str):
-        super().__init__(message)
-        self.token = token
+def lox_error(token: Token, message: str) -> LoxError:
+    return LoxError(token, message)
 ```
 
 Unlike the Python type and value errors, our <span name="class">class</span>
@@ -569,16 +569,16 @@ Comparison operators:
 
 ```python
 # lox/eval.py match/case expression of eval(Binary)
-case TT.GREATER:
+case "GREATER":
     check_number_operands(expr.operator, left, right)
     return left > right
-case TT.GREATER_EQUAL:
+case "GREATER_EQUAL":
     check_number_operands(expr.operator, left, right)
     return left >= right
-case TT.LESS:
+case "LESS":
     check_number_operands(expr.operator, left, right)
     return left < right
-case TT.LESS_EQUAL:
+case "LESS_EQUAL":
     check_number_operands(expr.operator, left, right)
     return left <= right
 ```
@@ -587,13 +587,13 @@ Arithmetic operators:
 
 ```python
 # lox/eval.py match/case expression of eval(Binary)
-case TT.MINUS:
+case "MINUS":
     check_number_operands(expr.operator, left, right)
     return left - right
-case TT.SLASH:
+case "SLASH":
     check_number_operands(expr.operator, left, right)
     return left / right
-case TT.STAR:
+case "STAR":
     check_number_operands(expr.operator, left, right)
     return left * right
 ```
@@ -631,7 +631,7 @@ operators.
 
 ```python
 # lox/eval.py match/case expression of eval(Binary)
-case TT.PLUS:
+case "PLUS":
     if type(left) == type(right) and type(left) in (float, str):
         return left + right
     msg = "Operands must be two numbers or two strings"
@@ -674,7 +674,7 @@ we <span name="number">hack</span> it off the end.
 
 <aside name="number">
 
-Yet again, we take care of this edge case with numbers to ensure that jlox and
+Yet again, we take care of this edge case with numbers to ensure that pylox and
 clox work the same. Handling weird corners of the language like this will drive
 you crazy but is an important part of the job.
 
