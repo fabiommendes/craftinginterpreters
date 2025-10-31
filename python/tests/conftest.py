@@ -40,6 +40,22 @@ def check_program(section: str, name: str, /):
     print(ident(expected, "  "))
     print()
 
+    output, err = run_program(source)
+
+    print("Actual output:\n")
+    print(ident(output, "  "))
+    print()
+
+    if err is not None:
+        raise err
+    else:
+        compare_output(output, expected)
+
+
+def run_program(source: str) -> tuple[str, Exception | None]:
+    """
+    Run a program source and return its output.
+    """
     lox = Lox(interactive=True)
     err = None
     with redirect_stdout(StringIO()) as f:
@@ -49,16 +65,7 @@ def check_program(section: str, name: str, /):
             err = e
             print(f"Runtime error: {err}")
             err.with_traceback(err.__traceback__)
-
-    output = f.getvalue().rstrip()
-    print("Actual output:\n")
-    print(ident(output, "  "))
-    print()
-
-    if err is not None:
-        raise err
-    else:
-        compare_output(output, expected)
+    return f.getvalue().rstrip(), err
 
 
 def parse_expects(src: str) -> str:
@@ -92,17 +99,20 @@ def parse_expects(src: str) -> str:
 
 
 def compare_output(stdout: str, expected_stdout: str):
+    """
+    Compare the output to the expected output.
+    """
     output = stdout.rstrip().splitlines()
     expected = expected_stdout.rstrip().splitlines()
     if output == expected:
         return
 
     while output and expected:
-        if compatible(output[0], expected[0]):
+        if is_compatible_line(output[0], expected[0]):
             output.pop(0)
             expected.pop(0)
             continue
-        elif compatible(output[-1], expected[-1]):
+        elif is_compatible_line(output[-1], expected[-1]):
             output.pop()
             expected.pop()
             continue
@@ -111,7 +121,10 @@ def compare_output(stdout: str, expected_stdout: str):
         )
 
 
-def compatible(actual: str, expected: str) -> bool:
+def is_compatible_line(actual: str, expected: str) -> bool:
+    """
+    Check if two output lines are compatible.
+    """
     if actual == expected:
         return True
     elif expected.startswith("runtime error:"):
@@ -125,13 +138,16 @@ def compatible(actual: str, expected: str) -> bool:
         if m1.group(0) == m2.group(0):
             actual = actual[m1.end() :]
             expected = expected[m2.end() :]
-            return compatible(actual, expected)
+            return is_compatible_line(actual, expected)
     elif actual.startswith("Error at '") and expected.startswith("Error:"):
         actual = "Error:" + actual.partition("':")[2]
     return actual == expected
 
 
 def is_error_line(text: str) -> bool:
+    """
+    Check if a line is an error line.
+    """
     text = text.lstrip().casefold()
     return (
         text.startswith("[line ")
@@ -141,4 +157,7 @@ def is_error_line(text: str) -> bool:
 
 
 def ident(s: str, prefix: str) -> str:
+    """
+    Indent all lines in a string with a given prefix.
+    """
     return "\n".join(prefix + line for line in s.splitlines())
