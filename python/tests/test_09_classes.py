@@ -1,23 +1,22 @@
 import pytest
-from lox.testing import check_program
 
 
 @pytest.mark.parametrize("name", ["to_this"])
-def test_assignment(name: str):
-    check_program("assignment", name)
+def test_assignment(check, name: str):
+    check("assignment", name)
 
 
 @pytest.mark.parametrize("name", ["object"])
-def test_call(name: str):
-    check_program("call", name)
+def test_call(check, name: str):
+    check("call", name)
 
 
 @pytest.mark.parametrize(
     "name",
     ["empty", "local_reference_self", "reference_self"],
 )
-def test_class(name: str):
-    check_program("class", name)
+def test_class(check, name: str):
+    check("class", name)
 
 
 @pytest.mark.parametrize(
@@ -36,13 +35,13 @@ def test_class(name: str):
         "return_value",
     ],
 )
-def test_constructor(name: str):
-    check_program("constructor", name)
+def test_constructor(check, name: str):
+    check("constructor", name)
 
 
 @pytest.mark.parametrize("name", ["class_in_else", "class_in_then"])
-def test_if(name: str):
-    check_program("if", name)
+def test_if(check, name: str):
+    check("if", name)
 
 
 @pytest.mark.parametrize(
@@ -71,13 +70,13 @@ def test_if(name: str):
         "undefined",
     ],
 )
-def test_field(name: str):
-    check_program("field", name)
+def test_field(check, name: str):
+    check("field", name)
 
 
 @pytest.mark.parametrize("name", ["class_in_body"])
-def test_for(name: str):
-    check_program("for", name)
+def test_for(check, name: str):
+    check("for", name)
 
 
 @pytest.mark.parametrize(
@@ -94,13 +93,13 @@ def test_for(name: str):
         "too_many_parameters",
     ],
 )
-def test_method(name: str):
-    check_program("method", name)
+def test_method(check, name: str):
+    check("method", name)
 
 
 @pytest.mark.parametrize("name", ["in_method"])
-def test_return(name: str):
-    check_program("return", name)
+def test_return(check, name: str):
+    check("return", name)
 
 
 @pytest.mark.parametrize(
@@ -114,15 +113,15 @@ def test_return(name: str):
         "this_in_top_level_function",
     ],
 )
-def test_this(name: str):
-    check_program("this", name)
+def test_this(check, name: str):
+    check("this", name)
 
 
 @pytest.mark.parametrize("name", ["class_in_body"])
-def test_while(name: str):
-    check_program("while", name)
+def test_while(check, name: str):
+    check("while", name)
 
 
 @pytest.mark.parametrize("name", ["local_from_method"])
-def test_variable(name: str):
-    check_program("variable", name)
+def test_variable(check, name: str):
+    check("variable", name)

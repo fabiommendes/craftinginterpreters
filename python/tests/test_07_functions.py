@@ -1,15 +1,14 @@
 import pytest
-from lox.testing import check_program
 
 
 @pytest.mark.parametrize("name", ["bool", "nil", "string", "num"])
-def test_call(name: str):
-    check_program("call", name)
+def test_call(check, name: str):
+    check("call", name)
 
 
 @pytest.mark.parametrize("name", ["syntax"])
-def test_for(name: str):
-    check_program("for", name)
+def test_for(check, name: str):
+    check("for", name)
 
 
 @pytest.mark.parametrize(
@@ -30,13 +29,13 @@ def test_for(name: str):
         "too_many_parameters",
     ],
 )
-def test_function(name: str):
-    check_program("function", name)
+def test_function(check, name: str):
+    check("function", name)
 
 
 @pytest.mark.parametrize("name", ["fun_in_else", "fun_in_then"])
-def test_if(name: str):
-    check_program("if", name)
+def test_if(check, name: str):
+    check("if", name)
 
 
 @pytest.mark.parametrize(
@@ -50,13 +49,13 @@ def test_if(name: str):
         "return_nil_if_no_value",
     ],
 )
-def test_return(name: str):
-    check_program("return", name)
+def test_return(check, name: str):
+    check("return", name)
 
 
 @pytest.mark.parametrize(
     "name",
     ["fun_in_body", "closure_in_body", "return_closure", "return_inside"],
 )
-def test_while(name: str):
-    check_program("while", name)
+def test_while(check, name: str):
+    check("while", name)

@@ -1,10 +1,9 @@
 import pytest
-from lox.testing import check_program
 
 
 @pytest.mark.parametrize("name", ["empty"])
-def test_block(name: str):
-    check_program("block", name)
+def test_block(check, name: str):
+    check("block", name)
 
 
 @pytest.mark.parametrize(
@@ -17,8 +16,8 @@ def test_block(name: str):
         "statement_initializer",
     ],
 )
-def test_for(name: str):
-    check_program("for", name)
+def test_for(check, name: str):
+    check("for", name)
 
 
 @pytest.mark.parametrize(
@@ -32,8 +31,8 @@ def test_for(name: str):
         "var_in_then",
     ],
 )
-def test_if(name: str):
-    check_program("if", name)
+def test_if(check, name: str):
+    check("if", name)
 
 
 @pytest.mark.parametrize(
@@ -45,10 +44,10 @@ def test_if(name: str):
         "or_truth",
     ],
 )
-def test_logical_operator(name: str):
-    check_program("logical_operator", name)
+def test_logical_operator(check, name: str):
+    check("logical_operator", name)
 
 
 @pytest.mark.parametrize("name", ["syntax", "var_in_body"])
-def test_while(name: str):
-    check_program("while", name)
+def test_while(check, name: str):
+    check("while", name)

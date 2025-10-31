@@ -1,5 +1,4 @@
 import pytest
-from lox.testing import check_program
 
 
 @pytest.mark.parametrize(
@@ -11,8 +10,8 @@ from lox.testing import check_program
         "inherit_self",
     ],
 )
-def test_class(name: str):
-    check_program("class", name)
+def test_class(check, name: str):
+    check("class", name)
 
 
 @pytest.mark.parametrize(
@@ -27,8 +26,8 @@ def test_class(name: str):
         "set_fields_from_base_class",
     ],
 )
-def test_inheritance(name: str):
-    check_program("inheritance", name)
+def test_inheritance(check, name: str):
+    check("inheritance", name)
 
 
 @pytest.mark.parametrize(
@@ -56,5 +55,5 @@ def test_inheritance(name: str):
         "this_in_superclass_method",
     ],
 )
-def test_super(name: str):
-    check_program("super", name)
+def test_super(check, name: str):
+    check("super", name)

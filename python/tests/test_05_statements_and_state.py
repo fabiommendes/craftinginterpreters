@@ -1,5 +1,4 @@
 import pytest
-from lox.testing import check_program
 
 
 @pytest.mark.parametrize(
@@ -15,23 +14,23 @@ from lox.testing import check_program
         "prefix_operator",
     ],
 )
-def test_assignment(name: str):
-    check_program("assignment", name)
+def test_assignment(check, name: str):
+    check("assignment", name)
 
 
 @pytest.mark.parametrize("name", ["scope"])
-def test_block(name: str):
-    check_program("block", name)
+def test_block(check, name: str):
+    check("block", name)
 
 
 @pytest.mark.parametrize("name", ["equality", "not"])
-def test_bool(name: str):
-    check_program("bool", name)
+def test_bool(check, name: str):
+    check("bool", name)
 
 
 @pytest.mark.parametrize("name", ["literal"])
-def test_nil(name: str):
-    check_program("nil", name)
+def test_nil(check, name: str):
+    check("nil", name)
 
 
 @pytest.mark.parametrize(
@@ -72,20 +71,20 @@ def test_nil(name: str):
         "subtract_num_nonnum",
     ],
 )
-def test_operator(name: str):
-    check_program("operator", name)
+def test_operator(check, name: str):
+    check("operator", name)
 
 
 @pytest.mark.parametrize("name", ["hello", "missing_argument"])
-def test_print(name: str):
-    check_program("print", name)
+def test_print(check, name: str):
+    check("print", name)
 
 
 @pytest.mark.parametrize(
     "name", ["error_after_multiline", "literals", "multiline", "unterminated"]
 )
-def test_string(name: str):
-    check_program("string", name)
+def test_string(check, name: str):
+    check("string", name)
 
 
 @pytest.mark.parametrize(
@@ -109,11 +108,7 @@ def test_string(name: str):
         "use_false_as_var",
         "use_nil_as_var",
         "use_this_as_var",
-        # "local_from_method",
-        # "early_bound",
-        # "use_local_in_initializer",
-        # "collide_with_parameter",
     ],
 )
-def test_variable(name: str):
-    check_program("variable", name)
+def test_variable(check, name: str):
+    check("variable", name)

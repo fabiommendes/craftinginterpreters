@@ -1,10 +1,9 @@
 import pytest
-from lox.testing import check_program
 
 
 @pytest.mark.parametrize("name", ["local_mutual_recursion"])
-def test_function(name: str):
-    check_program("function", name)
+def test_function(check, name: str):
+    check("function", name)
 
 
 @pytest.mark.parametrize(
@@ -25,12 +24,12 @@ def test_function(name: str):
         "unused_later_closure",
     ],
 )
-def test_closure(name: str):
-    check_program("closure", name)
+def test_closure(check, name: str):
+    check("closure", name)
 
 
 @pytest.mark.parametrize(
     "name", ["early_bound", "use_local_in_initializer", "collide_with_parameter"]
 )
-def test_variable(name: str):
-    check_program("variable", name)
+def test_variable(check, name: str):
+    check("variable", name)

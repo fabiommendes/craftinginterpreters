@@ -5,10 +5,9 @@ thoses exact names and with behaviour and signatures as defined in the book.
 
 from pathlib import Path
 
-from lox.ast import Binary, Expr, Grouping, Literal, Unary
+from lox import ast
 from lox.printer import pretty
 from lox.tokens import Token
-from lox.tokens import TokenType as TT
 
 TEST_BASE = Path(__file__).parent.parent / "examples" / "scanning"
 
@@ -35,21 +34,21 @@ class TestRepresentation:
         return Token(type, symbol, lineno)
 
     def expr(self, value):
-        if isinstance(value, Expr):
+        if isinstance(value, ast.Expr):
             return value
         elif value in (None, True, False):
-            return Literal(value)
+            return ast.Literal(value)
         else:
             raise TypeError(f"cannot convert {value!r} to Expr")
 
     def binary(self, left, op: str, right, lineno: int = 1):
         left = self.expr(left)
         right = self.expr(right)
-        return Binary(left, self.op(op, lineno), right)
+        return ast.Binary(left, self.op(op, lineno), right)
 
     def unary(self, op: str, right, lineno: int = 1):
         right = self.expr(right)
-        return Unary(self.op(op, lineno), right)
+        return ast.Unary(self.op(op, lineno), right)
 
     def test_not_bool(self):
         assert pretty(self.unary("!", True)) == "(! true)"
@@ -69,7 +68,7 @@ class TestRepresentation:
         assert pretty(expr) == "(== (! true) (!= false nil))"
 
     def test_grouping(self):
-        expr = Grouping(
+        expr = ast.Grouping(
             self.binary(
                 self.unary("!", True),
                 "==",
