@@ -1,8 +1,7 @@
 from functools import singledispatch
 
-from .expr import Binary, Expr, Grouping, Literal, Unary
-from .tokens import Token
-from .tokens import TokenType as TT
+from lox.ast import Binary, Expr, Grouping, Literal, Unary
+from lox.tokens import Token
 
 
 @singledispatch

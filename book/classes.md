@@ -145,11 +145,11 @@ Over in our AST generator, the `classDecl` grammar rule gets its own statement
 node.
 
 ```python
-# lox/stmt.py
+# lox/ast.py
 @dataclass
 class Class(Stmt):
     name: Token
-    methods: List[Function]
+    methods: list[Function]
 ```
 
 It stores the class's name and the methods inside its body. Methods are
@@ -161,9 +161,11 @@ A class can appear anywhere a named declaration is allowed, triggered by the
 leading `class` keyword.
 
 ```python
-# lox/parser.py case of Parser.declaration()
-case "CLASS":
-    return self.class_declaration()
+# lox/parser.py Parser.declaration() match/case
+    ...
+    case "CLASS":
+        return self.class_declaration()
+    ...
 ```
 
 That calls out to:
@@ -174,6 +176,7 @@ def class_declaration() -> Class:
     self.consume("CLASS", "Expect 'class' keyword.")
     class_name = self.consume("IDENTIFIER", "Expect class name.")
     methods = []
+    self.consume("LEFT_BRACE", "Expect '{' before class body.")
     while not self.check("RIGHT_BRACE"):
         methods.append(self.function("method"))
     self.consume("RIGHT_BRACE", "Expect '}' after class body.")
@@ -195,16 +198,17 @@ closing brace at the end, but it ensures the parser doesn't get stuck in an
 infinite loop if the user has a syntax error and forgets to correctly end the
 class body.
 
-We wrap the name and list of methods into a stmt.Class node and we're done.
+We wrap the name and list of methods into a `Class` node and we're done.
 Previously, we would jump straight into the interpreter, but now we need to
 plumb the node through the resolver first.
 
 ```python
-# lox/resolver.py
-@resolve.register
-def _(stmt: Class, resolver: Resolver):
-    resolver.declare(stmt.name)
-    resolver.define(stmt.name)
+# lox/resolver.py after resolve_node()
+@resolve_node.register
+def _(stmt: Class, env: Env):
+    env.declare(stmt.name)
+    env.define(stmt.name)
+    ...
 ```
 
 We aren't going to worry about resolving the methods themselves yet, so for now
@@ -215,12 +219,20 @@ correctly.
 Now we interpret the class declaration.
 
 ```python
-# lox/exec.py
+# lox/interpreter.py add after exec()
 @exec.register
-def _(stmt: Class, env: Environment) -> None:
-    env.define(stmt.name.lexeme)
+def _(stmt: Class, env: Env) -> None:
     klass = LoxClass(stmt.name.lexeme)
-    env.assign(stmt.name, klass)
+    env[stmt.name.lexeme] = klass
+```
+
+And adjust the imports:
+
+```python
+# lox/interpreter.py at top
+from lox.runtime import LoxClass
+
+type Value = ... | LoxClass  # Add the LoxClass type
 ```
 
 This looks similar to how we execute function declarations. We declare the
@@ -233,9 +245,8 @@ We will refine it throughout the chapter, but the first draft of LoxClass looks
 like this:
 
 ```python
-# lox/runtime.py after LoxFunction
-
-@dataclass
+# lox/runtime.py
+@dataclass(eq=False)
 class LoxClass:
     name: str
 
@@ -298,8 +309,9 @@ implements `LoxCallable` and reports an error since LoxClass doesn't. Not _yet_,
 that is.
 
 ```python
-# lox/runtime.py replace line in LoxClass
-
+# lox/runtime.py
+# Replace class LoxClass:
+...
 class LoxClass(LoxCallable):
     ...
 ```
@@ -308,15 +320,17 @@ Implementing that interface requires two fields.
 
 ```python
 # lox/runtime.py in LoxClass
-arity : int = 0
+    ...
+    arity : int = 0
 
-def call(self, env: "Environment", arguments: List[Any]) -> "LoxInstance":
-    return LoxInstance(self)
+    def call(self, env: Env, arguments: list[Value]) -> LoxInstance:
+        return LoxInstance(self)
+    ...
 ```
 
 The interesting one is `call()`. When you "call" a class, it instantiates a new
-LoxInstance for the called class and returns it. The `arity()` method is how the
-interpreter validates that you passed the right number of arguments to a
+LoxInstance for the called class and returns it. The `arity` attribute is how
+the interpreter validates that you passed the right number of arguments to a
 callable. For now, we'll say you can't pass any. When we get to user-defined
 constructors, we'll revisit this.
 
@@ -324,15 +338,13 @@ That leads us to LoxInstance, the runtime representation of an instance of a Lox
 class. Again, our first implementation starts small.
 
 ```python
-lox/runtime.py after LoxClass
-
-@dataclass
+# lox/runtime.py
+@dataclass(eq=False)
 class LoxInstance:
     klass: LoxClass
 
     def __str__(self) -> str:
         return f"{self.klass.name} instance"
-
 ```
 
 Like LoxClass, it's pretty bare bones, but we're only getting started. If you
@@ -395,8 +407,8 @@ here on out, we'll call these "get expressions".
 The syntax tree node is:
 
 ```python
-# lox/expr.py
-@dataclasss
+# lox/ast.py
+@dataclass
 class Get(Expr):
     object: Expr
     name: Token
@@ -407,18 +419,13 @@ method.
 
 ```python
 # lox/parser.py inside Parser.call()
-...
-while True:
-    if self.match("LEFT_PAREN"):
-        expr = self.finish_call(expr)
+# Inside the while, before else
+    ...
     elif self.match("DOT"):
         msg = "Expect property name after '.'."
         name = self.consume("IDENTIFIER", msg)
         expr = Get(expr, name)
-    else:
-        break
-return expr
-...
+    ...
 ```
 
 The outer `while` loop there corresponds to the `*` in the grammar rule. We zip
@@ -427,14 +434,8 @@ and dots, like so:
 
 <img src="image/classes/zip.png" alt="Parsing a series of '.' and '()' expressions to an AST." />
 
-Instances of the new Expr.Get node feed into the resolver.
-
-```python
-# lox/resolver.py
-@resolve.register
-def _(expr: Get, resolver: Resolver):
-    resolve(expr.object, resolver)
-```
+Instances of the new Get node do not need any special treatment from the
+resolver.
 
 OK, not much to that. Since properties are looked up <span
 name="dispatch">dynamically</span>, they don't get resolved. During resolution,
@@ -449,13 +450,14 @@ process the property name during the static resolution pass.
 </aside>
 
 ```python
-# lox/eval.py
+# lox/interpreter.py after eval()
 @eval.register
-def _(expr: Get, env: Environment) -> Any:
+def _(expr: Get, env: Env) -> Value:
     obj = eval(expr.object, env)
     if isinstance(obj, LoxInstance):
         return obj.get(expr.name)
-    raise RuntimeError(expr.name, "Only instances have properties.")
+    msg = "Only instances have properties."
+    raise LoxRuntimeError(msg, expr.name)
 ```
 
 First, we evaluate the expression whose property is being accessed. In Lox, only
@@ -465,23 +467,41 @@ number, invoking a getter on it is a runtime error.
 If the object is a LoxInstance, then we ask it to look up the property. It must
 be time to give LoxInstance some actual state. A dict will do fine.
 
+We need to update the imports and definitions in the interpreter module:
+
 ```python
-# lox/runtime.py attribute of LoxInstance
-@dataclass
-class LoxInstance(LoxCallable):
-    klass: LoxClass
-    fields: Dict[str, Value] = field(default_factory=dict)
+# lox/interpreter.py at top
+from lox.runtime import  LoxInstance
+
+type Value = ... | LoxInstance  # Add LoxInstance to Value type
+```
+
+And tweak the LoxInstance class
+
+```python
+# lox/runtime.py LoxInstance add attribute
+    ...
+    fields: dict[str, Value] = field(default_factory=dict)
 ```
 
 Each key in the map is a property name and the corresponding value is the
 property's value. To look up a property on an instance:
 
 ```python
-# lox/runtime.py method of LoxInstance
-def get(self, name: Token) -> Any:
+# lox/runtime.py LoxInstance method
+def get(self, name: Token) -> Value:
     if name.lexeme in self.fields:
         return self.fields[name.lexeme]
-    raise RuntimeError(name, f"Undefined property '{name.lexeme}'.")
+    raise LoxRuntimeError(f"Undefined property '{name.lexeme}'.", name)
+```
+
+This method uses a few imports:
+
+```python
+# lox/runtime.py at top
+from lox.errors import LoxRuntimeError
+from lox.tokens import Token
+from dataclasses import field
 ```
 
 <aside name="hidden">
@@ -555,7 +575,7 @@ Just as we have two separate AST nodes for variable access and variable
 assignment, we need a second setter node to complement our getter node.
 
 ```python
-# lox/expr.py
+# lox/ast.py
 @dataclass
 class Set(Expr):
     object: Expr
@@ -579,39 +599,33 @@ We add another clause to that transformation to handle turning an expr.Get
 expression on the left into the corresponding expr.Set.
 
 ```python
-# lox/parser.py inside Parser.assignment()
-...
-elif isinstance(expr, Get):
-    return Set(expr.object, expr.name, value)
-...
+# lox/parser.py Parser.assignment()
+# Add case to inner if block
+    ...
+    elif isinstance(expr, Get):
+        return Set(expr.object, expr.name, value)
+    ...
 ```
 
-That's parsing our syntax. We push that node through into the resolver.
+That's parsing our syntax.
 
-```python
-# lox/resolver.py
-@resolve.register
-def _(expr: Set, resolver: Resolver):
-    resolve(expr.object, resolver)
-    resolve(expr.value, resolver)
-```
-
-Again, like expr.Get, the property itself is dynamically evaluated, so there's
+Again, like Get, the property itself is dynamically evaluated, so there's
 nothing to resolve there. All we need to do is recurse into the two
-subexpressions of expr.Set, the object whose property is being set, and the
-value it's being set to.
+subexpressions of Set, the object whose property is being set, and the value
+it's being set to.
 
 That leads us to the interpreter.
 
 ```python
-# lox/eval.py
+# lox/interpreter.py
 @eval.register
-def _(expr: Set, env: Environment) -> Any:
+def _(expr: Set, env: Env) -> Value:
     obj = eval(expr.object, env)
     if not isinstance(obj, LoxInstance):
-        raise RuntimeError("Only instances have fields.")
+        raise LoxRuntimeError("Only instances have fields.", expr.name)
     value = eval(expr.value, env)
     obj.set(expr.name, value)
+    return value
 ```
 
 We evaluate the object whose property is being set and check to see if it's a
@@ -636,7 +650,7 @@ order.
 </aside>
 
 ```python
-# lox/runtime.py method of LoxInstance
+# lox/runtime.py LoxInstance method
 def set(self, name: Token, value: Value) -> None:
     self.fields[name.lexeme] = value
 ```
@@ -811,10 +825,9 @@ the next step is to resolve them.
 
 ```python
 # lox/resolver.py at resolver(Class)
-...
-for method in stmt.methods:
-    function_type = FunctionType.METHOD
-    resolver.resolve_function(method, declaration)
+    ...
+    for method in stmt.methods:
+        resolve_function(method, "METHOD")
 ```
 
 <aside name="local">
@@ -825,29 +838,25 @@ expand this code before too long and it will make more sense.
 </aside>
 
 We iterate through the methods in the class body and call the
-`resolveFunction()` method we wrote for handling function declarations already.
-The only difference is that we pass in a new FunctionType enum value.
+`resolve_function()` method we wrote for handling function declarations already.
+The only difference is that we pass in a new FunctionContext enum value.
 
 ```python
-# lox/resolver.py inside Resolver
-class FunctionType(Enum):
-    NONE = auto()
-    FUNCTION = auto()
-    METHOD = auto()
+# lox/resolver.py replace FunctioContext
+type FunctionContext = Enum["FUNCTION", "METHOD", None]
 ```
 
 That's going to be important when we resolve `this` expressions. For now, don't
 worry about it. The interesting stuff is in the interpreter.
 
 ```python
-# lox/exec.py at exec(Class) between env.define() and env.assign()
-...
-methods = {}
-for method in stmt.methods:
-    function = LoxFunction(method, env)
-    methods[method.name.lexeme] = function
-klass = LoxClass(stmt.name.lexeme, methods)
-...
+# lox/interpreter.py exec(Class)
+# Before return
+    ...
+    for method in stmt.methods:
+        function = LoxFunction(method, env)
+        klass.methods[method.name.lexeme] = function
+    ...
 ```
 
 When we interpret a class declaration statement, we turn the syntactic
@@ -859,10 +868,10 @@ We take all of those and wrap them up into a map, keyed by the method names.
 That gets stored in LoxClass.
 
 ```python
-# lox/runtime.py attributes of LoxClass
-...
-methods: dict[str, LoxFunction]
-...
+# lox/runtime.py LoxClass add attribute
+    ...
+    methods: dict[str, LoxFunction] = field(default_factory=dict)
+    ...
 ```
 
 Where an instance stores state, the class stores behavior. LoxInstance has its
@@ -870,12 +879,12 @@ map of fields, and LoxClass gets a map of methods. Even though methods are owned
 by the class, they are still accessed through instances of that class.
 
 ```python
-# lox/runtime.py at LoxInstance.get() before raising the error
-...
-method = self.klass.find_method(name.lexeme)
-if method is not None:
-    return method
-...
+# lox/runtime.py LoxInstance.get() before raising
+    ...
+    method = self.klass.find_method(name.lexeme)
+    if method is not None:
+        return method
+    ...
 ```
 
 When looking up a property on an instance, if we don't <span
@@ -895,7 +904,7 @@ important semantic point.
 </aside>
 
 ```python
-# lox/runtime.py at LoxClass
+# lox/runtime.py LoxClass method
 def find_method(self, name: str) -> LoxFunction | None:
     return self.methods.get(name)
 ```
@@ -1040,20 +1049,22 @@ closures and environment chains should do all this correctly.
 Let's code it up. The first step is adding new syntax for `this`.
 
 ```python
-# lox/expr.py
+# lox/ast.py
 @dataclass
 class This(Expr):
     keyword: Token
+    depth: int = -1
 ```
 
 Parsing is simple since it's a single token which our lexer already recognizes
 as a reserved word.
 
 ```python
-# lox/parser.py inside Parser.primary()
-...
-case "THIS":
-    return This(self.next())
+# lox/parser.py Parser.primary() if
+    ...
+    if self.match("THIS"):
+        return This(self.previous())
+    ...
 ```
 
 You can start to see how `this` works like a variable when we get to the
@@ -1063,7 +1074,7 @@ resolver.
 # lox/resolver.py
 @resolve.register
 def _(expr: This, resolver: Resolver):
-    resolver.resolve_local(expr, expr.keyword)
+    resolve_local(expr, expr.keyword, env)
 ```
 
 We resolve it exactly like any other local variable using "this" as the name for
@@ -1071,25 +1082,46 @@ the "variable". Of course, that's not going to work right now, because "this"
 _isn't_ declared in any scope. Let's fix that over in `resolve(Class)`.
 
 ```python
-# lox/resolver.py inside resolve(Class)
-... # after resolver.define(stmt.name)
-resolver.begin_scope()
-resolver.scopes[-1]["this"] = True
+# lox/resolver.py resolve_node(Class)
+# Add lines
+    ...
+    for method in stmt.methods:
+        role = "METHOD"
+        method_env = env.push(function_context=role)
+        method_env["this"] = "DEFINED"
+        resolve_function(method, role, method_env)
 ```
 
-Before we step in and start resolving the method bodies, we push a new scope and
-define "this" in it as if it were a variable. Then, when we're done, we discard
-that surrounding scope.
+We are pushing a new scope to the environment stack, modifying its enclosing
+function and class context to indicate to the resolver that everything will
+happen inside a method of a class.
+
+We override the `push()` method to accept optional parameters for the new
+fields.
 
 ```python
-# lox/resolver.py at end of resolve(Class)
-...
-resolver.end_scope()
+# lox/resolver.py Env method
+def push(self, **kwargs) -> Env:
+    kwargs.setdefault("function_context", self.function_context)
+    return Env(enclosing=self, errors=self.errors, **kwargs)
 ```
 
-Now, whenever a `this` expression is encountered (at least inside a method) it
-will resolve to a "local variable" defined in an implicit scope just outside of
-the block for the method body.
+<aside name="kwargs">
+
+Here we used a little bit of Python magic. The `**kwargs` syntax allows us to
+accept any number of keyword arguments without explicitly naming them in the
+method signature. Then we can pass those along to the Env constructor using the
+same `**` syntax. Kwargs are passed as a dict to the method, so we can use
+`setdefault()` to fill in any missing fields with the current values from the
+existing environment.
+
+</aside>
+
+Before we step in and start resolving the method bodies, we push a new modified
+scope and define "this" in it as if it were a variable. Now, whenever a `this`
+expression is encountered (at least inside a method) it will resolve to a "local
+variable" defined in an implicit scope just outside of the block for the method
+body.
 
 The resolver has a new _scope_ for `this`, so the interpreter needs to create a
 corresponding _environment_ for it. Remember, we always have to keep the
@@ -1099,21 +1131,22 @@ the instance. We replace the previous line of code that simply returned the
 method's LoxFunction with this:
 
 ```python
-# lox/eval.py inside eval(Get) before returning the method
-...
-if method is not None:
-    return method.bind(obj)
-...
+# lox/runtime.py LoxInstance.get()
+# Before returning the method
+    ...
+    if method is not None:
+        return method.bind(self)
+    ...
 ```
 
 Note the new call to `bind()`. That looks like so:
 
 ```python
-# lox/runtime.py method of LoxFunction
-def bind(self, instance: "LoxInstance") -> "LoxFunction":
-    env = Environment(self.closure)
-    env.define("this", instance)
-    return LoxFunction(self.params, self.body, env)
+# lox/runtime.py LoxFunction method
+def bind(self, instance: LoxInstance) -> LoxFunction:
+    env = self.closure.push()
+    env["this"] = instance
+    return LoxFunction(self.declaration, env)
 ```
 
 There isn't much to it. We create a new environment nestled inside the method's
@@ -1129,11 +1162,13 @@ The remaining task is interpreting those `this` expressions. Similar to the
 resolver, it is the same as interpreting a variable expression.
 
 ```python
-# lox/eval.py
+# lox/interpreter.py
 @eval.register
-def _(expr: This, env: Environment) -> Any:
-    # TODO: resolver with env.look_up_variable()
-    return env.get(expr.keyword)
+def _(expr: This, env: Env) -> Value:
+    try:
+        return env.get_at(expr.depth, "this")
+    except NameError as error:
+        raise LoxRuntimeError(f"Undefined variable '{error}'.", expr.keyword)
 ```
 
 Go ahead and give it a try using that cake example from earlier. With less than
@@ -1165,77 +1200,64 @@ happier they'll be.
 
 Our resolution pass is a fine place to detect this error statically. It already
 detects `return` statements outside of functions. We'll do something similar for
-`this`. In the vein of our existing FunctionType enum, we define a new ClassType
-one.
+`this`. In the vein of our existing FunctionContext enum, we define a new
+ClassContext one.
 
 ```python
-# lox/resolver.py inside Resolver
-# at top of Resolver
-class ClassType(Enum):
-    NONE = auto()
-    CLASS = auto()
+# lox/resolver.py at top
+type ClassContext = Enum["CLASS", None]
 ```
 
 Yes, it could be a Boolean. When we get to inheritance, it will get a third
 value, hence the enum right now. We also add a corresponding field,
-`currentClass`. Its value tells us if we are currently inside a class
-declaration while traversing the syntax tree. It starts out `NONE` which means
+`class_context`. Its value tells us if we are currently inside a class
+declaration while traversing the syntax tree. It starts out `None` which means
 we aren't in one.
 
 ```python
-# lox/resolver.py inside Resolver
-class Resolver:
-    current_class = ClassType.NONE
+# lox/resolver.py Env
+    ...
+    class_context: ClassContext = None
+    ...
 ```
 
 When we begin to resolve a class declaration, we change that.
 
 ```python
-# lox/resolver.py at the start of resolve(Class)
-    ...
-    enclosing_class = resolver.current_class
-    resolver.current_class = ClassType.CLASS
+# lox/resolver.py resolve_node(Class)
+# Add lines to the start
+    current_context = env.class_context
+    env.class_context = "CLASS"
     ...
 ```
 
-As with `current_function`, we store the previous value of the field in a local
-variable. This lets us piggyback onto the JVM to keep a stack of `current_class`
-values. That way we don't lose track of the previous value if one class nests
-inside another.
+We store the previous value of the field in a local variable. This lets us
+piggyback onto the Python VM to keep a stack of `current_context` values in its
+stack frames. That way we don't lose track of the previous value if one class
+nests inside another.
 
-Once the methods have been resolved, we "pop" that stack by restoring the old
+Once the methods had been resolved, we "pop" that stack by restoring the old
 value.
 
 ```python
-# lox/resolver.py at the endof resolve(Class)
+# lox/resolver.py resolve_node(Class)
+# Add line to the end
     ...
-    resolver.current_class = enclosing_class
+    env.class_context = current_context
 ```
 
-As with `current_function`, we store the previous value of the field in a local
-variable. This lets us piggyback onto the JVM to keep a stack of `current_class`
-values. That way we don't lose track of the previous value if one class nests
-inside another.
-
-Once the methods have been resolved, we "pop" that stack by restoring the old
-value.
-
-```python
-# lox/resolver.py inside Resolver
-    ...
-    resolver.current_class = enclosing_class
-```
-
-When we resolve a `this` expression, the `currentClass` field gives us the bit
+When we resolve a `this` expression, the `class_context` field gives us the bit
 of data we need to report an error if the expression doesn't occur nestled
 inside a method body.
 
 ```python
-# lox/resolver.py at the end of resolve(This)
+# lox/resolver.py resolve_node(This)
+# Add lines to the start
     ...
-    if resolver.current_class == ClassType.NONE:
-        msg = "Cannot use 'this' outside of a class."
-        raise ResolverError(expr.keyword, msg)
+    if env.class_context is None:
+        msg = "Can't use 'this' outside of a class."
+        env.error(expr.keyword, msg)
+    ...
 ```
 
 That should help users use `this` correctly, and it saves us from having to
@@ -1295,11 +1317,11 @@ In LoxClass's implementation of LoxCallable, we add a few more lines.
 
 ```python
 # lox/runtime.py in LoxClass.call()
-# replace the return statement
+# Replace the return statement
     ...
     init = self.find_method("init")
     if init is not None:
-        init.bind(instance).call(interpreter, arguments)
+        init.bind(instance).call(env, arguments)
     return instance
 ```
 
@@ -1310,7 +1332,8 @@ method call. The argument list is forwarded along.
 That argument list means we also need to tweak how a class declares its arity.
 
 ```python
-# lox/runtime.py replace LoxClass.arity
+# lox/runtime.py LoxClass
+# Replace line `arity: int = 0`
 @property
 def arity(self) -> int:
     init = self.find_method("init")
@@ -1318,6 +1341,14 @@ def arity(self) -> int:
         return 0
     return init.arity
 ```
+
+<aside name="property">
+
+Here we use a Python property to make `arity` look like a field even though it's
+actually a method. This is just syntactic sugar to make the code that uses it
+look cleaner.
+
+</aside>
 
 If there is an initializer, that method's arity determines how many arguments
 you must pass when you call the class itself. We don't _require_ a class to
@@ -1367,22 +1398,21 @@ that won't cause your users and future self to curse your shortsightedness.
 </aside>
 
 ```python
-# lox/runtime.py in LoxFunction.call() before returning the value
+# lox/runtime.py LoxFunction.call()
+# Add at the end
     ...
     if self.is_initializer:
         return self.closure.get_at(0, "this")
-    return value
 ```
 
 If the function is an initializer, we override the actual return value and
 forcibly return `this`. That relies on a new `is_initializer` field.
 
 ```python
-# lox/runtime.py in LoxFunction after all property declarations
-@dataclass
-class LoxFunction(LoxCallable):
+# lox/runtime.py LoxFunction add field
     ...
     is_initializer: bool = False
+    ...
 ```
 
 We can't simply see if the name of the LoxFunction is "init" because the user
@@ -1396,14 +1426,11 @@ need to change the code that creates LoxFunctions for normal function
 declarations. We only need to change the code that creates them for methods.
 
 ```python
-# lox/exec.py in exec(Class)
-# replace the line that creates the LoxFunction
+# lox/interpreter.py in exec(Class)
+# Replace the line that creates the LoxFunction
     ...
-    function = LoxFunction(
-        method,
-        env,
-        is_initializer=(method.name.lexeme == "init"),
-    )
+    is_initializer=method.name.lexeme == "init"
+    function = LoxFunction(method, env, is_initializer)
     ...
 ```
 
@@ -1414,7 +1441,7 @@ we pass along the original method's value.
 # lox/runtime.py in LoxFunction.bind()
 # replace the return statement
     ...
-    return LoxFunction(self.params, self.body, env, self.is_initializer)
+    return LoxFunction(self.declaration, env, self.is_initializer)
 ```
 
 ### Returning from init()
@@ -1432,25 +1459,23 @@ class Foo {
 ```
 
 It's definitely not going to do what they want, so we may as well make it a
-static error. Back in the resolver, we add another case to FunctionType.
+static error. Back in the resolver, we add another case to FunctionContext.
 
 ```python
-# lox/resolver.py inside Resolver
-class FunctionType(Enum):
-    NORMAL = auto()
-    INITIALIZER = auto()
-    METHOD = auto()
+# lox/resolver.py
+# Add case to FunctionContext
+type FunctionContext = Enum[..., "INITIALIZER"]
 ```
 
 We use the visited method's name to determine if we're resolving an initializer
 or not.
 
 ```python
-# lox/resolver.py at the start of resolve(Class)
-# after defining the "declaration" variable
+# lox/resolver.py at resolve_node(Class)
+# After line `role = "METHOD"`
     ...
-    if stmt.name.lexeme == "init":
-        declaration = FunctionType.INITIALIZER
+    if method.name.lexeme == "init":
+        role = "INITIALIZER"
     ...
 ```
 
@@ -1458,11 +1483,12 @@ When we later traverse into a `return` statement, we check that field and make
 it an error to return a value from inside an `init()` method.
 
 ```python
-# lox/resolver.py at the start of resolve(Function)
+# lox/resolver.py resolve(Return)
+# Inside the `if stmt.value is not None:` block
     ...
-    if stmt.value is not None:
-      if env.current_function == FunctionType.INITIALIZER:
-        error(stmt.keyword, "Cannot return a value from an initializer.")
+    if env.function_context == "INITIALIZER":
+        msg = "Can't return a value from an initializer."
+        env.error(stmt.keyword, msg)
     ...
 ```
 
@@ -1483,11 +1509,11 @@ over in LoxFunction.
 
 ```python
 # lox/runtime.py in LoxFunction.call()
-# after catching the LoxReturn exception
+# Before `return error.value`
     ...
     if self.is_initializer:
         return self.closure.get_at(0, "this")
-
+    ...
 ```
 
 If we're in an initializer and execute a `return` statement, instead of

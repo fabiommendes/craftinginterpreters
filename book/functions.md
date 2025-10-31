@@ -99,7 +99,7 @@ Over in our syntax tree generator, we add a <span name="call-ast">new
 node</span>.
 
 ```python
-# lox/expr.py
+# lox/ast.py
 @dataclass
 class Call(Expr):
     callee: Expr
@@ -117,7 +117,7 @@ change it to call, well, `call()`.
 ```python
 # lox/parser.py at Parser.unary
     ...
-    return self.call()  # replace self.unary()
+    return self.call()  # replace self.primary()
 ```
 
 Its definition is:
@@ -156,7 +156,7 @@ The code to parse the argument list is in this helper:
 
 ```python
 # lox/parser.py method of Parser
-def finish_call(self) -> Expr:
+def finish_call(self, callee: Expr) -> Expr:
     arguments = []
     if not self.check("RIGHT_PAREN"):
         arguments.append(self.expression())
@@ -196,7 +196,7 @@ implicitly passed to the method, so it claims one of the slots.
 
 </aside>
 
-Our Java interpreter for Lox doesn't really need a limit, but having a maximum
+Our Python interpreter for Lox doesn't really need a limit, but having a maximum
 number of arguments will simplify our bytecode interpreter in [Part III][]. We
 want our two interpreters to be compatible with each other, even in weird corner
 cases like this, so we'll add the same limit to pylox.
@@ -207,8 +207,8 @@ cases like this, so we'll add the same limit to pylox.
 # lox/parser.py inside Parser.finish_call()
     ...
     # inside the while block
-    if len(arguments) >= 255:
-        self.error(paren, "Can't have more than 255 arguments.")
+    if len(arguments) > 255:
+        self.error(self.previous(), "Can't have more than 255 arguments.")
     ...
 ```
 
@@ -226,9 +226,9 @@ calls first, but we'll worry about that when we get there. As always,
 interpretation starts with a new visit method for our new call expression node.
 
 ```python
-# lox/eval.py implementation of eval()
+# lox/interpreter.py implementation of eval()
 @eval.register
-def _(expr: Call, env: Environment) -> Value:
+def _(expr: Call, env: Env) -> Value:
     callee = eval(expr.callee, env)
     arguments = [eval(arg, env) for arg in expr.arguments]
     return callee.call(env, arguments)
@@ -259,24 +259,44 @@ We'll also use it for one more purpose shortly.
 
 <aside name="callable">
 
-I stuck "Lox" before the name to distinguish it from the Java standard library's
-own Callable interface. Alas, all the good simple names are already taken.
+I stuck "Lox" before the name to distinguish it from the Python standard
+library's own Callable type. Alas, all the good simple names are already taken.
 
 </aside>
 
 There isn't too much to this new interface.
 
 ```python
-# lox/types.py
-import abc
-
+# lox/runtime.py
 class LoxCallable(abc.ABC):
     @abc.abstractmethod
     def call(self,
-             env: Environment,
+             env: Env,
              arguments: list[Value]) -> Value:
         ...
 ```
+
+This code uses the following imports and definitions:
+
+```python
+# lox/runtime.py at the top
+from __future__ import annotations
+import abc
+from lox import env, interpreter
+
+type Value = interpreter.Value
+type Env = env.Env[Value]
+```
+
+<aside name="circular-imports">
+
+Here we import the sub-modules lox.env, and lox.interpreter by name instead of
+requiring specific symbols as we usually do. This is to avoid circular import
+issues. The `lox.runtime` uses Env from `lox.env`, but it uses `Value` from
+`lox.interpreter` and later on we want `Value` to include LoxCallable and other
+objects defined in this module.
+
+</aside>
 
 We pass in the environment in case the class implementing `call()` needs it. We
 also give it the list of evaluated argument values. The implementer's job is
@@ -294,21 +314,28 @@ you can call? What if you try to do this:
 ```
 
 Strings aren't callable in Lox. The runtime representation of a Lox string is a
-Python string, so when we cast that to LoxCallable, the Python interpreter will
-throw a TypeError. We don't want our interpreter to vomit out some nasty Python
-stack trace and die. Instead, we need to check the type ourselves first.
+Python string, so when we try to call its `call()` method, the Python
+interpreter will raise a AttributeError. We don't want our interpreter to vomit
+out some nasty Python stack trace and die. Instead, we need to check the type
+ourselves first.
 
 ```python
-# lox/eval.py before the return statement in eval(Call)
+# lox/interpreter.py before the return statement in eval(Call)
     ...
     if not isinstance(callee, LoxCallable):
         msg = "Can only call functions and classes."
-        raise LoxRuntimeError(expr.paren, msg)
+        raise LoxRuntimeError(msg, expr.paren)
     ...
 ```
 
 We still throw an exception, but now we're throwing our own exception type, one
 that the interpreter knows to catch and report gracefully.
+
+This code requires an import to work correctly:
+
+```python
+from lox.runtime import LoxCallable
+```
 
 ### Checking arity
 
@@ -346,11 +373,11 @@ we'll take Python's approach. Before invoking the callable, we check to see if
 the argument list's length matches the callable's arity.
 
 ```python
-# lox/eval.py before the return statement in eval(Call)
+# lox/interpreter.py before the return statement in eval(Call)
 ...
 if len(arguments) != callee.arity:
-    msg = f"Expected {callee.arity()} arguments but got {len(arguments)}."
-    raise LoxRuntimeError(expr.paren, msg)
+    msg = f"Expected {callee.arity} arguments but got {len(arguments)}."
+    raise LoxRuntimeError(msg, expr.paren)
 ...
 ```
 
@@ -462,32 +489,62 @@ functions.
 ```python
 # lox/runtime.py
 from dataclasses import dataclass
+from typing import Callable
 
-@dataclass
+@dataclass(eq=False)
 class NativeFunction(LoxCallable):
     function: Callable[..., Value]
     arity: int
 
     def call(self,
-             env: Environment,
+             env: Env,
              arguments: list[Value]) -> Value:
         return self.function(*arguments)
+
+    def __str__(self) -> str:
+        return "<native fn>"
 ```
+
+<aside name="equality">
+
+We added `eq=False` to the `@dataclass` decorator here to disable the
+auto-generated equality method. By default, dataclasses compare instances by all
+their fields. If we disable that, they use the default Python behavior of
+comparing by identity, which is what we want here.
+
+</aside>
 
 Now we create a new constructor in our Environment populated with Lox's standard
 lib with its single `clock` function.
 
 ```python
-# lox/environment.py method of Environment
+# lox/env.py method of Env
 @classmethod
-def globals(cls) -> "Environment":
-    return cls({"clock": NativeFunction(time.time, arity=0)})
+def globals(cls) -> "Env":
+    return cls({"clock": NativeFunction(time.time, 0)})
+```
+
+Remember to do the required imports:
+
+```python
+# lox/env.py at the top
+import time
+from lox.runtime import NativeFunction
+```
+
+And to use it to initialize the global environment in the main interpreter:
+
+```python
+# lox/__main__.py at Lox.__init__
+# Replace Env() with Env.globals()
+    ...
+    self.environment = Env.globals()
 ```
 
 This defines a <span name="lisp-1">variable</span> named "clock". Its value is a
 Python anonymous class that implements LoxCallable. The `clock()` function takes
 no arguments, so its arity is zero. The implementation of `call()` calls the
-corresponding Java function and converts the result to a double value in
+corresponding Python function and converts the result to a double value in
 seconds.
 
 <aside name="lisp-1">
@@ -511,6 +568,15 @@ NativeFunction. But for the book, this one is really all we need.
 
 Let's get ourselves out of the function-defining business and let our users take
 over...
+
+It is also a good idea to redefine the `lox.interpreter.Value` type to accept
+NativeFunctions as well:
+
+```python
+# lox/interpreter.py at the top
+from lox.runtime import NativeFunction
+type Value = LiteralValue | NativeFunction
+```
 
 ## Function Declarations
 
@@ -575,7 +641,7 @@ identifier, not an expression. That's a lot of new syntax for the parser to chew
 through, but the resulting AST <span name="fun-ast">node</span> isn't too bad.
 
 ```python
-# lox/stmt.py
+# lox/ast.py
 @dataclass
 class Function(Stmt):
     name: Token
@@ -593,6 +659,7 @@ Over in the parser, we weave in the new declaration.
 # lox/parser.py case of Parser.declaration()
     ...
     case "FUN":
+        self.consume("FUN", f"Expect function declaration.")
         return self.function("function")
     ...
 ```
@@ -604,9 +671,7 @@ method up a piece at a time, starting with this:
 
 ```python
 # lox/parser.py method of Parser
-def function(self, kind: str) -> Stmt:
-    if kind == "function":
-        self.consume("FUN", f"Expect function declaration.")
+def function(self, kind: str) -> Function:
     name = self.consume("IDENTIFIER", f"Expect {kind} name.")
     ...
 ```
@@ -630,6 +695,8 @@ Next, we parse the parameter list and the pair of parentheses wrapped around it.
         while self.match("COMMA"):
             argument = self.consume("IDENTIFIER", "Expect parameter name.")
             parameters.append(argument)
+            if len(parameters) > 255:
+                self.error(argument, "Can't have more than 255 parameters.")
     self.consume("RIGHT_PAREN", "Expect ')' after parameters.")
     ...
 ```
@@ -647,14 +714,17 @@ Finally, we parse the body and wrap it all up in a function node.
 ```python
 # lox/parser.py inside Parser.function()
     ...
-    body = self.block()
-    return Function(name, parameters, body)
+    if self.check("LEFT_BRACE"):
+        body = self.block_statement()
+    else:
+        raise self.error(self.peek(), "Expect '{' before function body.")
+    return Function(name, parameters, body.statements)
 ```
 
 ## Function Objects
 
 We've got some syntax parsed so usually we're ready to interpret, but first we
-need to think about how to represent a Lox function in Java. We need to keep
+need to think about how to represent a Lox function in Python. We need to keep
 track of the parameters so that we can bind them to argument values when the
 function is called. And, of course, we need to keep the code for the body of the
 function so that we can execute it.
@@ -666,8 +736,10 @@ the front end's syntax classes so we don't want Stmt.Function itself to
 implement that. Instead, we wrap it in a new class.
 
 ```python
-# lox/function.py
-@dataclass
+# lox/runtime.py
+from lox.ast import Function
+
+@dataclass(eq=False)
 class LoxFunction(LoxCallable):
     declaration: Function
 ```
@@ -675,18 +747,17 @@ class LoxFunction(LoxCallable):
 We implement the `call()` of LoxCallable like so:
 
 ```python
-# lox/function.py method of LoxFunction
+# lox/runtime.py LoxFunction method
 def call(self,
-         env: Environment,
+         env: Env,
          arguments: list[Value]) -> Value:
     # Create a new environment for the function's parameters.
-    env = Environment(enclosing=env)
-    for param, arg in zip(self.declaration.parameters, arguments):
-        env.define(param.lexeme, arg)
+    env = env.push()
+    for param, arg in zip(self.declaration.params, arguments):
+        env[param.lexeme] = arg
 
     for stmt in self.declaration.body:
          exec(stmt, env)
-    return None
 ```
 
 This handful of lines of code is one of the most fundamental, powerful pieces of
@@ -783,7 +854,7 @@ do that.
 # lox/function.py method of LoxFunction
 @property
 def arity(self) -> int:
-    return len(self.declaration.parameters)
+    return len(self.declaration.params)
 ```
 
 That's most of our object representation. While we're in here, we may as well
@@ -813,9 +884,18 @@ Now we can visit a function declaration.
 ```python
 # lox/exec.py implementation of exec(Function)
 @exec.register
-def _(stmt: Function, env: Environment):
+def _(stmt: Function, env: Env):
     function = LoxFunction(stmt)
-    env.define(stmt.name.lexeme, function)
+    env[stmt.name.lexeme] = function
+```
+
+And do not forget to add the import and redefine the Value type:
+
+```python
+# lox/exec.py at the top
+from lox.runtime import LoxFunction
+
+type Value = LiteralValue | LoxFunction | NativeFunction
 ```
 
 This is similar to how we interpret other literal expressions. We take a
@@ -902,7 +982,7 @@ return nil;
 Over in our AST generator, we add a <span name="return-ast">new node</span>.
 
 ```python
-# lox/stmt.py
+# lox/ast.py
 @dataclass
 class Return(Stmt):
     keyword: Token
@@ -930,7 +1010,7 @@ def return_statement(self):
     value = None
     if not self.check("SEMICOLON"):
         value = self.expression()
-    self.consume(TokenType.SEMICOLON, "Expect ';' after return value.")
+    self.consume("SEMICOLON", "Expect ';' after return value.")
     return Return(keyword, value)
 ```
 
@@ -983,24 +1063,31 @@ executing the body.
 The visit method for our new AST node looks like this:
 
 ```python
-# lox/exec.py implementation of exec(Return)
+# lox/interpreter.py after exec()
 @exec.register
-def _(stmt: Return, env: Environment):
+def _(stmt: Return, env: Env):
     value = None
     if stmt.value is not None:
         value = eval(stmt.value, env)
-    raise ReturnException(value)
+    raise LoxReturn(value)
 ```
 
 If we have a return value, we evaluate it, otherwise, we use `nil`. Then we take
 that value and wrap it in a custom exception class and throw it.
 
 ```python
-# lox/exec.py implementation of ReturnException
+# lox/runtime.py at top level
 class LoxReturn(Exception):
     def __init__(self, value):
         super().__init__()
         self.value = value
+```
+
+We need to import it in the interpreter module:
+
+```python
+# lox/interpreter.py at the top
+from lox.runtime import LoxReturn
 ```
 
 This class wraps the return value with a Python runtime exception class. The
@@ -1013,8 +1100,8 @@ error messages.
 
 For the record, I'm not generally a fan of using exceptions for control flow.
 But inside a heavily recursive tree-walk interpreter, it's the way to go. Since
-our own syntax tree evaluation is so heavily tied to the Java call stack, we're
-pressed to do some heavyweight call stack manipulation occasionally, and
+our own syntax tree evaluation is so heavily tied to the Python call stack,
+we're pressed to do some heavyweight call stack manipulation occasionally, and
 exceptions are a handy tool for that.
 
 </aside>
@@ -1023,17 +1110,13 @@ We want this to unwind all the way to where the function call began, the
 `call()` method in LoxFunction.
 
 ```python
-# lox/function.py method of LoxFunction
-def call(self,
-         env: Environment,
-         arguments: list[Value]) -> Value:
-    ...
+# lox/function.py LoxFunction.call()
+# Replace the for loop with this:
     try:
         for stmt in self.declaration.body:
-             exec(stmt, env)
+            interpreter.exec(stmt, env)
     except LoxReturn as result:
         return result.value
-    return None
 ```
 
 We wrap the call to the statements in the function body in a try-except block.
@@ -1073,6 +1156,26 @@ be faster.
 
 </aside>
 
+Since we mentioned recursion, it is a good time to ponder what would happen if
+the Lox program enter an infinite recursion. Each function call consumes a bit
+of memory on the call stack and eventually, if the recursion goes deep enough,
+the interpreter will run out of memory.
+
+In C programs, this would result in a stack overflow error when the operating
+system crashes the misbehaving program. Python allocates its call stack on the
+heap (confusing, hmm?), but it still puts a limit on how deep the recursion can
+go on and raises a `RecursionError` exception when that limit is exceeded. We
+should capture those errors and report them as Lox runtime errors to the user:
+
+```python
+# lox/function.py LoxFunction.call()
+# Create a new except clause
+    ...
+    except RecursionError:
+        msg = "Stack overflow."
+        raise LoxRuntimeError(msg, self.declaration.name)
+```
+
 ## Local Functions and Closures
 
 Our functions are pretty full featured, but there is one hole to patch. In fact,
@@ -1082,8 +1185,6 @@ up, but we can get started here.
 LoxFunction's implementation of `call()` creates a new environment where it
 binds the function's parameters. When I showed you that code, I glossed over one
 important point: What is the _parent_ of that environment?
-
-# FIXME:
 
 Right now, it is always `globals`, the top-level global environment. That way,
 if an identifier isn't defined inside the function body itself, the interpreter
@@ -1161,20 +1262,18 @@ grunts and pawing hand gestures.
 </aside>
 
 ```python
-# lox/function.py add line to LoxFunction class
-@dataclass
-class LoxFunction
+# lox/function.py LoxFunction parameters
     ...
-    closure: Environment
+    closure: Env
+    ...
 ```
 
 When we create a LoxFunction, we capture the current environment.
 
 ```python
-# lox/exec.py modify implementation of exec(Function)
-@exec.register
-def _(stmt: Function, env: Environment):
-    function = LoxFunction(stmt, closure=env)
+# lox/exec.py exec(Function)
+# Add parameter to LoxFunction constructor
+    function = LoxFunction(stmt, env)
     ...
 ```
 
@@ -1184,11 +1283,10 @@ surrounding the function declaration. Finally, when we call the function, we use
 that environment as the call's parent instead of going straight to `globals`.
 
 ```python
-# lox/function.py modify method of LoxFunction.call()
-def call(self,
-         env: Environment,
-         arguments: list[Value]) -> Value:
-    env = Environment(enclosing=self.closure)
+# lox/function.py LoxFunction.call()
+# Replace env = env.push()
+    ...
+    env = self.closure.push()
     ...
 ```
 

@@ -264,7 +264,7 @@ But in our implementation, environments do act like the entire block is one
 scope, just a scope that changes over time. Closures do not like that. When a
 function is declared, it captures a reference to the current environment. The
 function _should_ capture a frozen snapshot of the environment _as it existed at
-the moment the function was declared_. But instead, in the Java code, it has a
+the moment the function was declared_. But instead, in the Python code, it has a
 reference to the actual mutable environment object. When a variable is later
 declared in the scope that environment corresponds to, the closure sees the new
 variable, even though the declaration does _not_ precede the function.
@@ -395,29 +395,75 @@ the user's program grows.
 
 </aside>
 
-## A Resolver Method
+## A Resolver Function
 
-Our variable resolution pass is similar to the `eval/exec` methods of our
-interpreter. It is, afterall, a partial kind of interpretation -- one that only
-simulates the overall structure of execution without actually running each
-command in detail.
+Our variable resolution pass works similarly to the `eval/exec` methods of our
+interpreter. It is, afterall, a kind of abstract interpretation -- one that only
+simulates the overall structure of execution, tracking variable definitions and
+usage without actually running each command in detail.
 
-Like we did before, the resolver is implemented as a singledispatch function.
+Like we did before, the resolver module exposes one simple function that
+implements the main functionality in the resolution pass.
 
 ```python
 # lox/resolver.py
+import copy
 from functools import singledispatch
-from .expr import *
-from .stmt import *
+from lox.ast import *
 
-@singledispatch
-def resolve(node: Expr | Stmt, env: Environment) -> None:
-    raise TypeError(f"Unknown node type: {type(node)}")
+def resolve(program: Program) -> Program:
+    env = Env()
+    program = copy.deepcopy(program)
+    resolve_node(program, env)
+    if env.errors:
+        raise LoxStaticError(env.errors)
+    return program
 ```
 
-Since the resolver needs to visit every node in the syntax tree, it implements a
-similar abstraction as exec() and eval() . Only a few kinds of nodes are
-interesting when it comes to resolving variables:
+<aside name="deepcopy">
+
+It is a good API ettiquete to avoid mutating the user's data structures unless
+the function is clearly labeled as a mutator. Since we want to return the
+modified syntax tree with resolution information it would be confusing to modify
+it in-place and return the same object.
+
+To avoid that confusion, we use Python's native `copy.deepcopy()` function to
+make a complete copy of the syntax tree before modifying it. Beware that
+`copy.copy()` only makes shallow copies: it returns a new tree but would share
+all the child nodes with the input argument.
+
+</aside>
+
+The resolver initializes a new environment to track scopes and then delegates
+the work to a helper function, `resolve_node()`, which is implemented as a
+singledispatch method.
+
+```python
+# lox/resolver.py
+@singledispatch
+def resolve_node(node: Expr | Stmt, env: Env) -> None:
+    for child in vars(node).values():
+        if isinstance(child, (Stmt, Expr, list)):
+            resolve_node(child, env)
+```
+
+Differently from before, `resolve_node()` has a useful generic implementation.
+It uses Python's reflection capabilities to walk all of the fields of the given
+node, resolving them recursivelly.
+
+It can handle Expr, Stmt and we sneak support for Python lists to simplify the
+implementation of a few nodes:
+
+```python
+# lox/resolver.py after resolve_node()
+@resolve_node.register
+def _(stmts: list, env: Env) -> None:
+    for stmt in stmts:
+        resolve_node(stmt, env)
+```
+
+The resolver needs to visit every node in the syntax tree, but only a few kinds
+of nodes are interesting when it comes to resolving variables:
 
 - A block statement introduces a new scope for the statements it contains.
 
@@ -428,9 +474,68 @@ interesting when it comes to resolving variables:
 
 - Variable and assignment expressions need to have their variables resolved.
 
-The rest of the nodes don't do anything special, but we still need to implement
-methods for them that traverse into their subtrees. Even though a `+` expression
-doesn't _itself_ have any variables to resolve, either of its operands might.
+The rest of the nodes don't do anything special, and the fallback implementation
+takes good care of them.
+
+### Resolving Environment
+
+The resolver visits each node in the syntax tree, tracking variable definitions
+and usage. This information must be stored somewhere, to give it some context to
+modify the syntax tree accordingly. Our `Env` class seems like a natural fit for
+the job, but we need to extend it a bit.
+
+```python
+# lox/resolver.py after imports
+from lox import env
+from dataclasses import dataclass, field
+from typing import Literal as Enum
+from lox.errors import LoxSyntaxError
+from lox.ast import *
+
+type Binding = Enum["DECLARED", "DEFINED"]
+
+@dataclass
+class Env(env.Env[Binding]):
+    errors: list[Exception] = field(default_factory=list)
+```
+
+<aside name="enum">
+
+Python has a built-in `Enum` type in the `enum` module, but it's a bit
+heavyweight for our needs. Here, we just need a simple way to represent a couple
+of distinct states and we use `Literal` from the `typing` module to do that.
+Since we also import Literal from `lox.ast`, I alias it to `Enum` to avoid name
+clashes.
+
+</aside>
+
+For now, we specify the type of bindings and add a list to store any errors we
+encounter during resolution. The resolver doesn't track variable values -- that
+would require that we actually run the program -- so we use a simple enum to
+track the state of each variable in the scope maps.
+
+- A **DECLARED** variable has been declared in the current scope, but its
+  initializer has not yet been resolved.
+- A **DEFINED** variable has been fully initialized and is ready for use.
+
+We also track errors just like we did in the Parser:
+
+```python
+# lox/resolver.py Env method
+def error(self, token: Token, message: str) -> Exception:
+    error = LoxSyntaxError.from_token(token, message)
+    self.errors.append(error)
+    return error
+```
+
+Finally, we modify `Env.push()` to make the enclosed enviroment share the same
+list of errors as its parent.
+
+```python
+# lox/resolver.py Env method
+def push(self) -> Env:
+    return Env(self, errors=self.errors)
+```
 
 ### Resolving blocks
 
@@ -438,67 +543,39 @@ We start with blocks since they create the local scopes where all the magic
 happens.
 
 ```python
-# lox/resolver.py continuation
+# lox/resolver.py after resolve_node()
+@resolve_node.register
+def _(stmt: Block, env: Env) -> None:
+    resolve_node(stmt.statements, env.push())
 
-@resolve.register
-def _(stmt: Block, env: Environment) -> None:
-    begin_scope(env)
-    resolve_statements(stmt.statements, env)
-    end_scope(env)
 ```
 
-This begins a new scope, traverses into the statements inside the block, and
-then discards the scope. The fun stuff lives in those helper methods. We start
-with the simple one.
-
-^code resolve-statements
-
-This walks a list of statements and resolves each one. It in turn calls:
-
-^code resolve-stmt
-
-While we're at it, let's add another overload that we'll need later for
-resolving an expression.
-
-^code resolve-expr
-
-These methods are similar to the `evaluate()` and `execute()` methods in
-Interpreter -- they turn around and apply the Visitor pattern to the given
-syntax tree node.
-
-The real interesting behavior is around scopes. A new block scope is created
-like so:
-
-^code begin-scope
+This begins a new scope and traverses into the statements inside the block using
+this nested scope. It tranverses the list of statements since we implemented
+support for lists in the generic `resolve_node()` method.
 
 Lexical scopes nest in both the interpreter and the resolver. They behave like a
-stack. The interpreter implements that stack using a linked list -- the chain of
-Environment objects. In the resolver, we use an actual Java Stack.
-
-^code scopes-field (1 before, 2 after)
-
-This field keeps track of the stack of scopes currently, uh, in scope. Each
-element in the stack is a Map representing a single block scope. Keys, as in
-Environment, are variable names. The values are Booleans, for a reason I'll
-explain soon.
+stack. We implement that stack using a linked list -- the chain of Env objects.
 
 The scope stack is only used for local block scopes. Variables declared at the
 top level in the global scope are not tracked by the resolver since they are
 more dynamic in Lox. When resolving a variable, if we can't find it in the stack
 of local scopes, we assume it must be global.
 
-Since scopes are stored in an explicit stack, exiting one is straightforward.
-
-^code end-scope
-
-Now we can push and pop a stack of empty scopes. Let's put some things in them.
-
 ### Resolving variable declarations
 
 Resolving a variable declaration adds a new entry to the current innermost
 scope's map. That seems simple, but there's a little dance we need to do.
 
-^code visit-var-stmt
+```python
+# lox/resolver.py after resolve_node()
+@resolve_node.register
+def _(stmt: Var, env: Env) -> None:
+    env.declare(stmt.name)
+    if stmt.initializer is not None:
+        resolve_node(stmt.initializer, env)
+    env.define(stmt.name)
+```
 
 We split binding into two steps, declaring then defining, in order to handle
 funny edge cases like this:
@@ -554,12 +631,20 @@ In order to do that, as we visit expressions, we need to know if we're inside
 the initializer for some variable. We do that by splitting binding into two
 steps. The first is **declaring** it.
 
-^code declare
+We implement some helper methods to avoid fiddling with the maps directly.
+
+```python
+# lox/resolver.py Env method
+def declare(self, name: Token) -> None:
+    if not self.enclosing:
+        return
+    self[name.lexeme] = "DECLARED"
+```
 
 Declaration adds the variable to the innermost scope so that it shadows any
 outer one and so that we know the variable exists. We mark it as "not ready yet"
-by binding its name to `false` in the scope map. The value associated with a key
-in the scope map represents whether or not we have finished resolving that
+by binding its name to `"DECLARED"` in the scope map. The value associated with
+a key in the scope map represents whether or not we have finished resolving that
 variable's initializer.
 
 After declaring the variable, we resolve its initializer expression in that same
@@ -567,9 +652,15 @@ scope where the new variable now exists but is unavailable. Once the initializer
 expression is done, the variable is ready for prime time. We do that by
 **defining** it.
 
-^code define
+```python
+# lox/resolver.py Env method
+def define(self, name: Token) -> None:
+    if not self.enclosing:
+        return
+    self[name.lexeme] = "DEFINED"
+```
 
-We set the variable's value in the scope map to `true` to mark it as fully
+We set the variable's value in the scope map to `"DEFINED"` to mark it as fully
 initialized and available for use. It's alive!
 
 ### Resolving variable expressions
@@ -577,39 +668,86 @@ initialized and available for use. It's alive!
 Variable declarations -- and function declarations, which we'll get to -- write
 to the scope maps. Those maps are read when we resolve variable expressions.
 
-^code visit-variable-expr
+```python
+# lox/resolver.py after resolve_node()
+@resolve_node.register
+def _(expr: Variable, env: Env) -> None:
+    if env.values.get(expr.name.lexeme) == "DECLARED":
+        msg = "Can't read local variable in its own initializer."
+        env.error(expr.name, msg)
+    resolve_local(expr, expr.name, env)
+```
 
 First, we check to see if the variable is being accessed inside its own
 initializer. This is where the values in the scope map come into play. If the
-variable exists in the current scope but its value is `false`, that means we
-have declared it but not yet defined it. We report that error.
+variable exists in the current scope but its value is `"DECLARED"`, that means
+we have declared it but not yet defined it. We report that error.
 
 After that check, we actually resolve the variable itself using this helper:
 
-^code resolve-local
+```python
+# lox/resolver.py
+def resolve_local(expr: Expr, name: Token, env: Env) -> None:
+    expr.depth = env.get_depth(name.lexeme)
+```
 
-This looks, for good reason, a lot like the code in Environment for evaluating a
+Which stores the depth of the variable in the syntax tree node itself. This
+requires some tweaking to our syntax trees.
+
+```python
+# lox/ast.py Variable add field
+    ...
+    depth: int = -1
+```
+
+The new `depth` field stores how many scopes away the variable's declaration is
+from the current innermost scope. A depth of 0 means the variable is in the
+current scope. A depth of 1 means it's in the immediately enclosing scope, and
+so on. Negative depths are sentinels meaning the variable is still unresolved.
+
+`resolve_local()` also uses a new method in our `Env` class to calculate that
+depth:
+
+```python
+# lox/resolver.py Env method
+def get_depth(self, name: str) -> int:
+    if name in self.values or self.enclosing is None:
+        return 0
+    return 1 + self.enclosing.get_depth(name)
+```
+
+This looks, for good reason, a lot like the code in Env for evaluating a
 variable. We start at the innermost scope and work outwards, looking in each map
 for a matching name. If we find the variable, we resolve it, passing in the
 number of scopes between the current innermost scope and the scope where the
 variable was found. So, if the variable was found in the current scope, we pass
 in 0. If it's in the immediately enclosing scope, 1. You get the idea.
 
-If we walk through all of the block scopes and never find the variable, we leave
-it unresolved and assume it's global. We'll get to the implementation of that
-`resolve()` method a little later. For now, let's keep on cranking through the
-other syntax nodes.
-
 ### Resolving assignment expressions
 
 The other expression that references a variable is assignment. Resolving one
 looks like this:
 
-^code visit-assign-expr
+```python
+# lox/resolver.py after resolve_node()
+@resolve_node.register
+def _(expr: Assign, env: Env) -> None:
+    resolve_node(expr.value, env)
+    resolve_local(expr, expr.name, env)
+```
 
 First, we resolve the expression for the assigned value in case it also contains
-references to other variables. Then we use our existing `resolveLocal()` method
-to resolve the variable that's being assigned to.
+references to other variables. Then we use our existing `resolve_local()`
+function to resolve the variable that's being assigned to.
+
+Like before, we also need to add a `depth` field to the `Assign` syntax tree
+node:
+
+```python
+# lox/ast.py Assign add field
+    ...
+    depth: int = -1
+```
 
 ### Resolving function declarations
 
@@ -618,20 +756,56 @@ the function itself is bound in the surrounding scope where the function is
 declared. When we step into the function's body, we also bind its parameters
 into that inner function scope.
 
-^code visit-function-stmt
+```python
+# lox/resolver.py after resolve_node()
+@resolve_node.register
+def _(stmt: Function, env: Env) -> None:
+    env.declare(stmt.name)
+    env.define(stmt.name)
+    resolve_function(stmt, "FUNCTION", env)
+```
 
-Similar to `visitVariableStmt()`, we declare and define the name of the function
-in the current scope. Unlike variables, though, we define the name eagerly,
-before resolving the function's body. This lets a function recursively refer to
-itself inside its own body.
+Similar to `resolve_node(Variable)`, we declare and define the name of the
+function in the current scope. Unlike variables, though, we define the name
+eagerly, before resolving the function's body. This lets a function recursively
+refer to itself inside its own body.
 
 Then we resolve the function's body using this:
 
-^code resolve-function
+```python
+# lox/resolver.py after resolve_node()
+def resolve_function(function: Function,
+                     context: FunctionContext,
+                     env: Env) -> None:
+    env = env.push(function_context=context)
+    for param in function.params:
+        env.declare(param)
+        env.define(param)
+    resolve_node(function.body, env)
+```
 
-It's a separate method since we will also use it for resolving Lox methods when
-we add classes later. It creates a new scope for the body and then binds
+It's a separate function since we will also use it for resolving Lox methods
+when we add classes later. It creates a new scope for the body and then binds
 variables for each of the function's parameters.
+
+The extra parameter `type` is there to track what kind of function we're
+resolving. Right now, we only have one kind, but later we'll add support for
+methods and initializers. Some of those have special rules around `return`
+statements that we'll need to enforce during resolution. We need to declare this
+type alias somewhere:
+
+```python
+# lox/resolver.py after imports
+type FunctionContext = Enum["FUNCTION", None]
+```
+
+The `Env` class also must keep track if the current block is enclosed by a
+function or not:
+
+```python
+# lox/resolver.py Env field
+    function_context: FunctionContext = None
+```
 
 Once that's ready, it resolves the function body in that scope. This is
 different from how the interpreter handles function declarations. At _runtime_,
@@ -639,174 +813,40 @@ declaring a function doesn't do anything with the function's body. The body
 doesn't get touched until later when the function is called. In a _static_
 analysis, we immediately traverse into the body right then and there.
 
-### Resolving the other syntax tree nodes
-
-That covers the interesting corners of the grammars. We handle every place where
-a variable is declared, read, or written, and every place where a scope is
-created or destroyed. Even though they aren't affected by variable resolution,
-we also need visit methods for all of the other syntax tree nodes in order to
-recurse into their subtrees. <span name="boring">Sorry</span> this bit is
-boring, but bear with me. We'll go kind of "top down" and start with statements.
-
-<aside name="boring">
-
-I did say the book would have every single line of code for these interpreters.
-I didn't say they'd all be exciting.
-
-</aside>
-
-An expression statement contains a single expression to traverse.
-
-^code visit-expression-stmt
-
-An if statement has an expression for its condition and one or two statements
-for the branches.
-
-^code visit-if-stmt
-
-Here, we see how resolution is different from interpretation. When we resolve an
-`if` statement, there is no control flow. We resolve the condition and _both_
-branches. Where a dynamic execution steps only into the branch that _is_ run, a
-static analysis is conservative -- it analyzes any branch that _could_ be run.
-Since either one could be reached at runtime, we resolve both.
-
-Like expression statements, a `print` statement contains a single subexpression.
-
-^code visit-print-stmt
-
-Same deal for return.
-
-^code visit-return-stmt
-
-As in `if` statements, with a `while` statement, we resolve its condition and
-resolve the body exactly once.
-
-^code visit-while-stmt
-
-That covers all the statements. On to expressions...
-
-Our old friend the binary expression. We traverse into and resolve both
-operands.
-
-^code visit-binary-expr
-
-Calls are similar -- we walk the argument list and resolve them all. The thing
-being called is also an expression (usually a variable expression), so that gets
-resolved too.
-
-^code visit-call-expr
-
-Parentheses are easy.
-
-^code visit-grouping-expr
-
-Literals are easiest of all.
-
-^code visit-literal-expr
-
-A literal expression doesn't mention any variables and doesn't contain any
-subexpressions so there is no work to do.
-
-Since a static analysis does no control flow or short-circuiting, logical
-expressions are exactly the same as other binary operators.
-
-^code visit-logical-expr
-
-And, finally, the last node. We resolve its one operand.
-
-^code visit-unary-expr
-
-With all of these visit methods, the Java compiler should be satisfied that
-Resolver fully implements Stmt.Visitor and Expr.Visitor. Now is a good time to
-take a break, have a snack, maybe a little nap.
-
-## Interpreting Resolved Variables
-
-Let's see what our resolver is good for. Each time it visits a variable, it
-tells the interpreter how many scopes there are between the current scope and
-the scope where the variable is defined. At runtime, this corresponds exactly to
-the number of _environments_ between the current one and the enclosing one where
-the interpreter can find the variable's value. The resolver hands that number to
-the interpreter by calling this:
-
-^code resolve
-
-We want to store the resolution information somewhere so we can use it when the
-variable or assignment expression is later executed, but where? One obvious
-place is right in the syntax tree node itself. That's a fine approach, and
-that's where many compilers store the results of analyses like this.
-
-We could do that, but it would require mucking around with our syntax tree
-generator. Instead, we'll take another common approach and store it off to the
-<span name="side">side</span> in a map that associates each syntax tree node
-with its resolved data.
-
-<aside name="side">
-
-I _think_ I've heard this map called a "side table" since it's a tabular data
-structure that stores data separately from the objects it relates to. But
-whenever I try to Google for that term, I get pages about furniture.
-
-</aside>
-
-Interactive tools like IDEs often incrementally reparse and re-resolve parts of
-the user's program. It may be hard to find all of the bits of state that need
-recalculating when they're hiding in the foliage of the syntax tree. A benefit
-of storing this data outside of the nodes is that it makes it easy to _discard_
-it -- simply clear the map.
-
-^code locals-field (1 before, 2 after)
-
-You might think we'd need some sort of nested tree structure to avoid getting
-confused when there are multiple expressions that reference the same variable,
-but each expression node is its own Java object with its own unique identity. A
-single monolithic map doesn't have any trouble keeping them separated.
-
-As usual, using a collection requires us to import a couple of names.
-
-^code import-hash-map (1 before, 1 after)
-
-And:
-
-^code import-map (1 before, 2 after)
-
 ### Accessing a resolved variable
 
 Our interpreter now has access to each variable's resolved location. Finally, we
-get to make use of that. We replace the visit method for variable expressions
-with this:
+get to make use of that. We replace eval(Variable) with this:
 
-^code call-look-up-variable (1 before, 1 after)
+```python
+# lox/interpreter.py eval(Variable)
+# Replace return statement
+    ...
+    return env.get_at(expr.depth, expr.name.lexeme)
+    ...
+```
 
-That delegates to:
+Instead of calling `env[]`, we call this new method on Env:
 
-^code look-up-variable
+```python
+# lox/env.py Env method
+def get_at(self, depth: int, name: str) -> T:
+    while depth > 0:
+        self = self.enclosing
+        depth -= 1
+    if name in self.values:
+        return self.values[name]
+    raise NameError(name)
+```
 
-There are a couple of things going on here. First, we look up the resolved
-distance in the map. Remember that we resolved only _local_ variables. Globals
-are treated specially and don't end up in the map (hence the name `locals`). So,
-if we don't find a distance in the map, it must be global. In that case, we look
-it up, dynamically, directly in the global environment. That throws a runtime
-error if the variable isn't defined.
+The old `__getitem__()` method dynamically walks the chain of enclosing
+environments, scouring each one to see if the variable might be hiding in there
+somewhere. But now we know exactly which environment in the chain will have the
+variable.
 
-If we _do_ get a distance, we have a local variable, and we get to take
-advantage of the results of our static analysis. Instead of calling `get()`, we
-call this new method on Environment:
-
-^code get-at
-
-The old `get()` method dynamically walks the chain of enclosing environments,
-scouring each one to see if the variable might be hiding in there somewhere. But
-now we know exactly which environment in the chain will have the variable. We
-reach it using this helper method:
-
-^code ancestor
-
-This walks a fixed number of hops up the parent chain and returns the
-environment there. Once we have that, `getAt()` simply returns the value of the
-variable in that environment's map. It doesn't even have to check to see if the
-variable is there -- we know it will be because the resolver already found it
-before.
+This walks a fixed number of hops up the parent chain and returns the variable
+in there. It doesn't even have to check to see if the variable is there -- we
+know it will be because the resolver already found it before.
 
 <aside name="coupled">
 
@@ -819,7 +859,7 @@ match in the interpreter for modifying an environment.
 I felt that coupling firsthand because as I wrote the code for the book, I ran
 into a couple of subtle bugs where the resolver and interpreter code were
 slightly out of sync. Tracking those down was difficult. One tool to make that
-easier is to have the interpreter explicitly assert -- using Java's assert
+easier is to have the interpreter explicitly assert -- using Python's assert
 statements or some other validation tool -- the contract it expects the resolver
 to have already upheld.
 
@@ -827,40 +867,61 @@ to have already upheld.
 
 ### Assigning to a resolved variable
 
-We can also use a variable by assigning to it. The changes to visiting an
+We can also use a variable by assigning to it. The changes to interpreting an
 assignment expression are similar.
 
-^code resolved-assign (2 before, 1 after)
+```python
+# lox/interpreter.py eval(Assign)
+# Replace call to env.assign()
+    ...
+    env.assign_at(expr.depth, expr.name.lexeme, value)
+    ...
+```
 
-Again, we look up the variable's scope distance. If not found, we assume it's
-global and handle it the same way as before. Otherwise, we call this new method:
+Again, we look up the variable's scope distance and call a new setter method:
 
-^code assign-at
+```python
+# lox/env.py Env method
+def assign_at(self, depth: int, name: str, value: T) -> None:
+    while depth > 0:
+        self = self.enclosing
+        depth -= 1
 
-As `getAt()` is to `get()`, `assignAt()` is to `assign()`. It walks a fixed
-number of environments, and then stuffs the new value in that map.
+    if name not in self.values:
+        raise NameError(name)
+    self.values[name] = value
+```
 
-Those are the only changes to Interpreter. This is why I chose a representation
-for our resolved data that was minimally invasive. All of the rest of the nodes
-continue working as they did before. Even the code for modifying environments is
-unchanged.
+As `get_at()` is to `__getitem__()`, `assign_at()` is to `assign()`. It walks a
+fixed number of environments, and then stuffs the new value in that map.
+
+Those are the only changes to the interpreter functions. This is why I chose a
+representation for our resolved data that was minimally invasive. All of the
+rest of the nodes continue working as they did before. Even the code for
+modifying environments is unchanged.
 
 ### Running the resolver
 
 We do need to actually _run_ the resolver, though. We insert the new pass after
 the parser does its magic.
 
-^code create-resolver (3 before, 1 after)
+```python
+# lox/__main__.py Lox.run()
+# After ast = parse(tokens)
+    ...
+    ast = resolve(ast)
+    ...
+```
 
-We don't run the resolver if there are any parse errors. If the code has a
-syntax error, it's never going to run, so there's little value in resolving it.
-If the syntax is clean, we tell the resolver to do its thing. The resolver has a
-reference to the interpreter and pokes the resolution data directly into it as
-it walks over variables. When the interpreter runs next, it has everything it
-needs.
+And don't forget to import the `resolve()` function for this to work:
 
-At least, that's true if the resolver _succeeds_. But what about errors during
-resolution?
+```python
+# lox/__main__.py after imports
+from lox.resolver import resolve
+```
+
+Simple, isnt it? The resolver is just another step in the pipeline from source
+code to execution.
 
 ## Resolution Errors
 
@@ -883,7 +944,15 @@ the previous one.
 
 We can detect this mistake statically while resolving.
 
-^code duplicate-variable (1 before, 1 after)
+```python
+# lox/resolver.py Env.declare()
+# After checking for enclosing
+    ...
+    if name.lexeme in self.values:
+        msg = "Already a variable with this name in this scope."
+        self.error(name, msg)
+    ...
+```
 
 When we declare a variable in a local scope, we already know the names of every
 variable previously declared in that same scope. If we see a collision, we
@@ -905,51 +974,16 @@ We can extend the resolver to detect this statically. Much like we track scopes
 as we walk the tree, we can track whether or not the code we are currently
 visiting is inside a function declaration.
 
-^code function-type-field (1 before, 2 after)
-
-Instead of a bare Boolean, we use this funny enum:
-
-^code function-type
-
-It seems kind of dumb now, but we'll add a couple more cases to it later and
-then it will make more sense. When we resolve a function declaration, we pass
-that in.
-
-^code pass-function-type (2 before, 1 after)
-
-Over in `resolveFunction()`, we take that parameter and store it in the field
-before resolving the body.
-
-^code set-current-function (1 after)
-
-We stash the previous value of the field in a local variable first. Remember,
-Lox has local functions, so you can nest function declarations arbitrarily
-deeply. We need to track not just that we're in a function, but _how many_ we're
-in.
-
-We could use an explicit stack of FunctionType values for that, but instead
-we'll piggyback on the JVM. We store the previous value in a local on the Java
-stack. When we're done resolving the function body, we restore the field to that
-value.
-
-^code restore-current-function (1 before, 1 after)
-
-Now that we can always tell whether or not we're inside a function declaration,
-we check that when resolving a `return` statement.
-
-^code return-from-top (1 before, 1 after)
+```python
+@resolve_node.register
+def _(stmt: Return, env: Env) -> None:
+    if env.function_context is None:
+        env.error(stmt.keyword, "Can't return from top-level code.")
+    if stmt.value is not None:
+        resolve_node(stmt.value, env)
+```
 
 Neat, right?
-
-There's one more piece. Back in the main Lox class that stitches everything
-together, we are careful to not run the interpreter if any parse errors are
-encountered. That check runs _before_ the resolver so that we don't try to
-resolve syntactically invalid code.
-
-But we also need to skip the interpreter if there are resolution errors, so we
-add _another_ check.
-
-^code resolution-error (1 before, 2 after)
 
 You could imagine doing lots of other analysis in here. For example, if we added
 `break` statements to Lox, we would probably want to ensure they are only used

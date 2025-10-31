@@ -476,7 +476,7 @@ binary expressions have two, and literals have none.
 
 We _could_ mush that all together into a single Expression class with an
 arbitrary list of children. Some compilers do. But I like getting the most out
-of Java's type system. So we'll define a base class for expressions. Then, for
+of Python's type system. So we'll define a base class for expressions. Then, for
 each kind of expression -- each production under `expression` -- we create a
 subclass that has fields for the nonterminals specific to that rule. This way,
 we get a compile error if we, say, try to access the second operand of a unary
@@ -494,10 +494,10 @@ keep things simpler.
 Something like this:
 
 ```python
-# lox/expr.py
+# lox/ast.py
 from dataclasses import dataclass
 from typing import Any
-from .tokens import Token
+from lox.tokens import Token
 
 class Expr:
     """Abstract Base Class for expressions"""
@@ -547,7 +547,7 @@ In fact, these types exist to enable the parser and interpreter to
 _communicate_. That lends itself to types that are simply data with no
 associated behavior. This style is very natural in functional languages like
 Lisp and ML where _all_ data is separate from behavior, but it feels odd in
-Java.
+Python.
 
 Functional programming aficionados right now are jumping up to exclaim "See!
 Object-oriented languages are a bad fit for an interpreter!" I won't go that
@@ -627,10 +627,10 @@ type and operation, we need a specific implementation. Picture a table:
 Rows are types, and columns are operations. Each cell represents the unique
 piece of code to implement that operation on that type.
 
-An object-oriented language like Java assumes that all of the code in one row
-naturally hangs together. It figures all the things you do with a type are
-likely related to each other, and the language makes it easy to define them
-together as methods inside the same class.
+An object-oriented approach assumes that all of the code in one row naturally
+hangs together. It figures all the things you do with a type are likely related
+to each other, and the language makes it easy to define them together as methods
+inside the same class.
 
 <img src="image/representing-code/rows.png" alt="The table split into rows for each class." />
 
@@ -760,7 +760,7 @@ class Cruller(Pastry):
 We want to be able to define new pastry operations -- cooking them, eating them,
 decorating them, etc. -- without having to add a new method to each class every
 time. Here's how we do it. First, we define the fallback for the desired
-operation. If there is no universal fallback, we simply raise a TypeError.
+operation. If there is no universal fallback, we simply raise a `TypeError`.
 
 ```python
 from functools import singledispatch
@@ -836,7 +836,7 @@ implement this, we define a new single dispatch method.
 ```python
 # lox/printer.py
 from functools import singledispatch
-from .expr import *
+from lox.ast import *
 
 @singledispatch
 def pretty(expr: Expr) -> str:
@@ -902,7 +902,7 @@ prints it.
 
 ```python
 # lox/printer.py at the end of file
-from .tokens import Token, TokenType as TT
+from lox.tokens import Token, TokenType as TT
 
 def main():
     minus = Token("MINUS", "-", 1)

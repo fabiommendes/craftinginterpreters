@@ -5,10 +5,9 @@ thoses exact names and with behaviour and signatures as defined in the book.
 
 from pathlib import Path
 
-from lox.expr import Binary, Expr, Grouping, Literal, Unary
+from lox.ast import *
 from lox.printer import pretty
 from lox.tokens import Token
-from lox.tokens import TokenType as TT
 
 TEST_BASE = Path(__file__).parent.parent / "examples" / "scanning"
 

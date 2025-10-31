@@ -37,7 +37,7 @@ code we need to sketch out the basic shape of our interpreter, pylox. Everything
 starts with a module in Python.
 
 ```python
-# lox/lox.py
+# lox/__main__.py
 import sys
 from pathlib import Path
 
@@ -54,6 +54,10 @@ def main():
 if __name__ == "__main__":
     main()
 ```
+
+We call this module `__main__` so that Python can run it as a script. If pylox
+is properly installed as a package, then the user can run it from the command
+line either with the command `pylox` or with `python -m lox`.
 
 <aside name="64">
 
@@ -83,7 +87,7 @@ version = "0.1.0"
 requires-python = ">=3.12"
 
 [project.scripts]
-pylox = "lox.lox:main"
+pylox = "lox.__main__:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -99,7 +103,7 @@ interpreter supports two ways of running code. If you start pylox from the
 command line and give it a path to a file, it reads the file and executes it.
 
 ```python
-# lox/lox.py after main()
+# lox/__main__.py at top-level
 def run_file(path: Path):
     src = path.read_text(encoding=sys.getdefaultencoding())
     lox = Lox()
@@ -126,7 +130,7 @@ Working outwards from the most nested call, you **R**ead a line of input,
 </aside>
 
 ```python
-# lox/lox.py after run_file()
+# lox/__main__.py at top-level
 def run_prompt():
     lox = Lox()
 
@@ -148,7 +152,7 @@ exit the loop.
 Both the prompt and the file runner are thin wrappers around this core method:
 
 ```python
-# lox/lox.py before the main() function
+# lox/__main__.py at top-level
 class Lox:
     def run(self, source: str):
         tokens = tokenize(source)
@@ -188,8 +192,8 @@ fun stuff, but there's only so much ink in the pen.
 </aside>
 
 ```python
-# lox/lox.py after the Lox class
-class LoxError(Exception):
+# lox/errors.py after the Lox class
+class LoxSyntaxError(Exception):
     def __init__(self, line: int, message: str,
                  where: str | None = None):
         super().__init__(line, message, where)
@@ -201,14 +205,14 @@ class LoxError(Exception):
         if self.where is None:
             where = ""
         else:
-            where = " " + where
+            where = " " + self.where
         return f"[line {self.line}] Error{where}: {self.message}"
 ```
 
-This `LoxError` exception and its `__str__()` helper tells the user some syntax
-error occurred on a given line. That is really the bare minimum to be able to
-claim you even _have_ error reporting. Imagine if you accidentally left a
-dangling comma in some function call and the interpreter printed out:
+This `LoxSyntaxError` exception and its `__str__()` renders it in a friendly
+manner. That is really the bare minimum to be able to claim you even _have_
+error reporting. Imagine if you accidentally left a dangling comma in some
+function call and the interpreter printed out:
 
 ```text
 Error: Unexpected "," somewhere in your code. Good luck finding it!
@@ -231,8 +235,8 @@ not super fun to read in a book and not very technically interesting. So we'll
 stick with just a line number. In your own interpreters, please do as I say and
 not as I do.
 
-Notice our `LoxError` class receives the parameters necessary to construct the
-error message instead of a fully formed string with said message and its
+Notice our `LoxSyntaxError` class receives the parameters necessary to construct
+the error message instead of a fully formed string with said message and its
 `__str__` method constructs the string message on the fly. This is to remind you
 that it's good engineering practice to separate the code that _generates_ the
 errors from the code that _reports_ them.
@@ -251,9 +255,9 @@ error reporting into a different class.
 
 <aside name="reporter">
 
-I had exactly that when I first implemented the original pylox in Java. I ended
+I had exactly that when I first implemented the original jlox in Java. I ended
 up tearing it out because it felt over-engineered for the minimal interpreter in
-this book.
+this book. The Python version follows suit.
 
 </aside>
 
@@ -307,36 +311,53 @@ that the scanner's job?
 
 ```python
 # lox/tokens.py
-from enum import IntEnum, auto
+from typing import Literal, Any
 
-
-class TokenType(IntEnum):
+type TokenType = Literal[
     # Single-character tokens.
-    LEFT_PAREN = auto(); RIGHT_PAREN = auto()
-    LEFT_BRACE = auto(); RIGHT_BRACE = auto()
-    COMMA = auto(); DOT = auto(); SEMICOLON = auto()
-    MINUS = auto(); PLUS = auto(); SLASH = auto(); STAR = auto()
-
+    "LEFT_PAREN", "RIGHT_PAREN", "LEFT_BRACE", "RIGHT_BRACE",
+    "COMMA", "DOT", "SEMICOLON",
+    "MINUS", "PLUS", "SLASH", "STAR",
 
     # One or two character tokens.
-    BANG = auto(); BANG_EQUAL = auto()
-    EQUAL= auto(); EQUAL_EQUAL = auto()
-    GREATER= auto(); GREATER_EQUAL = auto()
-    LESS= auto(); LESS_EQUAL = auto()
+    "BANG", "BANG_EQUAL", "EQUAL", "EQUAL_EQUAL",
+    "GREATER", "GREATER_EQUAL", "LESS", "LESS_EQUAL",
 
     # Literals.
-    IDENTIFIER = auto(); STRING = auto(); NUMBER = auto()
+    "IDENTIFIER", "STRING", "NUMBER",
 
     # Keywords.
-    AND = auto(); CLASS = auto(); ELSE = auto(); FALSE = auto()
-    FUN = auto(); FOR = auto(); IF = auto(); NIL = auto()
-    OR = auto(); PRINT = auto(); RETURN = auto(); SUPER = auto()
-    THIS = auto(); TRUE = auto(); VAR = auto(); WHILE = auto()
+    "AND", "CLASS", "ELSE", "FALSE", "FUN", "FOR", "IF",
+    "NIL", "OR", "PRINT", "RETURN", "SUPER", "THIS", "TRUE",
+    "VAR", "WHILE",
 
     # Special tokens.
-    EOF = auto()
-    INVALID = auto()
-    UNTERMINATED_STRING = auto()
+    "EOF", "INVALID",
+    "UNTERMINATED_STRING",
+]
+```
+
+We use strings token types here for simplicity, but we declare the allowed
+strings values explicitly using `Literal` so the Language Server can catch
+(some) typos in our code.
+
+<aside name="enum">
+
+I would probably use an `Enum` for token types in a production interpreter. That
+would give us better type safety and more robust error messages. However,
+Python's `Enum`s are somewhat clunky to work with compared to other languages,
+so I opted for this lower tech approach for the book.
+
+</aside>
+
+We will also gather many utility types in the `lox/types.py` module. While we're
+at it, let's define a `Literal` type to represent any Lox value that may be
+present literally in the source code.
+
+```python
+# lox/tokens.py
+
+type LiteralValue = None | str | float | bool
 ```
 
 ### Literal value
@@ -374,22 +395,29 @@ We take all of this data and wrap it in a class.
 ```python
 # lox/tokens.py after the TokenType class
 from dataclasses import dataclass
-from typing import Any
-
 
 @dataclass
 class Token:
     type: TokenType
     lexeme: str
     line: int
-    literal: Any = None
+    literal: LiteralValue = None
 
     def __str__(self):
-        return f"{self.type.name} {self.lexeme!r} {self.literal}"
+        return f"{self.type} {self.lexeme!r} {self.literal}"
 ```
 
 Now we have an object with enough structure to be useful for all of the later
 phases of the interpreter.
+
+<aside name="dataclass">
+
+We're using Python's [`dataclass`][dataclass] decorator to automatically
+generate the `__init__`, `__repr__`, and other useful methods for our `Token`
+class. This saves us from boilerplate code and makes our class easier to work
+with. Most of our classes will be defined this way throughout the book.
+
+</aside>
 
 ## Regular Languages and Expressions
 
@@ -476,7 +504,7 @@ Without further ado, let's make ourselves a scanner.
 # lox/scanner.py
 from dataclasses import dataclass, field
 from typing import Any
-from .tokens import Token, TokenType as TT
+from lox.tokens import Token
 
 @dataclass
 class Scanner:
@@ -498,7 +526,7 @@ fill with tokens we're going to generate. The aforementioned loop that does that
 looks like this:
 
 ```python
-# lox/scanner.py method in class Scanner
+# lox/scanner.py Scanner method
 def scan_tokens(self) -> list[Token]:
     while not self.is_at_end():
         # We are at the beginning of the next lexeme.
@@ -516,7 +544,7 @@ This loop depends on a couple of fields to keep track of where the scanner is in
 the source code.
 
 ```python
-# lox/scanner.py attributes of Scanner class
+# lox/scanner.py Scanner attributes
     start: int = 0
     current: int = 0
     line: int = 1
@@ -532,7 +560,7 @@ Then we have one little helper function that tells us if we've consumed all the
 characters.
 
 ```python
-# lox/scanner.py method of the Scanner class
+# lox/scanner.py Scanner method
 def is_at_end(self) -> bool:
     return self.current >= len(self.source)
 ```
@@ -554,7 +582,7 @@ Wondering why `/` isn't in here? Don't worry, we'll get to it.
 </aside>
 
 ```python
-# lox/scanner.py method of Scanner class
+# lox/scanner.py Scanner method
 def scan_token(self):
     match self.advance():
         case "(":
@@ -582,7 +610,7 @@ def scan_token(self):
 Again, we need a couple of helper methods.
 
 ```python
-# lox/scanner.py add methods to the Scanner class
+# lox/scanner.py Scanner methods
 def advance(self) -> str:
     char = self.source[self.current]
     self.current += 1
@@ -608,9 +636,10 @@ that doesn't mean the interpreter can pretend they aren't there. Instead, we
 collect them as an error token.
 
 ```python
-# lox/scanner.py at scan_token()'s match/case statement
-case _:
-    self.add_token("INVALID")
+# lox/scanner.py at Scanner.scan_token()'s match/case
+    ...
+    case _:
+        self.add_token("INVALID")
 ```
 
 Note that the erroneous character is still _consumed_ by the earlier call to
@@ -644,29 +673,31 @@ be followed by `=` to create the other equality and comparison operators.
 For all of these, we need to look at the second character.
 
 ```python
-# lox/scanner.py at scan_token()'s match/case statement
-case "!" if self.match("="):
-    self.add_token("BANG_EQUAL")
-case "!":
-    self.add_token("BANG")
-case "=" if self.match("="):
-    self.add_token("EQUAL_EQUAL")
-case "=":
-    self.add_token("EQUAL")
-case "<" if self.match("="):
-    self.add_token("LESS_EQUAL")
-case "<":
-    self.add_token("LESS")
-case ">" if self.match("="):
-    self.add_token("GREATER_EQUAL")
-case ">":
-    self.add_token("GREATER")
+# lox/scanner.py at Scanner.scan_token()'s match/case
+    ...
+    case "!" if self.match("="):
+        self.add_token("BANG_EQUAL")
+    case "!":
+        self.add_token("BANG")
+    case "=" if self.match("="):
+        self.add_token("EQUAL_EQUAL")
+    case "=":
+        self.add_token("EQUAL")
+    case "<" if self.match("="):
+        self.add_token("LESS_EQUAL")
+    case "<":
+        self.add_token("LESS")
+    case ">" if self.match("="):
+        self.add_token("GREATER_EQUAL")
+    case ">":
+        self.add_token("GREATER")
+    ...
 ```
 
 Those cases use this new method:
 
 ```python
-# lox/scanner.py method of the Scanner class
+# lox/scanner.py Scanner method
 def match(self, expected: str) -> bool:
     if self.is_at_end() or self.source[self.current] != expected:
         return False
@@ -688,13 +719,15 @@ We're still missing one operator: `/` for division. That character needs a
 little special handling because comments begin with a slash too.
 
 ```python
-# lox/scanner.py at scan_token()'s match/case statement
-case "/" if self.match("/"):
-    # A comment goes until the end of the line.
-    while self.peek() != '\n' and not self.is_at_end():
-        self.advance()
-case "/":
-    self.add_token("SLASH")
+# lox/scanner.py at Scanner.scan_token()'s match/case
+    ...
+    case "/" if self.match("/"):
+        # A comment goes until the end of the line.
+        while self.peek() != '\n' and not self.is_at_end():
+            self.advance()
+    case "/":
+        self.add_token("SLASH")
+    ...
 ```
 
 This is similar to the other two-character operators, except that when we find a
@@ -708,7 +741,7 @@ characters until it sees the end.
 We've got another helper:
 
 ```python
-# lox/scanner.py method of the Scanner class
+# lox/scanner.py Scanner method
 def peek(self) -> str:
     if self.is_at_end():
         return ""
@@ -738,12 +771,13 @@ While we're at it, now's a good time to skip over those other meaningless
 characters: newlines and whitespace.
 
 ```python
-# lox/scanner.py at scan_token()'s match/case statement
-...
-case " " | "\r" | "\t":
-    pass # Ignore whitespace.
-case "\n":
-    self.line += 1
+# lox/scanner.py at Scanner.scan_token()'s match/case
+    ...
+    case " " | "\r" | "\t":
+        pass # Ignore whitespace.
+    case "\n":
+        self.line += 1
+    ...
 ```
 
 When encountering whitespace, we simply go back to the beginning of the scan
@@ -766,15 +800,17 @@ Now that we're comfortable with longer lexemes, we're ready to tackle literals.
 We'll do strings first, since they always begin with a specific character, `"`.
 
 ```python
-# lox/scanner.py at scan_token()'s match/case statement
-case '"':
-    self.string()
+# lox/scanner.py at Scanner.scan_token()'s match/case
+    ...
+    case '"':
+        self.string()
+    ...
 ```
 
 That calls:
 
 ```python
-# lox/scanner.py method of the Scanner class
+# lox/scanner.py Scanner method
 def string(self):
     while self.peek() != '"' and not self.is_at_end():
         if self.peek() == '\n':
@@ -856,16 +892,18 @@ latter gets weird if we ever want to allow methods on numbers like `123.sqrt()`.
 To recognize the beginning of a number lexeme, we look for any digit.
 
 ```python
-# lox/scanner.py at scan_token()'s match/case statement
-case "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9":
-    self.number()
+# lox/scanner.py at Scanner.scan_token()'s match/case
+    ...
+    case "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9":
+        self.number()
+    ...
 ```
 
 Once we know we are in a number, we branch to a separate method to consume the
 rest of the literal, like we do with strings.
 
 ```python
-# lox/scanner.py method of the Scanner class
+# lox/scanner.py Scanner method
 def number(self):
     while is_digit(self.peek()):
         self.advance()
@@ -885,7 +923,7 @@ def number(self):
 This relies on this little utility:
 
 ```python
-#lox/scanner.py after the Scanner class
+#lox/scanner.py at top-level
 def is_digit(char: str) -> bool:
     return char.isdigit() and char.isascii()
 ```
@@ -910,7 +948,7 @@ don't want to consume the `.` until we're sure there is a digit _after_ it. So
 we add:
 
 ```python
-# lox/scanner.py method of the Scanner class
+# lox/scanner.py Scanner method
 def peek_next(self):
     if self.current + 1 >= len(self.source):
         return "\0"
@@ -944,8 +982,8 @@ multiple-character operators like `<=`.
 
 ```python
 case "o":
-  if self.match("r"):
-    self.add_token("OR")
+    if self.match("r"):
+        self.add_token("OR")
 ```
 
 Consider what would happen if a user named a variable `orchid`. The scanner
@@ -996,15 +1034,17 @@ So we begin by assuming any lexeme starting with a letter or underscore is an
 identifier.
 
 ```python
-# lox/scanner.py at scan_token()'s match/case statement
-case c if is_alpha(c):
-    self.identifier()
+# lox/scanner.py at Scanner.scan_token()'s match/case
+    ...
+    case c if is_alpha(c):
+        self.identifier()
+    ...
 ```
 
 The rest of the code lives over here:
 
 ```python
-# lox/scanner.py method of the Scanner class
+# lox/scanner.py Scanner method
 def identifier(self):
     while is_alpha_numeric(self.peek()):
         self.advance()
@@ -1014,7 +1054,7 @@ def identifier(self):
 We define that in terms of these helpers:
 
 ```python
-# lox/scanner.py after the Scanner class
+# lox/scanner.py at top-level
 def is_alpha(char: str) -> bool:
     return char == "_" or char.isalpha() and char.isascii()
 
@@ -1029,22 +1069,9 @@ keyword. We define the set of reserved words in a map.
 ```python
 # lox/scanner.py after the imports
 KEYWORDS = {
-    "and": "AND",
-    "class": "CLASS",
-    "else": "ELSE",
-    "false": "FALSE",
-    "for": "FOR",
-    "fun": "FUN",
-    "if": "IF",
-    "nil": "NIL",
-    "or": "OR",
-    "print": "PRINT",
-    "return": "RETURN",
-    "super": "SUPER",
-    "this": "THIS",
-    "true": "TRUE",
-    "var": "VAR",
-    "while": "WHILE",
+    "and", "class", "else", "false", "for", "fun", "if",
+    "nil", "or", "print", "return", "super", "this",
+    "true", "var", "while",
 }
 ```
 
@@ -1052,10 +1079,14 @@ Then, after we scan an identifier, we check to see if it matches anything in the
 map.
 
 ```python
-# lox/scanner.py replace the self.add_token(...) line
+# lox/scanner.py at Scanner.identifier()
+# before the self.add_token(...) line
+    ...
     text = self.source[self.start: self.current]
-    kind = KEYWORDS.get(text, "IDENTIFIER")
-    self.add_token(kind)
+    kind = "IDENTIFIER"
+    if text in KEYWORDS:
+        kind = text.upper()
+    ...
 ```
 
 If so, we use that keyword's token type. Otherwise, it's a regular user-defined

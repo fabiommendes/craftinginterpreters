@@ -173,7 +173,7 @@ keyword and a statement to execute if the condition is falsey. The
 pieces.
 
 ```python
-# lox/stmt.py
+# lox/ast.py
 @dataclass
 class If(Stmt):
     condition: Expr
@@ -202,7 +202,7 @@ When it finds one, it calls this new method to parse the rest:
 
 ```python
 # lox/parser.py method of the Parser class
-def if_statement(self) -> Stmt:
+def if_statement(self) -> If:
     self.consume("IF", "Expect 'if'.")
     self.consume("LEFT_PAREN", "Expect '(' after 'if'.")
     condition = self.expression()
@@ -286,9 +286,9 @@ the else clause for itself before returning to the outer `if` statements.
 Syntax in hand, we are ready to interpret.
 
 ```python
-# lox/exec.py implementation of exec()
+# lox/interpreter.py after exec()
 @exec.register
-def _(stmt: If, env: Environment) -> None:
+def _(stmt: If, env: Env) -> None:
     condition = eval(stmt.condition, env)
     if is_truthy(condition):
         exec(stmt.then_branch, env)
@@ -363,7 +363,7 @@ name="logical-ast">new class</span> for these operators so that they get their
 own visit method.
 
 ```python
-# lox/expr.py
+# lox/ast.py
 @dataclass
 class Logical(Expr):
     left: Expr
@@ -412,9 +412,9 @@ That calls `equality()` for its operands, and with that, the expression parser
 is all tied back together again. We're ready to interpret.
 
 ```python
-# lox/eval.py method of the eval() function
+# lox/interpreter.py method of the eval() function
 @eval.register
-def _(expr: Logical, env: Environment) -> Any:
+def _(expr: Logical, env: Env) -> Value:
     left = eval(expr.left, env)
     match (expr.operator.type, is_truthy(left)):
         case ("OR", True) | ("AND", False):
@@ -472,7 +472,7 @@ expression, then a statement for the body. That new grammar rule gets a <span
 name="while-ast">syntax tree node</span>.
 
 ```python
-# lox/stmt.py
+# lox/ast.py
 @dataclass
 class While(Stmt):
     condition: Expr
@@ -497,7 +497,7 @@ That delegates the real work to this method:
 
 ```python
 # lox/parser.py method of the Parser class
-def while_statement(self) -> Stmt:
+def while_statement(self) -> While:
     self.consume("WHILE", "Expect 'while'.")
     self.consume("LEFT_PAREN", "Expect '(' after 'while'.")
     condition = self.expression()
@@ -513,7 +513,7 @@ syntax:
 ```python
 # lox/exec.py implementation of exec()
 @exec.register
-def _(stmt: While, env: Environment) -> None:
+def _(stmt: While, env: Env) -> None:
     while is_truthy(eval(stmt.condition, env)):
         exec(stmt.body, env)
 ```
@@ -550,10 +550,11 @@ forStmt        → "for" "(" ( varDecl | exprStmt | ";" )
 <aside name="for">
 
 Most modern languages have a higher-level looping statement for iterating over
-arbitrary user-defined sequences. C# has `foreach`, Java has "enhanced for",
-even C++ has range-based `for` statements now. Those offer cleaner syntax than
-C's `for` statement by implicitly calling into an iteration protocol that the
-object being looped over supports.
+arbitrary user-defined sequences. Python has a iterator based for, similar to
+C#'s `foreach`, Java has "enhanced for", even C++ has range-based `for`
+statements now. Those offer cleaner syntax than C's `for` statement by
+implicitly calling into an iteration protocol that the object being looped over
+supports.
 
 I love those. For Lox, though, we're limited by building up the interpreter a
 chapter at a time. We don't have objects and methods yet, so we have no way of
@@ -668,7 +669,7 @@ The first clause following that is the initializer.
     ...
     if self.match("SEMICOLON"):
         initializer = None
-    elif self.match("VAR"):
+    elif self.check("VAR"):
         initializer = self.var_declaration()
     else:
         initializer = self.expression_statement()

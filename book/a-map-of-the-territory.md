@@ -343,7 +343,7 @@ at runtime. Running bytecode in a VM is slower than translating it to native
 code ahead of time because every instruction must be simulated at runtime each
 time it executes. In return, you get simplicity and portability. Implement your
 VM in, say, C, and you can run your language on any platform that has a C
-compiler. This is how the second interpreter we build in this book works. #TODO
+compiler. This is how the second interpreter we build in this book works.
 
 <aside name="vm">
 

@@ -73,7 +73,7 @@ instances are a subset. It all lines up.
 Our first step towards supporting inheritance in Lox is a way to specify a
 superclass when declaring a class. There's a lot of variety in syntax for this.
 C++ and C# place a `:` after the subclass's name, followed by the superclass
-name. Java uses `extends` instead of the colon. Python puts the superclass(es)
+name. Python uses `extends` instead of the colon. Python puts the superclass(es)
 in parentheses after the class name. Simula puts the superclass's name _before_
 the `class` keyword.
 
@@ -101,14 +101,14 @@ classDecl      → "class" IDENTIFIER ( "<" IDENTIFIER )?
 
 After the class name, you can have a `<` followed by the superclass's name. The
 superclass clause is optional because you don't _have_ to have a superclass.
-Unlike some other object-oriented languages like Java, Lox has no root "Object"
-class that everything inherits from, so when you omit the superclass clause, the
-class has _no_ superclass, not even an implicit one.
+Unlike some other object-oriented languages like Python, Lox has no root
+"object" class that everything inherits from, so when you omit the superclass
+clause, the class has _no_ superclass, not even an implicit one.
 
 We want to capture this new syntax in the class declaration's AST node.
 
 ```python
-# lox/stmt.py
+# lox/ast.py replace Class
 @dataclass
 class Class(Stmt):
     name: Token
@@ -125,21 +125,21 @@ resolver can hang the resolution information off of.
 The new parser code follows the grammar directly.
 
 ```python
-# lox/parser.py in Parser.class_declaration()
-# after consuming the class name token
+# lox/parser.py Parser.class_declaration()
+# After consuming the IDENTIFIER token
     ...
     superclass = None
     if self.match("LESS"):
-        superclass_name = self.consume("IDENTIFIER", "Expect superclass name after '<'.")
-        superclass = Expr.Variable(superclass_name)
+        name = self.consume("IDENTIFIER", "Expect superclass name.")
+        superclass = Variable(name)
     ...
 ```
 
 Once we've (possibly) parsed a superclass declaration, we store it in the AST.
 
 ```python
-# lox/parser.py at Parser.class_declaration()
-# replace the return statement
+# lox/parser.py Parser.class_declaration()
+# Replace the return statement
     ...
     return Class(name, superclass, methods)
 ```
@@ -149,11 +149,14 @@ If we didn't parse a superclass clause, the superclass expression will be
 those is the resolver.
 
 ```python
-# lox/resolver.py in Resolver.resolve(Class)
-# after defining the class name
+# lox/resolver.py resolve(Class)
+# Before looping over methods
     ...
     if stmt.superclass is not None:
-        resolve(stmt.superclass, resolver)
+        env.class_context = "SUBCLASS"
+        resolve_node(stmt.superclass, env)
+        env = env.push()
+        env["super"] = "DEFINED"
     ...
 ```
 
@@ -177,22 +180,25 @@ being cycles in the inheritance chain. The safest thing is to detect this case
 statically and report it as an error.
 
 ```python
-# lox/resolver.py in resolve(Class)
+# lox/resolver.py resolve(Class)
+# Inside the `if stmt.superclass is not None:` block
     ...
-    if stmt.superclass is not None and stmt.name.lexeme == stmt.superclass.name.lexeme:
-        error(stmt.superclass.name, "A class cannot inherit from itself.")
+    if stmt.name.lexeme == stmt.superclass.name.lexeme:
+        msg = "A class can't inherit from itself."
+        env.error(stmt.superclass.name, msg)
     ...
 ```
 
 Assuming the code resolves without error, the AST travels to the interpreter.
 
 ```python
-# lox/exec.py at the start of exec(Class)
+# lox/exec.py start of exec(Class)
     superclass = None
     if stmt.superclass is not None:
         superclass = eval(stmt.superclass, env)
         if not isinstance(superclass, LoxClass):
-            raise RuntimeError("Superclass must be a class.")
+            msg = "Superclass must be a class."
+            raise LoxRuntimeError(msg, stmt.superclass.name)
     ...
 ```
 
@@ -213,22 +219,21 @@ representation, a LoxClass object. We need to plumb the superclass through to
 that too. We pass the superclass to the constructor.
 
 ```python
-# lox/exec.py in exec(Class)
+# lox/exec.py exec(Class)
+# Replace class creation
     ...
-    if superclass is not None:
-        klass = LoxClass(name, superclass, methods)
+    klass = LoxClass(name, superclass)
     ...
 ```
 
 The constructor stores it in a field which we declare here:
 
 ```python
-# lox/class.py replace LoxClass fields
-@dataclass
-class LoxClass(LoxCallable):
-    name: str
+# lox/runtime.py LoxClass
+# Add field after name
+    ...
     superclass: LoxClass | None = None
-    methods: dict[str, LoxFunction] = field(default_factory=dict)
+    ...
 ```
 
 With that, we can define classes that are subclasses of other classes. Now, what
@@ -263,12 +268,26 @@ reuse code across classes. Implementing this in our interpreter is astonishingly
 easy.
 
 ```python
-# lox/exec.py in findMethod()
-    ...
+# lox/exec.py replace LoxClass.find_method()
+def find_method(self, name: str) -> LoxFunction | None:
+    if method := self.methods.get(name):
+        return method
     if self.superclass is not None:
         return self.superclass.find_method(name)
-    ...
 ```
+
+<aside name="walrus">
+
+Remember how assignments are expressions in Lox, but statements in Python? Here,
+we use the "walrus operator" (`:=`), which behaves like a Lox assignement -- it
+stores the value on the right into the variable on the left and then evaluates
+to that value. As innocent as it looks, this Python 3.8+ feature caused quite a
+stir when it was introduced. The controversy was so heated that Python's
+creator, Guido van Rossum, stepped down his role as "Benevolent Dictator For
+Life" over it. So much for programming languages being a purely technical
+endeavor...
+
+</aside>
 
 That's literally all there is to it. When we are looking up a method on an
 instance, if we don't find it on the instance's class, we recurse up through the
@@ -304,8 +323,8 @@ execute the original superclass behavior too.
 However, since the subclass has overridden the method, there's no way to refer
 to the original one. If the subclass method tries to call it by name, it will
 just recursively hit its own override. We need a way to say "Call this method,
-but look for it directly on my superclass and ignore my override". Java uses
-`super` for this, and we'll use that same syntax in Lox. Here is an example:
+but look for it directly on my superclass and ignore my override". Python uses
+`super` for this, and we'll use a similar syntax in Lox. Here is an example:
 
 ```lox
 class Doughnut {
@@ -370,11 +389,12 @@ and the name of the method being looked up. The corresponding <span
 name="super-ast">syntax tree node</span> is thus:
 
 ```python
-# lox/stmt.py
+# lox/ast.py
 @dataclass
 class Super(Expr):
     keyword: Token
     method: Token
+    depth: int = -1
 ```
 
 Following the grammar, the new parsing code goes inside our existing `primary()`
@@ -383,7 +403,7 @@ method.
 ```python
 # lox/parser.py at Parser.primary()
     ...
-    case "SUPER":
+    if self.check("SUPER"):
         return self.super_expression()
     ...
 ```
@@ -432,7 +452,7 @@ class C < B {}
 C().test();
 ```
 
-Translate this program to Java, C#, or C++ and it will print "A method", which
+Translate this program to Python, C#, or C++ and it will print "A method", which
 is what we want Lox to do too. When this program runs, inside the body of
 `test()`, `this` is an instance of C. The superclass of C is B, but that is
 _not_ where the lookup should start. If it did, we would hit B's `method()`.
@@ -510,27 +530,18 @@ can get to creating the environment at runtime, we need to handle the
 corresponding scope chain in the resolver.
 
 ```python
-# lox/resolver.py in resolve(Class)
-# before defining the methods
+# lox/resolver.py resolve(Class)
+# Before looping over methods
     ...
     if stmt.superclass is not None:
-        self.begin_scope()
-        self.scopes[-1]["super"] = True
+        resolve_node(stmt.superclass, env)
+        env = env.push()
+        env["super"] = "DEFINED"
     ...
 ```
 
 If the class declaration has a superclass, then we create a new scope
-surrounding all of its methods. In that scope, we define the name "super". Once
-we're done resolving the class's methods, we discard that scope.
-
-```python
-# lox/resolver.py in resolve(Class)
-# after defining the methods
-    ...
-    if stmt.superclass is not None:
-        self.end_scope()
-    ...
-```
+surrounding all of its methods. In that scope, we define the name "super".
 
 It's a minor optimization, but we only create the superclass environment if the
 class actually _has_ a superclass. There's no point creating it when there isn't
@@ -540,10 +551,10 @@ With "super" defined in a scope chain, we are able to resolve the `super`
 expression itself.
 
 ```python
-# lox/resolver.py
-@resolve.register
-def _(expr: Super, resolver: Resolver):
-    resolver.resolve_local(expr, expr.keyword)
+# lox/resolver.py after resolve_node()
+@resolve_node.register
+def _(expr: Super, env: Env) -> None:
+    resolve_local(expr, expr.keyword, env)
 ```
 
 We resolve the `super` token exactly as if it were a variable. The resolution
@@ -554,12 +565,13 @@ This code is mirrored in the interpreter. When we evaluate a subclass
 definition, we create a new environment.
 
 ```python
-# lox/exec.py in exec(Class)
-# before evaluating methods
+# lox/exec.py exec(Class)
+# Before looping over methods
     ...
+    outer_env = env
     if superclass is not None:
-        env = Environment(env)
-        env.define("super", superclass)
+        env = env.push()
+        env["super"] = superclass
     ...
 ```
 
@@ -567,26 +579,26 @@ Inside that environment, we store a reference to the superclass -- the actual
 LoxClass object for the superclass which we have now that we are in the runtime.
 Then we create the LoxFunctions for each method. Those will capture the current
 environment -- the one where we just bound "super" -- as their closure, holding
-on to the superclass like we need. Once that's done, we pop the environment.
+on to the superclass like we need.
+
+We also need to make sure we define the class in the correct environment, which
+is the `outer_env` we saved before pushing the superclass environment.
 
 ```python
-# lox/exec.py in exec(Class)
-# after creating the LoxClass instance
+# lox/exec.py exec(Class)
+# Replace the final env assignment
     ...
-    if superclass is not None:
-        env = env.enclosing
-    ...
+    outer_env[stmt.name.lexeme] = klass
 ```
 
 We're ready to interpret `super` expressions themselves. There are a few moving
 parts, so we'll build this method up in pieces.
 
 ```python
-# lox/eval.py in eval(Super)
+# lox/interpreter.py in eval(Super)
 @eval.register
-def _(expr: Super, env: Environment) -> Any:
-    distance = env.distance(expr)
-    superclass = env.get_at(distance, "super")
+def _(expr: Super, env: Env) -> Value:
+    superclass = env.get_at(expr.depth, "super")
 ```
 
 First, the work we've been leading up to. We look up the surrounding class's
@@ -605,9 +617,10 @@ control the layout of the environment chains. The environment where "this" is
 bound is always right inside the environment where we store "super".
 
 ```python
-# lox/eval.py at eval(Super)
+# lox/interpreter.py eval(Super)
+# Add lines
     ...
-    instance = env.get_at(distance - 1, "this")
+    instance = env.get_at(expr.depth - 1, "this")
 ```
 
 Offsetting the distance by one looks up "this" in that inner environment. I
@@ -624,25 +637,27 @@ can't hide the hacks by leaving them as an "exercise for the reader".
 Now we're ready to look up and bind the method, starting at the superclass.
 
 ```python
-# lox/eval.py at eval(Super)
+# lox/interpreter.py eval(Super)
+# Add lines
     ...
     method = superclass.find_method(expr.method.lexeme)
     return method.bind(instance)
 ```
 
 This is almost exactly like the code for looking up a method of a get
-expression, except that we call `findMethod()` on the superclass instead of on
+expression, except that we call `find_method()` on the superclass instead of on
 the class of the current object.
 
 That's basically it. Except, of course, that we might _fail_ to find the method.
 So we check for that too.
 
 ```python
-# lox/eval.py at eval(Super)
-# before the return statement
+# lox/interpreter.py eval(Super)
+# Before the return statement
     ...
     if method is None:
-        raise RuntimeError(f"Undefined property '{expr.method.lexeme}'.")
+        msg = f"Undefined property '{expr.method.lexeme}'."
+        raise LoxRuntimeError(msg, expr.method)
     ...
 ```
 
@@ -692,11 +707,9 @@ First, we add a new case to the enum we use to keep track of what kind of class
 is surrounding the current code being visited.
 
 ```python
-# lox/resolver.py replace ClassType enum
-class ClassType(Enum):
-    NONE = auto()
-    CLASS = auto()
-    SUBCLASS = auto()
+# lox/resolver.py
+# Replace ClassContext
+type ClassContext = Enum["CLASS", "SUBCLASS", None]
 ```
 
 We'll use that to distinguish when we're inside a class that has a superclass
@@ -704,10 +717,10 @@ versus one that doesn't. When we resolve a class declaration, we set that if the
 class is a subclass.
 
 ```python
-# lox/resolver.py at resolve(Class)
-# after checking if stmt.superclass is not None
+# lox/resolver.py resolve_node(Class)
+# Replace env = env.push() when there is a superclass
     ...
-    resolver.current_class = ClassType.SUBCLASS
+    env = env.push(class_context="SUBCLASS")
     ...
 ```
 
@@ -715,12 +728,15 @@ Then, when we resolve a `super` expression, we check to see that we are
 currently inside a scope where that's allowed.
 
 ```python
-# lox/resolver.py in resolve(Super)
-# at the start of the method
-    if resolver.current_class == ClassType.NONE:
-        error(expr.keyword, "Cannot use 'super' outside of a class.")
-    elif resolver.current_class != ClassType.SUBCLASS:
-        error(expr.keyword, "Cannot use 'super' in a class without a superclass.")
+# lox/resolver.py resolve_node(Super)
+# Before calling resolve_local()
+    ...
+    if env.class_context is None:
+        msg = "Can't use 'super' outside of a class."
+        env.error(expr.keyword, msg)
+    elif env.class_context != "SUBCLASS":
+        msg = "Can't use 'super' in a class with no superclass."
+        env.error(expr.keyword, msg)
     ...
 ```
 
@@ -729,7 +745,7 @@ If not -- oopsie! -- the user made a mistake.
 ## Conclusion
 
 We made it! That final bit of error handling is the last chunk of code needed to
-complete our Java implementation of Lox. This is a real <span
+complete our Python implementation of Lox. This is a real <span
 name="superhero">accomplishment</span> and one you should be proud of. In the
 past dozen chapters and a thousand or so lines of code, we have learned and
 implemented...
@@ -769,8 +785,8 @@ implemented...
 </aside>
 
 We did all of that from scratch, with no external dependencies or magic tools.
-Just you and I, our respective text editors, a couple of collection classes in
-the Java standard library, and the JVM runtime.
+Just you and I, our respective text editors, and a couple of classes in the
+Python standard library.
 
 This marks the end of Part II, but not the end of the book. Take a break. Maybe
 write a few fun Lox programs and run them in your interpreter. (You may want to

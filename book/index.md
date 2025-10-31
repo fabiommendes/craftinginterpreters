@@ -16,10 +16,10 @@ This text is not used. All of the content is in the index.md
 - [scanning.md] ✅
 - [representing-code.md] ✅
 - [parsing-expressions.md] ✅
-- [evaluating-expressions.md] ⚠️
-- [statements-and-state.md] ⚠️
-- [control-flow.md]
-- [functions.md]
+- [evaluating-expressions.md] ✅
+- [statements-and-state.md] ✅
+- [control-flow.md] ✅
+- [functions.md] ✅
 - [resolving-and-binding.md]
 - [classes.md]
 - [inheritance.md]

@@ -45,7 +45,7 @@ from expressions. We start with the two simplest kinds:
 1.  An **expression statement** lets you place an expression where a statement
     is expected. They exist to evaluate expressions that have side effects. You
     may not notice them, but you use them all the time in <span
-    name="expr-stmt">C</span>, Python, Java, and other languages. Any time you
+    name="expr-stmt">C</span>, Python, Python, and other languages. Any time you
     see a function or method call followed by a `;`, you're looking at an
     expression statement.
 
@@ -117,12 +117,10 @@ use the cryptic name "Stmt". Just as before, we will define them using
 dataclasses.
 
 ```python
-# lox/stmt.py
-from dataclasses import dataclass
-from .expr import Expr
+# lox/ast.py after Expr
 
 class Stmt:
-    pass
+    """Abstract Base Class for statements"""
 
 @dataclass
 class Expression(Stmt):
@@ -133,20 +131,14 @@ class Print(Stmt):
     expression: Expr
 ```
 
-<aside name="stmt-ast">
+We will also create a special Stmt node that represents whole programs:
 
-The generated code for the new nodes is in [Appendix II][appendix-ii]:
-[Expression statement][], [Print statement][].
-
-[appendix-ii]: appendix-ii.html
-[expression statement]: appendix-ii.html#expression-statement
-[print statement]: appendix-ii.html#print-statement
-
-</aside>
-
-Run the AST generator script and behold the resulting "Stmt.java" file with the
-syntax tree classes we need for expression and `print` statements. Don't forget
-to add the file to your IDE project or makefile or whatever.
+```python
+# lox/ast.py after Stmt
+@dataclass
+class Program(Stmt):
+    statements: list[Stmt]
+```
 
 ### Parsing statements
 
@@ -157,23 +149,15 @@ deal.
 
 ```python
 # lox/parser.py replace the parse() function
-from .stmt import Stmt
+from lox.stmt import Stmt
 
-def parse(tokens: list[Token]) -> list[Stmt]:
+def parse(tokens: list[Token]) -> Stmt:
     parser = Parser(tokens)
     statements = []
     while not parser.is_at_end():
         statements.append(parser.statement())
-    return statements
+    return Program(statements)
 ```
-
-<aside name="parse-error-handling">
-
-What about the code we had in here for catching `ParseError` exceptions? We'll
-put better parse error handling in place soon when we add support for additional
-statement types.
-
-</aside>
 
 This parses a series of statements, as many as it can find until it hits the end
 of the input. This is a pretty direct translation of the `program` rule into
@@ -183,7 +167,7 @@ A program is a list of statements, and we parse one of those statements using
 this method:
 
 ```python
-# lox/parser.py method of the Parser class
+# lox/parser.py Parser method
 def statement(self) -> Stmt:
     match self.peek().type:
         case "PRINT":
@@ -204,8 +188,8 @@ its first token.
 Each statement kind gets its own method. First `print`:
 
 ```python
-# lox/parser.py add the print_statement() method
-def print_statement(self) -> Stmt:
+# lox/parser.py Parser method
+def print_statement(self) -> Print:
     self.consume("PRINT", "Expect 'print' keyword.")
     value = self.expression()
     self.consume("SEMICOLON", "Expect ';' after value.")
@@ -219,20 +203,11 @@ testing and reuse, albeit with at a very small cost in performance. We parse the
 subsequent expression, consume the terminating semicolon, and emit the syntax
 tree.
 
-Remember we must import the new Stmt submodule at the top of parser.py. We will
-use star imports again, but in production code you should probably specify each
-class individually.
-
-```python
-# lox/parser.py at the top
-from .stmt import *
-```
-
 If we didn't match a `print` statement, we must have one of these:
 
 ```python
-# lox/parser.py method of the Parser class
-def expression_statement(self) -> Stmt:
+# lox/parser.py Parser method
+def expression_statement(self) -> Expression:
     expr = self.expression()
     self.consume("SEMICOLON", "Expect ';' after expression.")
     return Expression(expr)
@@ -253,37 +228,29 @@ account for this.
 Rather than patching `eval` to handle `Stmt` arguments, we will create an
 entirely different funtion called `exec`. This is consistent with Python's own
 nomeclature in which the builtin `eval` handles Python code that represents
-expressions and `exec` handles Python code that represent whole programs.
+expressions and `exec` handles Python code that represent whole programs and
+statements.
 
 ```python
-# lox/exec.py
-from functools import singledispatch
-from .eval import eval, Environment
-from .stmt import Stmt
-from .expr import Expr
-from .tokens import TokenType as TT
-
+# lox/interpreter.py
 @singledispatch
-def exec(stmt: Stmt, env: Environment) -> None:
+def exec(stmt: Stmt, env: Env) -> None:
     msg = f"exec not implemented for {type(stmt)}"
     raise TypeError(msg)
-
 ```
 
 We have two statement types, and we need an implementation method for each. The
 easiest is expression statements.
 
 ```python
-# lox/exec.py
+# lox/interpreter.py after exec()
 @exec.register
-def _(stmt: Stmt.Expression, env: Environment):
-    eval(stmt.expression)
+def _(stmt: Expression, env: Env) -> None:
+    eval(stmt.expression, env)
 ```
 
-We evaluate the inner expression using our existing `evaluate()` method and
-<span name="discard">discard</span> the value. Then we return `null`. Java
-requires that to satisfy the special capitalized Void return type. Weird, but
-what can you do?
+We evaluate the inner expression using our existing `eval()` method and
+<span name="discard">discard</span> the value.
 
 <aside name="discard">
 
@@ -295,9 +262,9 @@ that call inside a _Python_ expression statement.
 The `print` statement's visit method isn't much different.
 
 ```python
-# lox/exec.py
+# lox/interpreter.py after exec()
 @exec.register
-def _(stmt: Stmt.Print, env: Environment) -> None:
+def _(stmt: Print, env: Env) -> None:
     value = eval(stmt.expression, env)
     print(stringify(value))
 ```
@@ -306,41 +273,50 @@ Before discarding the expression's value, we convert it to a string using the
 `stringify()` function we introduced in the last chapter and then dump it to
 stdout.
 
-Our interpreter is able to handle statements now, but we have some work to do to
-feed them to it. First, modify the old `interpret()` method in the Interpreter
-class to accept a list of statements -- in other words, a program.
+We must provide the implementation of `exec(Program)` to allow our interpreter
+to handle whole programs.
 
 ```python
-#TODO
-#
+# lox/interpreter.py after exec()
+@exec.register
+def _(stmt: Program, env: Env) -> None:
+    for child in stmt.statements:
+        exec(child, env)
 ```
 
-That's the statement analogue to the `evaluate()` method we have for
-expressions.
-
-The main Lox class is still trying to parse a single expression and pass it to
-the interpreter. We fix the parsing line like so:
+We also need to adjust the Lox.interpret() method to call `exec()` instead of
+`eval()`.
 
 ```python
-#TODO
-^code parse-statements (1 before, 2 after)
+# lox/__main__.py Lox method
+# Replace the implementation
+def interpret(self, statement: Stmt):
+    try:
+        exec(statement, self.environment)
+    except LoxRuntimeError as error:
+        self.report_error(error, code=70)
 ```
 
-And then replace the call to the interpreter with this:
+This require a slight change to the imports:
 
 ```python
-self.interpret(statements)
+# lox/__main__.py replace lox.interpreter import
+from lox.interpreter import eval, exec, stringify
 ```
 
 Basically just plumbing the new syntax through. OK, fire up the interpreter and
 give it a try. At this point, it's worth sketching out a little Lox program in a
 text file to run as a script. Something like:
 
+````lox
+print "one";
+print true;
+print 2 + 1;
 ```lox
 print "one";
 print true;
 print 2 + 1;
-```
+````
 
 It almost looks like a real program! Note that the REPL, too, now requires you
 to enter a full statement instead of a simple expression. Don't forget your
@@ -412,7 +388,7 @@ We _could_ allow the latter, but it's confusing. What is the scope of that
 its value on days other than Monday? Does the variable exist at all on those
 days?
 
-Code like this is weird, so C, Java, and friends all disallow it. It's as if
+Code like this is weird, so C, Python, and friends all disallow it. It's as if
 there are two levels of <span name="brace">"precedence"</span> for statements.
 Some places where a statement is allowed -- like inside a block or at the top
 level -- allow any kind of statement, including declarations. Others allow only
@@ -476,7 +452,7 @@ generator, we add a <span name="var-stmt-ast">new statement</span> node for a
 variable declaration.
 
 ```python
-# lox/stmt.py
+# lox/ast.py
 @dataclass
 class Var(Stmt):
     name: Token
@@ -497,7 +473,7 @@ initializer expression. (If there isn't an initializer, that field is `null`.)
 Then we add an expression node for accessing a variable.
 
 ```python
-# lox/expr.py
+# lox/ast.py
 @dataclass
 class Variable(Expr):
     name: Token
@@ -520,47 +496,64 @@ Before we parse variable statements, we need to shift around some code to make
 room for the new `declaration` rule in the grammar. The top level of a program
 is now a list of declarations, so the entrypoint method to the parser changes.
 
-```python
-# lox/parser.py replace lines in the parse() function
-...
-while not parser.is_at_end():
-    statements.append(parser.declaration())
-...
-```
-
-That calls this new method:
-
-```python
-# lox/parser.py method of the Parser class
-def declaration(self):
-    try:
-       match self.peek().type:
-          case "VAR":
-              return self.var_declaration()
-          case _:
-              return self.statement()
-    except ParseError:
-        self.synchronize()
-```
-
 Hey, do you remember way back in that [earlier chapter][parsing] when we put the
 infrastructure in place to do error recovery? We are finally ready to hook that
-up.
+up. We replace the entry point to the parser with this:
 
 [parsing]: parsing-expressions.html
 [error recovery]: parsing-expressions.html#panic-mode-error-recovery
 
+```python
+# lox/parser.py the while loop in the parse()
+    ...
+    while not parser.is_at_end():
+        try:
+            statements.append(parser.declaration())
+        except LoxSyntaxError:
+            parser.synchronize()
+    ...
+```
+
 This `declaration()` method is the method we call repeatedly when parsing a
 series of statements in a block or a script, so it's the right place to
-synchronize when the parser goes into panic mode. The whole body of this method
-is wrapped in a try block to catch the exception thrown when the parser begins
-error recovery. This gets it back to trying to parse the beginning of the next
-statement or declaration.
+synchronize when the parser goes into panic mode. We capture any LoxSyntaxError
+exceptions and initialize the error recovery. The try/except is used to keep
+parsing even when we hit an error, and if an error occurs, this gets it back to
+trying to parse the beginning of the next statement or declaration.
 
-The real parsing happens inside the try block. First, it looks to see if we're
-at a variable declaration by looking for the leading `var` keyword. If not, it
-falls through to the existing `statement()` method that parses `print` and
-expression statements.
+After the parsing is done, we need to announce all errors, if any, to the user.
+We do this by checking the `self.errors` list and raising an `LoxStaticError`
+when appropriate. This requires an import:
+
+```python
+# lox/parser.py at the top
+from lox.errors import LoxStaticError
+```
+
+And a small verification just before returning:
+
+```python
+# lox/parser.py parse() before the return
+    ...
+    if parser.errors:
+        raise LoxStaticError(parser.errors)
+    ...
+```
+
+The real parsing happens inside the `declaration()` method. First, it looks to
+see if we're at a variable declaration by looking for the leading `var` keyword.
+If not, it falls through to the existing `statement()` method that parses
+`print` and expression statements.
+
+```python
+# lox/parser.py Parser method
+def declaration(self) -> Stmt:
+    match self.peek().type:
+        case "VAR":
+            return self.var_declaration()
+        case _:
+            return self.statement()
+```
 
 Remember how `statement()` tries to parse an expression statement if no other
 statement matches? And `expression()` reports a syntax error if it can't parse
@@ -570,8 +563,8 @@ error if a valid declaration or statement isn't parsed.
 When the parser matches a `var` token, it branches to:
 
 ```python
-# lox/parser.py method of the Parser class
-def var_declaration(self) -> Stmt:
+# lox/parser.py Parser method
+def var_declaration(self) -> Var:
     self.consume("VAR", "Expect 'var' keyword.")
     name = self.consume("IDENTIFIER", "Expect variable name.")
 
@@ -597,9 +590,9 @@ Parsing a variable expression is even easier. In `primary()`, we look for an
 identifier token.
 
 ```python
-# lox/parser.py case of the Parser.statement method
-    case "IDENTIFIER":
-        return Variable(self.advance())
+# lox/parser.py Parser.primary if chain
+    if self.match("IDENTIFIER"):
+        return Variable(self.previous())
 ```
 
 That gives us a working front end for declaring and using variables. All that's
@@ -623,7 +616,7 @@ variables and values frolic.
 
 You can think of it like a <span name="map">map</span> where the keys are
 variable names and the values are the variable's, uh, values. In fact, that's
-how we'll implement it in Java. We could stuff that map and the code to manage
+how we'll implement it in Python. We could stuff that map and the code to manage
 it right into Interpreter, but since it forms a nicely delineated concept, we'll
 pull it out into its own class.
 
@@ -639,29 +632,73 @@ Python calls them **dictionaries** or **dicts**. Other languages call them
 </aside>
 
 ```python
-# lox/environment.py
+# lox/env.py
+# Replace the Env declaration
 from dataclasses import dataclass, field
-from typing import Any
+
 @dataclass
-class Environment:
-    values: dict[str, Any] = field(default_factory=dict )
+class Env[T]:
+    values: dict[str, T] = field(default_factory=dict)
 ```
 
-There's a Python dict in there to store the bindings. It uses bare strings for
+<aside name="field">
+
+The `field()` function is how you specify non-default behavior for dataclass
+fields. Here, we use it to specify that the default value for `values` is a new,
+empty dictionary, created by calling `dict()`. If we just wrote
+
+```python
+values: dict[str, Value] = {}
+```
+
+Python would share that single dictionary instance across all instances of
+`Env`. In fact, newer versions of Python will even stop us from doing that and
+raise an error during initialization.
+
+</span>
+
+There’s a Python dict in there to store the bindings. It uses bare strings for
 the keys, not tokens. A token represents a unit of code at a specific place in
 the source text, but when it comes to looking up variables, all identifier
 tokens with the same name should refer to the same variable (ignoring scope for
 now). Using the raw string ensures all of those tokens refer to the same map
 key.
 
-There are two operations we need to support. First, a variable definition binds
-a new name to a value.
+We also need to hook up the `Env` class to the interpreter. Since we declared
+`Env` here as generic, we will create a subclass that specializes to a mapping
+from strings to Lox values.
 
 ```python
-# lox/environment.py method of the Environment class
-def define(self, name: str, value: Any) -> None:
+# lox/interpreter.py replace Env declaration
+from lox import env
+
+class Env(env.Env[Value]):
+    pass
+```
+
+There are two operations we need to support. First, a variable definition binds
+a new name to a value. We want our `Env` to behave similarly to Python's
+dictionaries:
+
+```python
+# lox/env.py Env method
+def __setitem__(self, name: str, value: Value) -> None:
     self.values[name] = value
 ```
+
+<aside name="setitem">
+
+The `__setitem__` method is a special Python method that makes it possible to
+use the square bracket notation to set values in the environment. With this
+method in place, we can write:
+
+```python
+env["a"] = 42
+```
+
+instead of having to call a separate method like `env.set("a", 42)`.
+
+</aside>
 
 Not exactly brain surgery, but we have made one interesting semantic choice.
 When we add the key to the map, we don't check to see if it's already present.
@@ -702,12 +739,19 @@ So, to keep the two modes consistent, we'll allow it -- at least for global
 variables. Once a variable exists, we need a way to look it up.
 
 ```python
-# lox/environment.py method of the Environment class
-def get(self, name: str) -> Any:
+# lox/types.py Env method
+def __getitem__(self, name: str) -> Value:
     if name in self.values:
         return self.values[name]
-    raise RuntimeError(f"Undefined variable '{name}'.")
+    raise NameError(name)
 ```
+
+<aside name="getitem">
+
+`__getitem__` is the getter brother of `__setitem__` we saw before. It is used
+to _retrieve_ items from a collection using the bracket notation.
+
+</aside>
 
 This is a little more semantically interesting. If the variable is found, it
 simply returns the value bound to it. But what if it's not? Again, we have a
@@ -763,7 +807,7 @@ the two functions, then `isOdd()` isn't defined when we're looking at
 
 <aside name="declare">
 
-Some statically typed languages like Java and C# solve this by specifying that
+Some statically typed languages like Python and C# solve this by specifying that
 the top level of a program isn't a sequence of imperative statements. Instead, a
 program is a set of declarations which all come into being simultaneously. The
 implementation declares _all_ of the names before looking at the bodies of _any_
@@ -794,25 +838,15 @@ tell the user where in their code they messed up.
 
 ### Interpreting global variables
 
-We now plug the real Environment class into the lox/eval.py module.
-
-```python
-# lox/eval.py replace the Environment import
-from .environment import Environment
-```
-
-Don't forget delete the line `type Environment = Any`, which we were using
-temporarely to create a stand-in for the real class.
-
 We have two new syntax trees, so that's two new `exec` method implementations.
 The first is for declaration statements.
 
 ```python
-# lox/exec.py
+# lox/interpreter.py after exec()
 @exec.register
-def _(stmt: Stmt.Var, env: Environment) -> None:
+def _(stmt: Var, env: Env) -> None:
     value = eval(stmt.initializer, env)
-    env.define(stmt.name.lexeme, value)
+    env[stmt.name.lexeme] = value
 ```
 
 If the variable has an initializer, we evaluate it. If not, we have another
@@ -831,17 +865,20 @@ var a;
 print a; // "nil".
 ```
 
-Thus, if there isn't an initializer, we set the value to `null`, which is the
-Java representation of Lox's `nil` value. Then we tell the environment to bind
+Thus, if there isn't an initializer, we set the value to `None`, which is the
+Python representation of Lox's `nil` value. Then we tell the environment to bind
 the variable to that value.
 
 Next, we evaluate a variable expression.
 
 ```python
-# lox/eval.py
-@exec.register
-def _(expr: Variable, env: Environment) -> Any:
-    return env.get(expr.name.lexeme)
+# lox/interpreter.py
+@eval.register
+def _(expr: Variable, env: Env) -> Value:
+    try:
+        return env[expr.name.lexeme]
+    except NameError as error:
+        raise LoxRuntimeError(expr.name, f"Undefined variable '{error}'")
 ```
 
 This simply forwards to the environment which does the heavy lifting to make
@@ -913,23 +950,15 @@ objects, like:
 instance.field = "value";
 ```
 
-The easy part is adding the <span name="assign-ast">new syntax tree node</span>.
+The easy part is adding the new syntax tree node.
 
 ```python
-# lox/expr.py
+# lox/ast.py
 @dataclass
 class Assign(Expr):
     name: Token
     value: Expr
 ```
-
-<aside name="assign-ast">
-
-The generated code for the new node is in [Appendix II][appendix-assign].
-
-[appendix-assign]: appendix-ii.html#assign-expression
-
-</aside>
 
 It has a token for the variable being assigned to, and an expression for the new
 value. After you run the AstGenerator to get the new Expr.Assign class, swap out
@@ -937,7 +966,7 @@ the body of the parser's existing `expression()` method to match the updated
 rule.
 
 ```python
-# lox/parser.py replace the Parser.expression() method
+# lox/parser.py replace Parser.expression()
 def expression(self) -> Expr:
     return self.assignment()
 ```
@@ -995,7 +1024,7 @@ We have only a single token of lookahead, so what do we do? We use a little
 trick, and it looks like this:
 
 ```python
-# lox/parser.py method of the Parser class
+# lox/parser.py Parser method
 def assignment(self) -> Expr:
     expr = self.equality()
 
@@ -1089,26 +1118,32 @@ being assigned. All with only a single token of lookahead and no backtracking.
 
 ### Assignment semantics
 
-We have a new syntax tree node, so our interpreter gets a new visit method.
+We have a new syntax tree node, so our interpreter gets a new method
+implementation.
 
 ```python
-# lox/eval.py
-def _(expr: Assign, env: Environment) -> Any:
+# lox/interpreter.py
+@eval.register
+def _(expr: Assign, env: Env) -> Value:
     value = eval(expr.value, env)
-    env.assign(expr.name.lexeme, value)
+    try:
+        env.assign(expr.name.lexeme, value)
+    except NameError as error:
+        raise LoxRuntimeError(f"Undefined variable '{error}'.", expr.name)
     return value
 ```
 
 For obvious reasons, it's similar to variable declaration. It evaluates the
 right-hand side to get the value, then stores it in the named variable. Instead
-of using `define()` on Environment, it calls this new method:
+of using `__setitem__()` on Env, it calls this new method:
 
 ```python
-# lox/env.py method of the Environment class
-def assign(self, name: str, value: Any):
+# lox/env.py Env method
+def assign(self, name: str, value: Value) -> None:
     if name in self.values:
         self.values[name] = value
-    raise RuntimeError(f"Undefined variable '{name}'.")
+    else:
+        raise NameError(name)
 ```
 
 The key difference between assignment and definition is that assignment is not
@@ -1335,16 +1370,36 @@ with support for this nesting. First, we give each environment a reference to
 its enclosing one.
 
 ```python
-# lox/environment.py
-@dataclass
-class Environment:
-    values: dict[str, Any] = field(default_factory=dict )
-    enclosing: "Environment" | None = None
+# lox/types.py replace Env fields
+    ...
+    values: dict[str, Value] = field(default_factory=dict)
+    enclosing: Env | None = None
+    ...
 ```
 
-The no-argument constructor is for the global scope's environment, which ends
-the chain. The other constructor creates a new local scope nested inside the
-given outer one.
+Depending on your Python version, you may need to add a <span
+name="future">future</span> import:
+
+```python
+from __future__ import annotations
+```
+
+<aside name="future">
+
+Imports `from __future__` is Python quirk way to enable features that will be
+standard in future versions of the language. Here, we use it to allow type
+annotations to refer to `Env` while it is still being defined. As the
+publication of this book, only the very latest version of Python support this
+behavior without the future import. We leave it by default because I can't
+assume everyone is living on the bleeding edge.
+
+</aside>
+
+```python
+# lox/types.py Env method
+def push(self) -> Env:
+    return Env(enclosing=self)
+```
 
 We don't have to touch the `define()` method -- a new variable is always
 declared in the current innermost scope. But variable lookup and assignment work
@@ -1352,11 +1407,12 @@ with existing variables and they need to walk the chain to find them. First,
 lookup:
 
 ```python
-# lox/environment.py before raising in Envinronment.get()
-...
-if self.enclosing is not None:
-    return self.enclosing.get(name)
-raise RuntimeError(f"Undefined variable '{name}'.")
+# lox/types.py Env.__getitem__
+# Before raising
+    ...
+    if self.enclosing is not None:
+        return self.enclosing[name]
+    ...
 ```
 
 If the variable isn't found in this environment, we simply try the enclosing
@@ -1375,11 +1431,12 @@ solution is prettier. We'll do something _much_ faster in clox.
 </aside>
 
 ```python
-# lox/environment.py before raising in Envinronment.assign()
-...
-if self.enclosing is not None:
-    return self.enclosing.assign(name, value)
-raise RuntimeError(f"Undefined variable '{name}'.")
+# lox/env.py Env.assign()
+# Before else
+    ...
+    elif self.enclosing is not None:
+        self.enclosing.assign(name, value)
+    ...
 ```
 
 Again, if the variable isn't in this environment, it checks the outer one,
@@ -1400,105 +1457,66 @@ block          → "{" declaration* "}" ;
 
 A block is a (possibly empty) series of statements or declarations surrounded by
 curly braces. A block is itself a statement and can appear anywhere a statement
-is allowed. The <span name="block-ast">syntax tree</span> node looks like this:
+is allowed. The syntax tree node looks like this:
 
 ```python
-# lox/stmt.py
+# lox/ast.py
 @dataclass
 class Block(Stmt):
     statements: list[Stmt]
 ```
 
-<aside name="block-ast">
-
-The generated code for the new node is in [Appendix II][appendix-block].
-
-[appendix-block]: appendix-ii.html#block-statement
-
-</aside>
-
-<span name="generate">It</span> contains the list of statements that are inside
-the block. Parsing is straightforward. Like other statements, we detect the
-beginning of a block by its leading token -- in this case the `{`. In the
-`statement()` method, we add:
-
-<aside name="generate">
-
-As always, don't forget to run "GenerateAst.java".
-
-</aside>
+It contains the list of statements that are inside the block. Parsing is
+straightforward. Like other statements, we detect the beginning of a block by
+its leading token -- in this case the `{`. In the `statement()` method, we add:
 
 ```python
-# lox/parser.py case of Parser.statement()
-case self.match("LEFT_BRACE"):
-    return Block(self.block())
+# lox/parser.py Parser.statement() match/case
+    ...
+    case "LEFT_BRACE":
+        return self.block_statement()
+    ...
 ```
 
 All the real work happens here:
 
 ```python
-# lox/parser.py method of the Parser class
-def block(self) -> list[Stmt]:
+# lox/parser.py Parser method
+def block_statement(self) -> Block:
     self.consume("LEFT_BRACE", "Expect '{' to open block.")
     statements: list[Stmt] = []
     while not self.check("RIGHT_BRACE") and not self.is_at_end():
         statements.append(self.declaration())
     self.consume("RIGHT_BRACE", "Expect '}' after block.")
-    return statements
+    return Block(statements)
 ```
 
 We <span name="list">create</span> an empty list and then parse statements and
 add them to the list until we reach the end of the block, marked by the closing
-`}`. Note that the loop also has an explicit check for `isAtEnd()`. We have to
+`}`. Note that the loop also has an explicit check for `is_at_end()`. We have to
 be careful to avoid infinite loops, even when parsing invalid code. If the user
 forgets a closing `}`, the parser needs to not get stuck.
-
-<aside name="list">
-
-Having `block()` return the raw list of statements and leaving it to
-`statement()` to wrap the list in a Stmt.Block looks a little odd. I did it that
-way because we'll reuse `block()` later for parsing function bodies and we don't
-want that body wrapped in a Stmt.Block.
-
-</aside>
 
 That's it for syntax. For semantics, we add another visit method to exec.
 
 ```python
-# lox/exec.py
+# lox/interpreter.py after exec()
 @exec.register
-def _(stmt: Stmt.Block, env: Environment) -> None:
-    env = Environment(enclosing=env)
+def _(stmt: Block, env: Env) -> None:
+    inner_env = env.push()
     for statement in stmt.statements:
-        exec(statement, env)
+        exec(statement, inner_env)
 ```
 
 This new method executes a list of statements in the context of a given <span
-name="param">environment</span>. Up until now, the `env` argument always pointed
-to the same environment -- the global one. Now, that field represents the
-_current_ environment. That's the environment that corresponds to the innermost
-scope containing the code to be executed.
+name="param">env</span>. Up until now, the `env` argument always pointed to the
+same environment -- the global one. Now, that field represents the _current_
+environment. That's the environment that corresponds to the innermost scope
+containing the code to be executed.
 
 To execute code within a given scope, this method encloses the `env` passed to
 all inner statements and then discards the enclosing environment at the end of
 execution.
-
-<aside name="param">
-
-# TODO
-
-Manually changing and restoring a mutable `environment` field feels inelegant.
-Another classic approach is to explicitly pass the environment as a parameter to
-each visit method. To "change" the environment, you pass a different one as you
-recurse down the tree. You don't have to restore the old one, since the new one
-lives on the Java stack and is implicitly discarded when the interpreter returns
-from the block's visit method.
-
-I considered that for pylox, but it's kind of tedious and verbose adding an
-environment parameter to every single visit method. To keep the book a little
-simpler, I went with the mutable field.
-
-</aside>
 
 Surprisingly, that's all we need to do in order to fully support local
 variables, nesting, and shadowing. Go ahead and try this out:

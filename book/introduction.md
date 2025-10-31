@@ -354,7 +354,7 @@ language is supposed to behave.
 <aside name="lang">
 
 The book uses Python and Rust. The original version of this book, for instance,
-uses Java, and C and readers have ported the code to [many other
+uses Python, and C and readers have ported the code to [many other
 languages][port].  
 If the languages I picked aren't your bag, take a look at those.
 
@@ -413,14 +413,14 @@ how Python _itself_ implements those things.
 
 ## The Second Interpreter
 
-So in the next part, we start all over again, but this time in Rust. Rust is the
+So in the next part, we start all over again, but this time in C. C is the
 perfect language for understanding how an implementation _really_ works, all the
 way down to the bytes in memory and the code flowing through the CPU.
 
-#TODO: A big reason that we're using Rust is so I can show you things Rust is
-particularly good at, but that _does_ mean you'll need to be pretty comfortable
-with it. You don't have to be the reincarnation of Dennis Ritchie, but you
-shouldn't be spooked by pointers either.
+A big reason that we're using C is so I can show you things C is particularly
+good at, but that _does_ mean you'll need to be pretty comfortable with it. You
+don't have to be the reincarnation of Dennis Ritchie, but you shouldn't be
+spooked by pointers either.
 
 If you aren't there yet, pick up an introductory book on C and chew through it,
 then come back here when you're done. In return, you'll come away from this book
@@ -470,9 +470,9 @@ few thousand lines of code.
     a debugger, get comfortable with it and step through your program as it
     runs.
 
-1.  #TODO: Do the same thing for Rust. To get some practice with pointers,
-    define a [doubly linked list][] of heap-allocated strings. Write functions
-    to insert, find, and delete items from it. Test them.
+1.  Do the same thing for C. To get some practice with pointers, define a
+    [doubly linked list][] of heap-allocated strings. Write functions to insert,
+    find, and delete items from it. Test them.
 
 [repo]: https://github.com/munificent/craftinginterpreters
 [doubly linked list]: https://en.wikipedia.org/wiki/Doubly_linked_list

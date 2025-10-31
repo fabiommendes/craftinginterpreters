@@ -129,37 +129,51 @@ instead of concatenating strings, it computes values.
 
 [single dispatch]: representing-code.html#single-dispatch
 
-We start with a new single dispatch method.
+We start declaring a new singledispatch function `eval()`.
 
 ```python
-# lox/eval.py
+# lox/interpreter.py
 from functools import singledispatch
-from typing import Any
-from .expr import *
-from .token import TokenType as TT
-
-type Environment = Any  # Placeholder for future Environment class
+from lox.ast import *
+from lox.tokens import TokenType, LiteralValue
 
 @singledispatch
-def eval(expr: Expr, env: Environment) -> Any:
+def eval(expr: Expr, env: Env) -> Value:
     msg = f"cannot eval {expr.__class__.__name__} objects"
     raise TypeError(msg)
 ```
+
+<aside name="eval">
 
 We call it `eval` to honour a tradition in many dynamic languages (including
 Python) that have a function named like so that dynamically interpret source
 strings of that language.
 
+</aside>
+
 The function `eval` receive a second parameter, `env`, which represents the
 _current execution environment_ -- which is an object that tracks the state of
 our program as it runs. Right now, we don't have any state to track, so we can
-just pass in `None` (or anything else) when we call `eval()`. Later, when we add
-variables and functions, we'll define a proper `Environment` class and pass in
-an instance of that.
+just pass in an empty dict (or anything else) when we call `eval()`. Later, when
+we add variables and functions, we'll define a proper `Env` class and pass in an
+instance of that.
 
-The return type of the `eval` method will be `Any`, meaning that it can be any
-arbitrary Python value. We need to define implementations for each of the four
-expression tree classes our parser produces. We'll start with the simplest...
+`Value` is a type alias that represents any Lox value. We will use Python
+dynamism to represent Lox values directly using Python types. For now, we can
+only produce literals, so `Value` is just `LiteralValue`.
+
+We need to declare those types explicitly:
+
+```python
+# lox/interpreter.py after imports
+Value = LiteralValue
+Env = dict[str, Value]
+```
+
+The return type of the `eval` method will be `Value`, that represents the
+acceptable Python representations of Lox values. We need to define
+implementations for each of the four expression tree classes our parser
+produces. We'll start with the simplest...
 
 ### Evaluating literals
 
@@ -185,9 +199,9 @@ in the parser, now we convert the literal tree node into a runtime value. That
 turns out to be trivial.
 
 ```python
-# lox/eval.py after the eval() function
+# lox/interpreter.py after eval()
 @eval.register
-def _(expr: Literal, env) -> Any:
+def _(expr: Literal, env: Env) -> Value:
     return expr.value
 ```
 
@@ -201,9 +215,9 @@ The next simplest node to evaluate is grouping -- the node you get as a result
 of using explicit parentheses in an expression.
 
 ```python
-# lox/eval.py after the eval() function
+# lox/interpreter.py after eval()
 @eval.register
-def _(expr: Grouping, env):
+def _(expr: Grouping, env: Env) -> Value:
     return eval(expr.expression, env)
 ```
 
@@ -227,21 +241,25 @@ evaluate first. The difference is that the unary expression itself does a little
 work afterwards.
 
 ```python
-# lox/eval.py after the eval() function
+# lox/interpreter.py after eval()
 @eval.register
-def _(expr: Unary, env):
+def _(expr: Unary, env: Env) -> Value:
     right = eval(expr.right, env)
-
     match expr.operator.type :
         case "MINUS":
             return -right
-
-    # Unreachable.
+        case op:
+            assert False, f"unhandled operator {op}"
 ```
 
 First, we evaluate the operand expression. Then we apply the unary operator
 itself to the result of that. There are two different unary expressions,
 identified by the type of the operator token.
+
+The fallback case with the `assert` is a sanity check to ensure the interpreter
+shouts loudly if we ever encounter an unexpected operator. This should not be
+possible if the parser is working correctly, but we are humans and make
+mistakes.
 
 You can start to see how evaluation recursively traverses the tree. We can't
 evaluate the unary operator itself until after we evaluate its operand
@@ -251,9 +269,11 @@ each node evaluates its children before doing its own work.
 The other unary operator is logical not.
 
 ```python
-# lox/eval.py match/case expression of eval(Unary)
-case "BANG":
-    return not is_truthy(right)
+# lox/interpreter.py at eval(Unary) match/case
+    ...
+    case "BANG":
+        return not is_truthy(right)
+    ...
 ```
 
 The implementation is simple, but what is this "truthy" thing about? We need to
@@ -294,7 +314,7 @@ Lox follows Ruby's simple rule: `false` and `nil` are falsey, and everything
 else is truthy. We implement that like so:
 
 ```python
-# lox/eval.py after all eval() implementations
+# lox/interpreter.py after all eval() implementations
 def is_truthy(obj: Any) -> bool:
     if obj is None or obj is False:
         return False
@@ -307,9 +327,9 @@ On to the last expression tree class, binary operators. There's a handful of
 them, and we'll start with the arithmetic ones.
 
 ```python
-# lox/eval.py after the eval() function
+# lox/interpreter.py after eval()
 @eval.register
-def _(expr: Binary, env):
+def _(expr: Binary, env: Env) -> Value:
     left = eval(expr.left, env)
     right = eval(expr.right, env)
 
@@ -319,10 +339,25 @@ def _(expr: Binary, env):
         case "MINUS":
             return left - right
         case "SLASH":
-            return left / right
+            return divide(left, right)
         case "STAR":
             return left * right
-    # Unreachable.
+        case op:
+            assert False, f"unhandled operator {op}"
+```
+
+Division uses a helper function to handle division by zero consistently:
+
+```python
+def divide(left: float, right: float) -> float:
+    if right != 0:
+        return left / right
+    if left == 0:
+        return float("nan")
+    elif left > 0:
+        return float("inf")
+    else:
+        return float("-inf")
 ```
 
 Did you notice we pinned down a subtle corner of the language semantics here? In
@@ -358,15 +393,17 @@ adding both integers and floating-point numbers.
 Next up are the comparison operators.
 
 ```python
-# lox/eval.py match/case expression of eval(Binary)
-case "GREATER":
-    return left > right
-case "GREATER_EQUAL":
-    return left >= right
-case "LESS":
-    return left < right
-case "LESS_EQUAL":
-    return left <= right
+# lox/interpreter.py at eval(Binary) match/case
+    ...
+    case "GREATER":
+        return left > right
+    case "GREATER_EQUAL":
+        return left >= right
+    case "LESS":
+        return left < right
+    case "LESS_EQUAL":
+        return left <= right
+    ...
 ```
 
 They are basically the same as arithmetic. The only difference is that where the
@@ -376,16 +413,19 @@ arithmetic operators produce a value whose type is the same as the operands
 The last pair of operators are equality.
 
 ```python
-# lox/eval.py match/case expression of eval(Binary)
-case "BANG_EQUAL":
-    return is_equal(left, right)
-case "EQUAL_EQUAL":
-    return is_equal(left, right)
+# lox/interpreter.py at eval(Binary) match/case
+    ...
+    case "BANG_EQUAL":
+        return not is_equal(left, right)
+    case "EQUAL_EQUAL":
+        return is_equal(left, right)
+    ...
 ```
 
 Unlike the comparison operators which require numbers, the equality operators
 support operands of any type, even mixed ones. You can't ask Lox if 3 is _less_
-than `"three"`, but you can ask if it's <span name="equal">_equal_</span> to it.
+than `"three"`, but you can ask if it <span name="equal">_is_equal_</span> to
+it.
 
 <aside name="equal">
 
@@ -396,8 +436,7 @@ Spoiler alert: it's not.
 Like truthiness, the equality logic is hoisted out into a separate method.
 
 ```python
-# lox/eval.py after all eval() implementations
-
+# lox/interpreter.py at top-level
 def is_equal(a, b):
     return type(a) == type(b) and a == b
 ```
@@ -518,45 +557,54 @@ Before we perform some operation, we check the object's type ourselves. So, for
 unary `-`, we change the implementation:
 
 ```python
-# lox/eval.py match/case expression of eval(Unary)
-case "MINUS":
-      return -as_number_operand(expr.operator, right)
+# lox/interpreter.py at eval(Unary) match/case
+    ...
+    case "MINUS":
+        return -as_number_operand(expr.operator, right)
+    ...
 ```
 
 The code to check the operand is:
 
 ```python
-# lox/eval.py at the end of the file
-def as_number_operand(operator: Token, operand: Any) -> float:
+# lox/interpreter.py at top-level
+def as_number_operand(operator: Token, operand: Value) -> float:
     if isinstance(operand, float):
         return operand
-    raise lox_error(operator, "Operand must be a number")
+    raise LoxRuntimeError("Operand must be a number.", operator)
 ```
 
-When the check fails, it produces a LoxError using information stored in the
-token object
+When the check fails, it produces a LoxRuntimeError using information stored in
+the token object
 
 ```python
-# lox/eval.py at the top-level
-from .tokens import Token
-from .lox import LoxError
-
-def lox_error(token: Token, message: str) -> LoxError:
-    return LoxError(token, message)
+# lox/interpreter.py at the top-level
+from lox.tokens import Token
+from lox.errors import LoxRuntimeError
 ```
 
-Unlike the Python type and value errors, our <span name="class">class</span>
-tracks the token that identifies where in the user's code the runtime error came
-from. As with static errors, this helps the user know where to fix their code.
+We also need to define that exception class. It goes in the `lox.errors` module:
 
-<aside name="class">
+```python
+# lox/errors.py
+from lox.tokens import Token
 
-I admit the name "RuntimeError" is confusing since Java defines a
-RuntimeException class. An annoying thing about building interpreters is your
-names often collide with ones already taken by the implementation language. Just
-wait until we support Lox classes.
+class LoxRuntimeError(Exception):
+    def __init__(self, message: str, token: Token):
+        super().__init__(message)
+        self.token = token
+        self.message = message
 
-</aside>
+    def __str__(self) -> str:
+        prefix =  f"[line {self.token.line}] "
+        prefix += f"Runtime error at '{self.token.lexeme}'"
+        return f"{prefix}: {self.message}"
+```
+
+Unlike the Python RuntimeError exception, our class tracks the token that
+identifies where in the user's code the runtime error came from. As with static
+errors, this helps the user know where to fix their code. Some errors cannot be
+directly tied to a specific token, so we make that parameter optional.
 
 We need similar checking for the binary operators. Since I promised you every
 single line of code needed to implement the interpreters, I'll run through them
@@ -568,45 +616,48 @@ operands before each operation.
 Comparison operators:
 
 ```python
-# lox/eval.py match/case expression of eval(Binary)
-case "GREATER":
-    check_number_operands(expr.operator, left, right)
-    return left > right
-case "GREATER_EQUAL":
-    check_number_operands(expr.operator, left, right)
-    return left >= right
-case "LESS":
-    check_number_operands(expr.operator, left, right)
-    return left < right
-case "LESS_EQUAL":
-    check_number_operands(expr.operator, left, right)
-    return left <= right
+# lox/interpreter.py at eval(Binary) match/case
+    ...
+    case "GREATER":
+        check_number_operands(expr.operator, left, right)
+        return left > right
+    case "GREATER_EQUAL":
+        check_number_operands(expr.operator, left, right)
+        return left >= right
+    case "LESS":
+        check_number_operands(expr.operator, left, right)
+        return left < right
+    case "LESS_EQUAL":
+        check_number_operands(expr.operator, left, right)
+        return left <= right
+    ...
 ```
 
 Arithmetic operators:
 
 ```python
-# lox/eval.py match/case expression of eval(Binary)
-case "MINUS":
-    check_number_operands(expr.operator, left, right)
-    return left - right
-case "SLASH":
-    check_number_operands(expr.operator, left, right)
-    return left / right
-case "STAR":
-    check_number_operands(expr.operator, left, right)
-    return left * right
+# lox/interpreter.py at eval(Binary) match/case
+    ...
+    case "MINUS":
+        check_number_operands(expr.operator, left, right)
+        return left - right
+    case "SLASH":
+        check_number_operands(expr.operator, left, right)
+        return divide(left, right)
+    case "STAR":
+        check_number_operands(expr.operator, left, right)
+        return left * right
+    ...
 ```
 
 All of those rely on this validator, which is virtually the same as the unary
 one:
 
 ```python
-lox/eval.py at the end of the file
-
-def check_number_operands(operator: Token, left: Any, right: Any):
+# lox/eval.py at top-level
+def check_number_operands(operator: Token, left: Value, right: Value):
     if not (isinstance(left, float) and isinstance(right, float)):
-        raise LoxRuntimeError(operator, "Operands must be numbers")
+        raise LoxRuntimeError("Operands must be numbers.", operator)
 ```
 
 <aside name="operand">
@@ -630,44 +681,74 @@ overloaded for numbers and strings we cannot reuse the same logic as the other
 operators.
 
 ```python
-# lox/eval.py match/case expression of eval(Binary)
-case "PLUS":
-    if type(left) == type(right) and type(left) in (float, str):
-        return left + right
-    msg = "Operands must be two numbers or two strings"
-    raise LoxRuntimeError(expr.operator, msg)
+# lox/interpreter.py at eval(Binary) match/case
+    ...
+    case "PLUS":
+        if type(left) == type(right) and type(left) in (float, str):
+            return left + right
+        msg = "Operands must be two numbers or two strings."
+        raise LoxRuntimeError(msg, expr.operator)
+    ...
 ```
 
 That gets us detecting runtime errors deep in the innards of the evaluator. The
 errors are getting thrown. The next step is to write the code that catches them.
-For that, we need to wire up the Interpreter class into the main Lox class that
-drives it.
+For that, we need to wire up `eval()` into the main Lox class that uses it.
 
 ## Hooking Up the Interpreter
 
-The visit methods are sort of the guts of the Interpreter class, where the real
-work happens. We need to wrap a skin around them to interface with the rest of
-the program. The Interpreter's public API is simply one method.
+The `eval` implementations are sort of the guts of our interpreter module, where
+the real work happens. We modify our main module to eventually call `eval` and
+handle any runtime errors that occur.
 
-^code interpret
+```python
+# lox/__main__.py Lox method
+def interpret(self, expression: Expr):
+    try:
+        value = eval(expression, self.environment)
+        print(stringify(value))
+    except LoxRuntimeError as error:
+        print(error)
+```
+
+We must import some necessary functions and classes at the top of the file:
+
+```python
+# lox/__main__.py at the top-level
+from lox.interpreter import eval, stringify, Value, Env
+from lox.errors import LoxRuntimeError, LoxSyntaxError
+from lox.ast import *
+```
 
 This takes in a syntax tree for an expression and evaluates it. If that
-succeeds, `evaluate()` returns an object for the result value. `interpret()`
+succeeds, `eval()` returns an object for the result value. `interpret()`
 converts that to a string and shows it to the user. To convert a Lox value to a
 string, we rely on:
 
-^code stringify
+```python
+# lox/interpreter.py at stringify
+def stringify(value: Value) -> str:
+    if value is None:
+        return "nil"
+    elif isinstance(value, float):
+        return str(value).removesuffix(".0")
+    elif isinstance(value, bool):
+        return "true" if value else "false"
+    else:
+        return str(value)
+```
 
-This is another of those pieces of code like `isTruthy()` that crosses the
+This is another of those pieces of code like `is_truthy()` that crosses the
 membrane between the user's view of Lox objects and their internal
-representation in Java.
+representation in Python.
 
 It's pretty straightforward. Since Lox was designed to be familiar to someone
-coming from Java, things like Booleans look the same in both languages. The two
-edge cases are `nil`, which we represent using Java's `null`, and numbers.
+coming from Python, things like Strings look the same in both languages. The two
+edge cases are `nil`, which we represent using Python's `None`, numbers and
+booleans, which are represented in lowercase in Lox.
 
 Lox uses double-precision numbers even for integer values. In that case, they
-should print without a decimal point. Since Java has both floating point and
+should print without a decimal point. Since Python has both floating point and
 integer types, it wants you to know which one you're using. It tells you by
 adding an explicit `.0` to integer-valued doubles. We don't care about that, so
 we <span name="number">hack</span> it off the end.
@@ -688,53 +769,59 @@ on different interpreters.
 
 If a runtime error is thrown while evaluating the expression, `interpret()`
 catches it. This lets us report the error to the user and then gracefully
-continue. All of our existing error reporting code lives in the Lox class, so we
-put this method there too:
+continue.
 
-^code runtime-error-method
+We need to hook it up to the `run()` method, which until now has just been
+printing the syntax tree for the parsed expression. We replace that temporary
+code with:
 
-We use the token associated with the RuntimeError to tell the user what line of
-code was executing when the error occurred. Even better would be to give the
-user an entire call stack to show how they _got_ to be executing that code. But
-we don't have function calls yet, so I guess we don't have to worry about it.
+```python
+# lox/__main__.py replace Lox.run()
+def run(self, source: str):
+    try:
+        tokens = tokenize(source)
+        ast = parse(tokens)
+        value = eval(ast, self.environment)
+        print(stringify(value))
+    except LoxRuntimeError as error:
+        self.report_error(error, code=70)
+    except LoxSyntaxError as error:
+        self.report_error(error, code=65)
+```
 
-After showing the error, `runtimeError()` sets this field:
+Since the `eval()` function requires an environment parameter, we need to add an
+`environment` field to the Lox class. For now, it can just be an empty
+dictionary since we don't have any variables yet. We initialize it in the
+constructor:
 
-^code had-runtime-error-field (1 before, 1 after)
+```python
+# lox/__main__.py Lox method
+def __init__(self, interactive: bool = False):
+    self.environment = Env()
+    self.interactive = interactive
+```
 
-That field plays a small but important role.
+Finally, we need to implement `report_error()`, which is responsible for showing
+the runtime error to the user. If the user is running a Lox <span
+name="repl">script from a file</span> and a runtime error occurs, we set an exit
+code when the process quits to let the calling process know. Not everyone cares
+about shell etiquette, but we do.
 
-^code check-runtime-error (4 before, 1 after)
-
-If the user is running a Lox <span name="repl">script from a file</span> and a
-runtime error occurs, we set an exit code when the process quits to let the
-calling process know. Not everyone cares about shell etiquette, but we do.
+```python
+# lox/__main__.py Lox method
+def report_error(self, error: Exception, code: int):
+    print(error)
+    if not self.interactive:
+        sys.exit(code)
+```
 
 <aside name="repl">
 
-If the user is running the REPL, we don't care about tracking runtime errors.
-After they are reported, we simply loop around and let them input new code and
-keep going.
+If the user is running the REPL, we don't care about propagating runtime or
+syntax errors. After they are reported, we simply loop around and let them input
+new code and keep going.
 
 </aside>
-
-### Running the interpreter
-
-Now that we have an interpreter, the Lox class can start using it.
-
-^code interpreter-instance (1 before, 1 after)
-
-We make the field static so that successive calls to `run()` inside a REPL
-session reuse the same interpreter. That doesn't make a difference now, but it
-will later when the interpreter stores global variables. Those variables should
-persist throughout the REPL session.
-
-Finally, we remove the line of temporary code from the [last chapter][] for
-printing the syntax tree and replace it with this:
-
-[last chapter]: parsing-expressions.html
-
-^code interpreter-interpret (3 before, 1 after)
 
 We have an entire language pipeline now: scanning, parsing, and execution.
 Congratulations, you now have your very own arithmetic calculator.
@@ -763,14 +850,14 @@ interpreter doesn't do very much, but it's alive!
 2.  Many languages define `+` such that if _either_ operand is a string, the
     other is converted to a string and the results are then concatenated. For
     example, `"scone" + 4` would yield `scone4`. Extend the code in
-    `visitBinaryExpr()` to support that.
+    `eval(Binary)` to support that.
 
 3.  What happens right now if you divide a number by zero? What do you think
     should happen? Justify your choice. How do other languages you know handle
     division by zero, and why do they make the choices they do?
 
-    Change the implementation in `visitBinaryExpr()` to detect and report a
-    runtime error for this case.
+    Change the implementation in `eval(Binary)` to detect and report a runtime
+    error for this case.
 
 </div>
 

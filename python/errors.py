@@ -1,4 +1,4 @@
-from .tokens import Token
+from lox.tokens import Token
 
 class LoxRuntimeError(Exception):
     def __init__(self, token: Token, message: str):

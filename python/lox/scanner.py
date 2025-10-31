@@ -1,26 +1,26 @@
 from dataclasses import dataclass, field
 from typing import Any
 
-from .tokens import Token
-from .tokens import TokenType as TT
+from lox.tokens import Token, TokenType
+from lox.errors import LoxSyntaxError
 
 KEYWORDS = {
-    "and": "AND",
-    "class": "CLASS",
-    "else": "ELSE",
-    "false": "FALSE",
-    "for": "FOR",
-    "fun": "FUN",
-    "if": "IF",
-    "nil": "NIL",
-    "or": "OR",
-    "print": "PRINT",
-    "return": "RETURN",
-    "super": "SUPER",
-    "this": "THIS",
-    "true": "TRUE",
-    "var": "VAR",
-    "while": "WHILE",
+    "and",
+    "class",
+    "else",
+    "false",
+    "for",
+    "fun",
+    "if",
+    "nil",
+    "or",
+    "print",
+    "return",
+    "super",
+    "this",
+    "true",
+    "var",
+    "while",
 }
 
 
@@ -97,13 +97,15 @@ class Scanner:
                 self.number()
             case c if is_alpha(c):
                 self.identifier()
+            case _:
+                self.add_token("INVALID")
 
     def advance(self) -> str:
         char = self.source[self.current]
         self.current += 1
         return char
 
-    def add_token(self, type: TT, literal: Any = None):
+    def add_token(self, type: TokenType, literal: Any = None):
         text = self.source[self.start : self.current]
         self.tokens.append(Token(type, text, self.line, literal))
 
@@ -129,8 +131,9 @@ class Scanner:
                 self.line += 1
             self.advance()
 
+        # FIX THIS
         if self.is_at_end():
-            raise LoxError(self.line, "Unterminated string.")
+            raise LoxSyntaxError(self.line, "Unterminated string.")
 
         # The closing ".
         self.advance()
@@ -158,7 +161,9 @@ class Scanner:
         while is_alpha_numeric(self.peek()):
             self.advance()
         text = self.source[self.start : self.current]
-        kind = KEYWORDS.get(text, "IDENTIFIER")
+        kind = "IDENTIFIER"
+        if text in KEYWORDS:
+            kind = text.upper()
         self.add_token(kind)
 
 

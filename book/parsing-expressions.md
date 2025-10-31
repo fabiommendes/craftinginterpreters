@@ -445,8 +445,9 @@ Each grammar rule becomes a method inside this new class:
 ```python
 # lox/parser.py
 from dataclasses import dataclass
-from .tokens import Token, TokenType as TT
-from .expr import *
+from lox.tokens import Token
+from lox.types import TokenType
+from lox.ast import *
 
 @dataclass
 class Parser:
@@ -463,7 +464,7 @@ each rule to Python code. The first rule, `expression`, simply expands to the
 `equality` rule, so that's straightforward.
 
 ```python
-# lox/parser.py method of the Parser class
+# lox/parser.py Parser method
 def expression(self) -> Expr:
     return self.equality()
 ```
@@ -490,7 +491,7 @@ equality       → comparison ( ( "!=" | "==" ) comparison )* ;
 In Python, that becomes:
 
 ```python
-# lox/parser.py method of the Parser class
+# lox/parser.py Parser method
 def equality(self) -> Expr:
     expr = self.comparison()
 
@@ -513,8 +514,8 @@ with the sequence of equality operators. We express that check using a handy
 `match()` method.
 
 ```python
-# lox/parser.py method of the Parser class
-def match(self, *types: TT) -> bool:
+# lox/parser.py Parser method
+def match(self, *types: TokenType) -> bool:
     for type in types:
         if self.check(type):
             self.advance()
@@ -531,8 +532,8 @@ The `check()` method returns `true` if the current token is of the given type.
 Unlike `match()`, it never consumes the token, it only looks at it.
 
 ```python
-# lox/parser.py method of the Parser class
-def check(self, type: TT) -> bool:
+# lox/parser.py Parser method
+def check(self, type: TokenType) -> bool:
     return not self.is_at_end() and self.peek().type == type
 ```
 
@@ -540,8 +541,8 @@ The `advance()` method consumes the current token and returns it, similar to how
 our scanner's corresponding method crawled through characters.
 
 ```python
-# lox/parser.py method of the Parser class
-def advance(self, type: TT) -> bool:
+# lox/parser.py Parser method
+def advance(self) -> Token:
     if not self.is_at_end()
         self.current += 1
     return self.previous()
@@ -550,7 +551,7 @@ def advance(self, type: TT) -> bool:
 These methods bottom out on the last handful of primitive operations.
 
 ```python
-# lox/parser.py method of the Parser class
+# lox/parser.py Parser method
 def is_at_end(self) -> bool:
     return self.peek().type == "EOF"
 
@@ -605,12 +606,12 @@ comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
 Translated to Python:
 
 ```python
-# lox/parser.py method of the Parser class
+# lox/parser.py Parser method
 def comparison(self) -> Expr:
     expr = self.term()
 
-    while self.match("GREATER", "GREATER_EQUAL", "LESS",
-                     "LESS_EQUAL"):
+    while self.match("GREATER", "GREATER_EQUAL",
+                     "LESS", "LESS_EQUAL"):
         operator = self.previous()
         right = self.term()
         expr = Binary(expr, operator, right)
@@ -635,13 +636,13 @@ types, and an operand method handle to simplify this redundant code.
 </aside>
 
 ```python
-# lox/parser.py method of the Parser class
+# lox/parser.py Parser method
 def term(self) -> Expr:
     expr = self.factor()
 
     while self.match("MINUS", "PLUS"):
         operator = self.previous()
-        right = self.unary()
+        right = self.factor()
         expr = Binary(expr, operator, right)
 
     return expr
@@ -650,7 +651,7 @@ def term(self) -> Expr:
 And finally, multiplication and division:
 
 ```python
-# lox/parser.py method of the Parser class
+# lox/parser.py Parser method
 def factor(self) -> Expr:
     expr = self.unary()
 
@@ -674,7 +675,7 @@ unary          → ( "!" | "-" ) unary
 The code for this is a little different.
 
 ```python
-# lox/parser.py method of the Parser class
+# lox/parser.py Parser method
 def unary(self) -> Expr:
     if self.match("BANG", "MINUS"):
         operator = self.previous()
@@ -708,7 +709,7 @@ Most of the cases for the rule are single terminals, so parsing is
 straightforward.
 
 ```python
-# lox/parser.py method of the Parser class
+# lox/parser.py Parser method
 def primary(self) -> Expr:
     if self.match("FALSE"):
         return Literal(False)
@@ -856,8 +857,8 @@ parser looks for the closing `)` by calling `consume()`. Here, finally, is that
 method:
 
 ```python
-# lox/parser.py method of the Parser class
-def consume(self, type: TT, message: str):
+# lox/parser.py Parser method
+def consume(self, type: TokenType, message: str) -> Token:
     if self.check(type):
         return self.advance()
     raise self.error(self.peek(), message)
@@ -865,45 +866,64 @@ def consume(self, type: TT, message: str):
 
 It's similar to `match()` in that it checks to see if the next token is of the
 expected type. If so, it consumes the token and everything is groovy. If some
-other token is there, then we've hit an error. We report it by calling this:
+other token is there, then we've hit an error. We put the parser in an error
+state and store the error by calling this:
 
 ```python
-# lox/parser.py method of the Parser class
+# lox/parser.py Parser method
 def error(self, token: Token, message: str):
-    return ParseError()
-```
+    error = LoxSyntaxError.from_token(token, message)
+    self.errors.append(error)
+    return error
 
-First, that shows the error to the user by calling:
-
-```python
-# lox/parser.py method of the Parser class
-def error(self, token: Token,  message: str):
+    line = token.line
     if token.type == "EOF":
-        self.report(token.line, " at end", message)
+        where = "at end"
     else:
-        self.report(token.line, f" at '{token.lexeme}'", message)
+        where = f"at '{token.lexeme}'"
+    error = LoxSyntaxError(line, message, where)
+    self.errors.append(error)
+    return error
 ```
 
-This reports an error at a given token. It shows the token's location and the
-token itself. This will come in handy later since we use tokens throughout the
-interpreter to track locations in code.
-
-After we report the error, the user knows about their mistake, but what does the
-_parser_ do next? Back in `error()`, we create and return a ParseError, an
-instance of this new class:
+It uses a new convenience constructor for `LoxSyntaxError` that builds the error
+object from a token:
 
 ```python
-# lox/parser.py after Parser class
-class ParseError(RuntimeError):
-    pass
+# lox/errors.py LoxSyntaxError method
+@classmethod
+def from_token(cls, token: Token, message: str) -> "LoxSyntaxError":
+    line = token.line
+    if token.type == "EOF":
+        where = "at end"
+    else:
+        where = f"at '{token.lexeme}'"
+    return cls(line, message, where)
 ```
 
-This is a simple sentinel class we use to unwind the parser. The `error()`
-method _returns_ the error instead of _throwing_ it because we want to let the
-calling method inside the parser decide whether to unwind or not. Some parse
-errors occur in places where the parser isn't likely to get into a weird state
-and we don't need to <span name="production">synchronize</span>. In those
-places, we simply report the error and keep on truckin'.
+And we also need to create a new `errors` attribute to our class to hold the
+list of problems that ocurred during parsing:
+
+```python
+# lox/parser.py add attribute to Parser
+    ...
+    errors: list[LoxSyntaxError] = field(default_factory=list)
+    ...
+```
+
+The new code uses a few imports:
+
+```python
+# lox/parser.py at top-level
+from lox.errors import LoxSyntaxError
+from dataclasses import field
+```
+
+The `error()` method _returns_ the error instead of _raising_ it because we want
+to let the calling method inside the parser decide whether to unwind or not.
+Some parse errors occur in places where the parser isn't likely to get into a
+weird state and we don't need to <span name="production">synchronize</span>. In
+those places, we simply report the error and keep on truckin'.
 
 For example, Lox limits the number of arguments you can pass to a function. If
 you pass too many, the parser needs to report that error, but it can and should
@@ -944,12 +964,12 @@ parser's own state?
 ### Synchronizing a recursive descent parser
 
 With recursive descent, the parser's state -- which rules it is in the middle of
-recognizing -- is not stored explicitly in fields. Instead, we use Java's own
+recognizing -- is not stored explicitly in fields. Instead, we use Python's own
 call stack to track what the parser is doing. Each rule in the middle of being
 parsed is a call frame on the stack. In order to reset that state, we need to
 clear out those call frames.
 
-The natural way to do that in Java is exceptions. When we want to synchronize,
+The natural way to do that in Python is exceptions. When we want to synchronize,
 we _throw_ that ParseError object. Higher up in the method for the grammar rule
 we are synchronizing to, we'll catch it. Since we synchronize on statement
 boundaries, we'll catch the exception there. After the exception is caught, the
@@ -973,7 +993,7 @@ the first error precisely, so everything after that is kind of "best effort".
 This method encapsulates that logic:
 
 ```python
-# lox/parser.py method of the Parser class
+# lox/parser.py Parser method
 def synchronize(self):
     self.advance()
     boundary_tokens = {"CLASS", "FUN", "VAR", "FOR", "IF",
@@ -984,7 +1004,7 @@ def synchronize(self):
             return
         if self.peek().type in boundary_tokens:
             return
-      self.advance()
+        self.advance()
 ```
 
 It discards tokens until it thinks it has found a statement boundary. After
@@ -1002,6 +1022,42 @@ Since we can parse only a single expression anyway, that's no big loss.
 
 ## Wiring up the Parser
 
+After we store an error, what does the _parser_ do next? Back in
+`Parser.error()`, we created and returned a LoxSyntaxError, representing a
+single issue which is stored in a list.
+
+We also need a class to represent the collection of all issues that may occur
+during parsing or later stages of analysis. We create a class to hold that list
+and format it for display.:
+
+```python
+# lox/errors.py at top-level
+class LoxStaticError(Exception):
+    def __init__(self, errors: list[LoxSyntaxError]):
+        self.errors = errors
+
+    def __str__(self):
+        return "\n".join(str(error) for error in self.errors)
+```
+
+We also need to handle any errors during scanning. We already have "INVALID"
+tokens for that purpose. If we see any of those tokens during parsing, we report
+them as syntax errors too. We can track those in our regular parsing methods or
+handle everygthing at once during class initialization, which I think is
+cleaner.
+
+```python
+# lox/parser.py Parser method
+def __post_init__(self):
+    for token in self.tokens:
+        if token.type == "INVALID":
+            self.error(token, "Unexpected character.")
+    self.tokens = [t for t in self.tokens if t.type != "INVALID"]
+```
+
+The `__post_init__()` method is a special hook provided by the `dataclasses` to
+run custom initialization code after the default `__init__()` method has run.
+
 We are mostly done parsing expressions now. There is one other place where we
 need to add a little error handling. As the parser descends through the parsing
 methods for each grammar rule, it eventually hits `primary()`. If none of the
@@ -1011,32 +1067,25 @@ expression. We need to handle that error too.
 ```python
 # lox/parser.py at the end of Parser.primary() method
     ...
-    raise ParseError(self.peek(), "Expect expression.")
+    raise self.error(self.peek(), "Expect expression.")
 ```
 
 With that, all that remains is for us to choose an initial method to kick it
 off. Similarly with the tokenizer, we create a top-level function `parse()` that
-encapsulates all this logic.
+encapsulates this logic.
 
 ```python
 # lox/parser.py at top-level
-def parse(tokens: list[Token]) -> Expr | None:
+def parse(tokens: list[Token]) -> Expr:
     parser = Parser(tokens)
-    try:
-        return parser.expression()
-    except ParseError:
-        return None
+    return parser.expression()
 ```
 
 We'll revisit this function later when we add statements to the language. For
 now, it parses a single expression and returns it. We also have some temporary
-code to exit out of panic mode. Syntax error recovery is the parser's job, so we
-don't want the ParseError exception to escape into the rest of the interpreter.
-
-When a syntax error does occur, this method returns `None`. That's OK. The
-parser promises not to crash or hang on invalid syntax, but it doesn't promise
-to return a _usable syntax tree_ if an error is found. As soon as the parser
-reports an error, `hadError` gets set, and subsequent phases are skipped.
+code to exit out of panic mode. For now we just raise the first syntax error
+that we encounter. Later, the parser will collect all syntax errors and report
+all of them at once.
 
 Finally, we can hook up our brand new parser to the main Lox class and try it
 out. We still don't have an interpreter, so for now, we'll parse to a syntax
@@ -1048,7 +1097,7 @@ display it.
 Delete the old code to print the scanned tokens and replace it with this:
 
 ```python
-# lox/lox.py in run() method of the Lox class
+# lox/lox.py at Lox.run()
     tokens = tokenize(self.source)
     expression = parse(tokens)
     if expression is None:
@@ -1062,8 +1111,8 @@ We also need to setup some imports in the beginning of this file:
 
 ```python
 # lox/lox.py at top-level
-from .parser import parse
-from .ast_printer import pretty
+from lox.parser import parse
+from lox.ast_printer import pretty
 ```
 
 Congratulations, you have crossed the <span name="harder">threshold</span>! That

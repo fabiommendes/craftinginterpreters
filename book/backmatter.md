@@ -3,9 +3,4 @@ material you may find helpful:
 
 - **[Appendix I][]** contains a complete grammar for Lox, all in one place.
 
-- **[Appendix II][]** shows the Java classes produced by [the AST generator][]
-  we use for pylox.
-
 [appendix i]: appendix-i.html
-[appendix ii]: appendix-ii.html
-[the ast generator]: representing-code.html#metaprogramming-the-trees

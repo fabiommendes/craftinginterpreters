@@ -1,1 +1,1 @@
-from .scanner import tokenize
+from lox.scanner import tokenize
