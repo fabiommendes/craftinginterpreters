@@ -130,7 +130,8 @@ The new parser code follows the grammar directly.
     ...
     superclass = None
     if self.match("LESS"):
-        name = self.consume("IDENTIFIER", "Expect superclass name.")
+        name = self.consume("IDENTIFIER",
+                            "Expect superclass name.")
         superclass = Variable(name)
     ...
 ```
@@ -415,7 +416,8 @@ And we define the auxiliary method.
 def super_expression(self) -> Super:
     keyword = self.consume("SUPER", "Expect 'super' keyword.")
     self.consume("DOT", "Expect '.' after 'super'.")
-    method = self.consume("IDENTIFIER", "Expect superclass method name.")
+    method = self.consume("IDENTIFIER",
+                          "Expect superclass method name.")
     return Super(keyword, method)
 ```
 

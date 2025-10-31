@@ -129,21 +129,7 @@ refresh your memory, Lox inheritance syntax looks like this:</p>
 </pre></div>
 <p>Here, the Cruller class inherits from Doughnut and thus, instances of Cruller
 inherit the <code>cook()</code> method. I don&rsquo;t know why I&rsquo;m belaboring this. You know how
-inheritance works. Let&rsquo;s start compiling the new syntax.</p>
-<div class="codehilite"><pre class="insert-before">  currentClass = &amp;classCompiler;
-
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>classDeclaration</em>()</div>
-<pre class="insert">  <span class="k">if</span> (<span class="i">match</span>(<span class="a">TOKEN_LESS</span>)) {
-    <span class="i">consume</span>(<span class="a">TOKEN_IDENTIFIER</span>, <span class="s">&quot;Expect superclass name.&quot;</span>);
-    <span class="i">variable</span>(<span class="k">false</span>);
-    <span class="i">namedVariable</span>(<span class="i">className</span>, <span class="k">false</span>);
-    <span class="i">emitByte</span>(<span class="a">OP_INHERIT</span>);
-  }
-
-</pre><pre class="insert-after">  namedVariable(className, false);
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>classDeclaration</em>()</div>
+inheritance works. Let&rsquo;s start compiling the new syntax.</p><strong>ERROR: Missing snippet compile-superclass</strong>
 
 <p>After we compile the class name, if the next token is a <code>&lt;</code>, then we found a
 superclass clause. We consume the superclass&rsquo;s identifier token, then call
@@ -161,19 +147,7 @@ existing class and applies the effect of inheritance to it.</p>
 </pre></div>
 <p>The result is this bytecode:</p><img src="image/superclasses/inherit-stack.png" alt="The series of bytecode instructions for a Cruller class inheriting from Doughnut." />
 <p>Before we implement the new <code>OP_INHERIT</code> instruction, we have an edge case to
-detect.</p>
-<div class="codehilite"><pre class="insert-before">    variable(false);
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>classDeclaration</em>()</div>
-<pre class="insert">
-
-    <span class="k">if</span> (<span class="i">identifiersEqual</span>(&amp;<span class="i">className</span>, &amp;<span class="i">parser</span>.<span class="i">previous</span>)) {
-      <span class="i">error</span>(<span class="s">&quot;A class can&#39;t inherit from itself.&quot;</span>);
-    }
-
-</pre><pre class="insert-after">    namedVariable(className, false);
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>classDeclaration</em>()</div>
+detect.</p><strong>ERROR: Missing snippet inherit-self</strong>
 
 <p><span name="cycle">A</span> class cannot be its own superclass. Unless you have
 access to a deranged nuclear physicist and a very heavily modified DeLorean, you
@@ -184,41 +158,12 @@ allowing cycles would actually cause any problems in clox. It wouldn&rsquo;t do
 anything <em>useful</em>, but I don&rsquo;t think it would cause a crash or infinite loop.</p>
 </aside>
 <h3><a href="#executing-inheritance" id="executing-inheritance"><small>29&#8202;.&#8202;1&#8202;.&#8202;1</small>Executing inheritance</a></h3>
-<p>Now onto the new instruction.</p>
-<div class="codehilite"><pre class="insert-before">  OP_CLASS,
-</pre><div class="source-file"><em>chunk.h</em><br>
-in enum <em>OpCode</em></div>
-<pre class="insert">  <span class="a">OP_INHERIT</span>,
-</pre><pre class="insert-after">  OP_METHOD
-</pre></div>
-<div class="source-file-narrow"><em>chunk.h</em>, in enum <em>OpCode</em></div>
+<p>Now onto the new instruction.</p><strong>ERROR: Missing snippet inherit-op</strong>
 
 <p>There are no operands to worry about. The two values we need<span class="em">&mdash;</span>superclass and
-subclass<span class="em">&mdash;</span>are both found on the stack. That means disassembling is easy.</p>
-<div class="codehilite"><pre class="insert-before">      return constantInstruction(&quot;OP_CLASS&quot;, chunk, offset);
-</pre><div class="source-file"><em>debug.c</em><br>
-in <em>disassembleInstruction</em>()</div>
-<pre class="insert">    <span class="k">case</span> <span class="a">OP_INHERIT</span>:
-      <span class="k">return</span> <span class="i">simpleInstruction</span>(<span class="s">&quot;OP_INHERIT&quot;</span>, <span class="i">offset</span>);
-</pre><pre class="insert-after">    case OP_METHOD:
-</pre></div>
-<div class="source-file-narrow"><em>debug.c</em>, in <em>disassembleInstruction</em>()</div>
+subclass<span class="em">&mdash;</span>are both found on the stack. That means disassembling is easy.</p><strong>ERROR: Missing snippet disassemble-inherit</strong>
 
-<p>The interpreter is where the action happens.</p>
-<div class="codehilite"><pre class="insert-before">        break;
-</pre><div class="source-file"><em>vm.c</em><br>
-in <em>run</em>()</div>
-<pre class="insert">      <span class="k">case</span> <span class="a">OP_INHERIT</span>: {
-        <span class="t">Value</span> <span class="i">superclass</span> = <span class="i">peek</span>(<span class="n">1</span>);
-        <span class="t">ObjClass</span>* <span class="i">subclass</span> = <span class="a">AS_CLASS</span>(<span class="i">peek</span>(<span class="n">0</span>));
-        <span class="i">tableAddAll</span>(&amp;<span class="a">AS_CLASS</span>(<span class="i">superclass</span>)-&gt;<span class="i">methods</span>,
-                    &amp;<span class="i">subclass</span>-&gt;<span class="i">methods</span>);
-        <span class="i">pop</span>(); <span class="c">// Subclass.</span>
-        <span class="k">break</span>;
-      }
-</pre><pre class="insert-after">      case OP_METHOD:
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, in <em>run</em>()</div>
+<p>The interpreter is where the action happens.</p><strong>ERROR: Missing snippet interpret-inherit</strong>
 
 <p>From the top of the stack down, we have the subclass then the superclass. We
 grab both of those and then do the inherit-y bit. This is where clox takes a
@@ -279,18 +224,7 @@ isn&rsquo;t a class at all:</p>
 </pre></div>
 <p>Obviously, no self-respecting programmer would write that, but we have to guard
 against potential Lox users who have no self respect. A simple runtime check
-fixes that.</p>
-<div class="codehilite"><pre class="insert-before">        Value superclass = peek(1);
-</pre><div class="source-file"><em>vm.c</em><br>
-in <em>run</em>()</div>
-<pre class="insert">        <span class="k">if</span> (!<span class="a">IS_CLASS</span>(<span class="i">superclass</span>)) {
-          <span class="i">runtimeError</span>(<span class="s">&quot;Superclass must be a class.&quot;</span>);
-          <span class="k">return</span> <span class="a">INTERPRET_RUNTIME_ERROR</span>;
-        }
-
-</pre><pre class="insert-after">        ObjClass* subclass = AS_CLASS(peek(0));
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, in <em>run</em>()</div>
+fixes that.</p><strong>ERROR: Missing snippet inherit-non-class</strong>
 
 <p>If the value we loaded from the identifier in the superclass clause isn&rsquo;t an
 ObjClass, we report a runtime error to let the user know what we think of them
@@ -375,19 +309,7 @@ the same.</p>
 <h3><a href="#a-superclass-local-variable" id="a-superclass-local-variable"><small>29&#8202;.&#8202;2&#8202;.&#8202;1</small>A superclass local variable</a></h3>
 <p>Our compiler already emits code to load the superclass onto the stack. Instead
 of leaving that slot as a temporary, we create a new scope and make it a local
-variable.</p>
-<div class="codehilite"><pre class="insert-before">    }
-
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>classDeclaration</em>()</div>
-<pre class="insert">    <span class="i">beginScope</span>();
-    <span class="i">addLocal</span>(<span class="i">syntheticToken</span>(<span class="s">&quot;super&quot;</span>));
-    <span class="i">defineVariable</span>(<span class="n">0</span>);
-
-</pre><pre class="insert-after">    namedVariable(className, false);
-    emitByte(OP_INHERIT);
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>classDeclaration</em>()</div>
+variable.</p><strong>ERROR: Missing snippet superclass-variable</strong>
 
 <p>Creating a new lexical scope ensures that if we declare two classes in the same
 scope, each has a different local slot to store its superclass. Since we always
@@ -400,17 +322,7 @@ with a user-defined one.</p>
 <p>The difference is that when compiling <code>this</code> expressions, we conveniently have a
 token sitting around whose lexeme is &ldquo;this&rdquo;. We aren&rsquo;t so lucky here. Instead,
 we add a little helper function to create a synthetic token for the given <span
-name="constant">constant</span> string.</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-add after <em>variable</em>()</div>
-<pre><span class="k">static</span> <span class="t">Token</span> <span class="i">syntheticToken</span>(<span class="k">const</span> <span class="t">char</span>* <span class="i">text</span>) {
-  <span class="t">Token</span> <span class="i">token</span>;
-  <span class="i">token</span>.<span class="i">start</span> = <span class="i">text</span>;
-  <span class="i">token</span>.<span class="i">length</span> = (<span class="t">int</span>)<span class="i">strlen</span>(<span class="i">text</span>);
-  <span class="k">return</span> <span class="i">token</span>;
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after <em>variable</em>()</div>
+name="constant">constant</span> string.</p><strong>ERROR: Missing snippet synthetic-token</strong>
 
 <aside name="constant" class="bottom">
 <p>I say &ldquo;constant string&rdquo; because tokens don&rsquo;t do any memory management of their
@@ -419,20 +331,7 @@ memory because it never gets freed. But the memory for C string literals lives
 in the executable&rsquo;s constant data section and never needs to be freed, so we&rsquo;re
 fine.</p>
 </aside>
-<p>Since we opened a local scope for the superclass variable, we need to close it.</p>
-<div class="codehilite"><pre class="insert-before">  emitByte(OP_POP);
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>classDeclaration</em>()</div>
-<pre class="insert">
-
-  <span class="k">if</span> (<span class="i">classCompiler</span>.<span class="i">hasSuperclass</span>) {
-    <span class="i">endScope</span>();
-  }
-</pre><pre class="insert-after">
-
-  currentClass = currentClass-&gt;enclosing;
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>classDeclaration</em>()</div>
+<p>Since we opened a local scope for the superclass variable, we need to close it.</p><strong>ERROR: Missing snippet end-superclass-scope</strong>
 
 <p>We pop the scope and discard the &ldquo;super&rdquo; variable after compiling the class body
 and its methods. That way, the variable is accessible in all of the methods of
@@ -442,33 +341,11 @@ there is one.</p>
 <p>To track that, we could declare a little local variable in <code>classDeclaration()</code>.
 But soon, other functions in the compiler will need to know whether the
 surrounding class is a subclass or not. So we may as well give our future selves
-a hand and store this fact as a field in the ClassCompiler now.</p>
-<div class="codehilite"><pre class="insert-before">typedef struct ClassCompiler {
-  struct ClassCompiler* enclosing;
-</pre><div class="source-file"><em>compiler.c</em><br>
-in struct <em>ClassCompiler</em></div>
-<pre class="insert">  <span class="t">bool</span> <span class="i">hasSuperclass</span>;
-</pre><pre class="insert-after">} ClassCompiler;
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in struct <em>ClassCompiler</em></div>
+a hand and store this fact as a field in the ClassCompiler now.</p><strong>ERROR: Missing snippet has-superclass</strong>
 
-<p>When we first initialize a ClassCompiler, we assume it is not a subclass.</p>
-<div class="codehilite"><pre class="insert-before">  ClassCompiler classCompiler;
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>classDeclaration</em>()</div>
-<pre class="insert">  <span class="i">classCompiler</span>.<span class="i">hasSuperclass</span> = <span class="k">false</span>;
-</pre><pre class="insert-after">  classCompiler.enclosing = currentClass;
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>classDeclaration</em>()</div>
+<p>When we first initialize a ClassCompiler, we assume it is not a subclass.</p><strong>ERROR: Missing snippet init-has-superclass</strong>
 
-<p>Then, if we see a superclass clause, we know we are compiling a subclass.</p>
-<div class="codehilite"><pre class="insert-before">    emitByte(OP_INHERIT);
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>classDeclaration</em>()</div>
-<pre class="insert">    <span class="i">classCompiler</span>.<span class="i">hasSuperclass</span> = <span class="k">true</span>;
-</pre><pre class="insert-after">  }
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>classDeclaration</em>()</div>
+<p>Then, if we see a superclass clause, we know we are compiling a subclass.</p><strong>ERROR: Missing snippet set-has-superclass</strong>
 
 <p>This machinery gives us a mechanism at runtime to access the superclass object
 of the surrounding subclass from within any of the subclass&rsquo;s methods<span class="em">&mdash;</span>simply
@@ -482,26 +359,10 @@ usual, we go front to back, starting with the new syntax. A super call <span
 name="last">begins</span>, naturally enough, with the <code>super</code> keyword.</p>
 <aside name="last">
 <p>This is it, friend. The very last entry you&rsquo;ll add to the parsing table.</p>
-</aside>
-<div class="codehilite"><pre class="insert-before">  [TOKEN_RETURN]        = {NULL,     NULL,   PREC_NONE},
-</pre><div class="source-file"><em>compiler.c</em><br>
-replace 1 line</div>
-<pre class="insert">  [<span class="a">TOKEN_SUPER</span>]         = {<span class="i">super_</span>,   <span class="a">NULL</span>,   <span class="a">PREC_NONE</span>},
-</pre><pre class="insert-after">  [TOKEN_THIS]          = {this_,    NULL,   PREC_NONE},
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, replace 1 line</div>
+</aside><strong>ERROR: Missing snippet table-super</strong>
 
 <p>When the expression parser lands on a <code>super</code> token, control jumps to a new
-parsing function which starts off like so:</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-add after <em>syntheticToken</em>()</div>
-<pre><span class="k">static</span> <span class="t">void</span> <span class="i">super_</span>(<span class="t">bool</span> <span class="i">canAssign</span>) {
-  <span class="i">consume</span>(<span class="a">TOKEN_DOT</span>, <span class="s">&quot;Expect &#39;.&#39; after &#39;super&#39;.&quot;</span>);
-  <span class="i">consume</span>(<span class="a">TOKEN_IDENTIFIER</span>, <span class="s">&quot;Expect superclass method name.&quot;</span>);
-  <span class="t">uint8_t</span> <span class="i">name</span> = <span class="i">identifierConstant</span>(&amp;<span class="i">parser</span>.<span class="i">previous</span>);
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after <em>syntheticToken</em>()</div>
+parsing function which starts off like so:</p><strong>ERROR: Missing snippet super</strong>
 
 <p>This is pretty different from how we compiled <code>this</code> expressions. Unlike <code>this</code>,
 a <code>super</code> <span name="token">token</span> is not a standalone expression.
@@ -532,18 +393,7 @@ when the compiler hits a <code>super</code> token, we consume the subsequent <co
 then look for a method name. Methods are looked up dynamically, so we use
 <code>identifierConstant()</code> to take the lexeme of the method name token and store it
 in the constant table just like we do for property access expressions.</p>
-<p>Here is what the compiler does after consuming those tokens:</p>
-<div class="codehilite"><pre class="insert-before">  uint8_t name = identifierConstant(&amp;parser.previous);
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>super_</em>()</div>
-<pre class="insert">
-
-  <span class="i">namedVariable</span>(<span class="i">syntheticToken</span>(<span class="s">&quot;this&quot;</span>), <span class="k">false</span>);
-  <span class="i">namedVariable</span>(<span class="i">syntheticToken</span>(<span class="s">&quot;super&quot;</span>), <span class="k">false</span>);
-  <span class="i">emitBytes</span>(<span class="a">OP_GET_SUPER</span>, <span class="i">name</span>);
-</pre><pre class="insert-after">}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>super_</em>()</div>
+<p>Here is what the compiler does after consuming those tokens:</p><strong>ERROR: Missing snippet super-get</strong>
 
 <p>In order to access a <em>superclass method</em> on <em>the current instance</em>, the runtime
 needs both the receiver <em>and</em> the superclass of the surrounding method&rsquo;s class.
@@ -593,19 +443,7 @@ access</strong> as an operand.</p>
 list and calling a function.</p>
 <p>We&rsquo;re almost ready to implement the new <code>OP_GET_SUPER</code> instruction in the
 interpreter. But before we do, the compiler has some errors it is responsible
-for reporting.</p>
-<div class="codehilite"><pre class="insert-before">static void super_(bool canAssign) {
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>super_</em>()</div>
-<pre class="insert">  <span class="k">if</span> (<span class="i">currentClass</span> == <span class="a">NULL</span>) {
-    <span class="i">error</span>(<span class="s">&quot;Can&#39;t use &#39;super&#39; outside of a class.&quot;</span>);
-  } <span class="k">else</span> <span class="k">if</span> (!<span class="i">currentClass</span>-&gt;<span class="i">hasSuperclass</span>) {
-    <span class="i">error</span>(<span class="s">&quot;Can&#39;t use &#39;super&#39; in a class with no superclass.&quot;</span>);
-  }
-
-</pre><pre class="insert-after">  consume(TOKEN_DOT, &quot;Expect '.' after 'super'.&quot;);
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>super_</em>()</div>
+for reporting.</p><strong>ERROR: Missing snippet super-errors</strong>
 
 <p>A super call is meaningful only inside the body of a method (or in a function
 nested inside a method), and only inside the method of a class that has a
@@ -614,42 +452,12 @@ that&rsquo;s <code>NULL</code> or points to a class with no superclass, we repor
 <h3><a href="#executing-super-accesses" id="executing-super-accesses"><small>29&#8202;.&#8202;3&#8202;.&#8202;1</small>Executing super accesses</a></h3>
 <p>Assuming the user didn&rsquo;t put a <code>super</code> expression where it&rsquo;s not allowed, their
 code passes from the compiler over to the runtime. We&rsquo;ve got ourselves a new
-instruction.</p>
-<div class="codehilite"><pre class="insert-before">  OP_SET_PROPERTY,
-</pre><div class="source-file"><em>chunk.h</em><br>
-in enum <em>OpCode</em></div>
-<pre class="insert">  <span class="a">OP_GET_SUPER</span>,
-</pre><pre class="insert-after">  OP_EQUAL,
-</pre></div>
-<div class="source-file-narrow"><em>chunk.h</em>, in enum <em>OpCode</em></div>
+instruction.</p><strong>ERROR: Missing snippet get-super-op</strong>
 
-<p>We disassemble it like other opcodes that take a constant table index operand.</p>
-<div class="codehilite"><pre class="insert-before">      return constantInstruction(&quot;OP_SET_PROPERTY&quot;, chunk, offset);
-</pre><div class="source-file"><em>debug.c</em><br>
-in <em>disassembleInstruction</em>()</div>
-<pre class="insert">    <span class="k">case</span> <span class="a">OP_GET_SUPER</span>:
-      <span class="k">return</span> <span class="i">constantInstruction</span>(<span class="s">&quot;OP_GET_SUPER&quot;</span>, <span class="i">chunk</span>, <span class="i">offset</span>);
-</pre><pre class="insert-after">    case OP_EQUAL:
-</pre></div>
-<div class="source-file-narrow"><em>debug.c</em>, in <em>disassembleInstruction</em>()</div>
+<p>We disassemble it like other opcodes that take a constant table index operand.</p><strong>ERROR: Missing snippet disassemble-get-super</strong>
 
 <p>You might anticipate something harder, but interpreting the new instruction is
-similar to executing a normal property access.</p>
-<div class="codehilite"><pre class="insert-before">      }
-</pre><div class="source-file"><em>vm.c</em><br>
-in <em>run</em>()</div>
-<pre class="insert">      <span class="k">case</span> <span class="a">OP_GET_SUPER</span>: {
-        <span class="t">ObjString</span>* <span class="i">name</span> = <span class="a">READ_STRING</span>();
-        <span class="t">ObjClass</span>* <span class="i">superclass</span> = <span class="a">AS_CLASS</span>(<span class="i">pop</span>());
-
-        <span class="k">if</span> (!<span class="i">bindMethod</span>(<span class="i">superclass</span>, <span class="i">name</span>)) {
-          <span class="k">return</span> <span class="a">INTERPRET_RUNTIME_ERROR</span>;
-        }
-        <span class="k">break</span>;
-      }
-</pre><pre class="insert-after">      case OP_EQUAL: {
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, in <em>run</em>()</div>
+similar to executing a normal property access.</p><strong>ERROR: Missing snippet interpret-get-super</strong>
 
 <p>As with properties, we read the method name from the
 constant table. Then we pass that to <code>bindMethod()</code> which looks up the method in
@@ -694,23 +502,7 @@ you invoke it immediately or not.</p>
 <p>The compiler can certainly answer that question for itself if it sees a left
 parenthesis after the superclass method name, so we&rsquo;ll go ahead and perform the
 same optimization we did for method calls. Take out the two lines of code that
-load the superclass and emit <code>OP_GET_SUPER</code>, and replace them with this:</p>
-<div class="codehilite"><pre class="insert-before">  namedVariable(syntheticToken(&quot;this&quot;), false);
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>super_</em>()<br>
-replace 2 lines</div>
-<pre class="insert">  <span class="k">if</span> (<span class="i">match</span>(<span class="a">TOKEN_LEFT_PAREN</span>)) {
-    <span class="t">uint8_t</span> <span class="i">argCount</span> = <span class="i">argumentList</span>();
-    <span class="i">namedVariable</span>(<span class="i">syntheticToken</span>(<span class="s">&quot;super&quot;</span>), <span class="k">false</span>);
-    <span class="i">emitBytes</span>(<span class="a">OP_SUPER_INVOKE</span>, <span class="i">name</span>);
-    <span class="i">emitByte</span>(<span class="i">argCount</span>);
-  } <span class="k">else</span> {
-    <span class="i">namedVariable</span>(<span class="i">syntheticToken</span>(<span class="s">&quot;super&quot;</span>), <span class="k">false</span>);
-    <span class="i">emitBytes</span>(<span class="a">OP_GET_SUPER</span>, <span class="i">name</span>);
-  }
-</pre><pre class="insert-after">}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>super_</em>(), replace 2 lines</div>
+load the superclass and emit <code>OP_GET_SUPER</code>, and replace them with this:</p><strong>ERROR: Missing snippet super-invoke</strong>
 
 <p>Now before we emit anything, we look for a parenthesized argument list. If we
 find one, we compile that. Then we load the superclass. After that, we emit a
@@ -724,45 +516,13 @@ I<span class="ellipse">&thinsp;.&thinsp;.&thinsp;.&nbsp;</span>I&rsquo;m sorry f
 </aside>
 <p>Otherwise, if we don&rsquo;t find a <code>(</code>, we continue to compile the expression as a
 super access like we did before and emit an <code>OP_GET_SUPER</code>.</p>
-<p>Drifting down the compilation pipeline, our first stop is a new instruction.</p>
-<div class="codehilite"><pre class="insert-before">  OP_INVOKE,
-</pre><div class="source-file"><em>chunk.h</em><br>
-in enum <em>OpCode</em></div>
-<pre class="insert">  <span class="a">OP_SUPER_INVOKE</span>,
-</pre><pre class="insert-after">  OP_CLOSURE,
-</pre></div>
-<div class="source-file-narrow"><em>chunk.h</em>, in enum <em>OpCode</em></div>
+<p>Drifting down the compilation pipeline, our first stop is a new instruction.</p><strong>ERROR: Missing snippet super-invoke-op</strong>
 
-<p>And just past that, its disassembler support.</p>
-<div class="codehilite"><pre class="insert-before">      return invokeInstruction(&quot;OP_INVOKE&quot;, chunk, offset);
-</pre><div class="source-file"><em>debug.c</em><br>
-in <em>disassembleInstruction</em>()</div>
-<pre class="insert">    <span class="k">case</span> <span class="a">OP_SUPER_INVOKE</span>:
-      <span class="k">return</span> <span class="i">invokeInstruction</span>(<span class="s">&quot;OP_SUPER_INVOKE&quot;</span>, <span class="i">chunk</span>, <span class="i">offset</span>);
-</pre><pre class="insert-after">    case OP_CLOSURE: {
-</pre></div>
-<div class="source-file-narrow"><em>debug.c</em>, in <em>disassembleInstruction</em>()</div>
+<p>And just past that, its disassembler support.</p><strong>ERROR: Missing snippet disassemble-super-invoke</strong>
 
 <p>A super invocation instruction has the same set of operands as <code>OP_INVOKE</code>, so
 we reuse the same helper to disassemble it. Finally, the pipeline dumps us into
-the interpreter.</p>
-<div class="codehilite"><pre class="insert-before">        break;
-      }
-</pre><div class="source-file"><em>vm.c</em><br>
-in <em>run</em>()</div>
-<pre class="insert">      <span class="k">case</span> <span class="a">OP_SUPER_INVOKE</span>: {
-        <span class="t">ObjString</span>* <span class="i">method</span> = <span class="a">READ_STRING</span>();
-        <span class="t">int</span> <span class="i">argCount</span> = <span class="a">READ_BYTE</span>();
-        <span class="t">ObjClass</span>* <span class="i">superclass</span> = <span class="a">AS_CLASS</span>(<span class="i">pop</span>());
-        <span class="k">if</span> (!<span class="i">invokeFromClass</span>(<span class="i">superclass</span>, <span class="i">method</span>, <span class="i">argCount</span>)) {
-          <span class="k">return</span> <span class="a">INTERPRET_RUNTIME_ERROR</span>;
-        }
-        <span class="i">frame</span> = &amp;<span class="i">vm</span>.<span class="i">frames</span>[<span class="i">vm</span>.<span class="i">frameCount</span> - <span class="n">1</span>];
-        <span class="k">break</span>;
-      }
-</pre><pre class="insert-after">      case OP_CLOSURE: {
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, in <em>run</em>()</div>
+the interpreter.</p><strong>ERROR: Missing snippet interpret-super-invoke</strong>
 
 <p>This handful of code is basically our implementation of <code>OP_INVOKE</code> mixed
 together with a dash of <code>OP_GET_SUPER</code>. There are some differences in how the

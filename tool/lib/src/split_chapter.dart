@@ -16,9 +16,9 @@ var _filePool = Pool(200);
 Future<void> splitChapter(Book book, Page chapter, [CodeTag tag]) async {
   var futures = <Future<void>>[];
 
-  for (var file in Glob("${chapter.language}/**.{c,h,java}").listSync()) {
-    futures.add(_splitSourceFile(book, chapter, file.path, tag));
-  }
+  // for (var file in Glob("${chapter.language}/**.{c,h,java}").listSync()) {
+  //   futures.add(_splitSourceFile(book, chapter, file.path, tag));
+  // }
 
   await Future.wait(futures);
 }

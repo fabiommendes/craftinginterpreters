@@ -892,7 +892,7 @@ object from a token:
 ```python
 # lox/errors.py LoxSyntaxError method
 @classmethod
-def from_token(cls, token: Token, message: str) -> "LoxSyntaxError":
+def from_token(cls, token: Token, message: str) -> Exception:
     line = token.line
     if token.type == "EOF":
         where = "at end"

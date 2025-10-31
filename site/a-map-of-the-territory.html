@@ -96,9 +96,9 @@ place. In <em>The Lord of the Rings</em> I never made anyone go farther than he 
 on a given day.</p>
 <p><cite>J. R. R. Tolkien</cite></p>
 </blockquote>
-<p>We don&rsquo;t want to wander all over the place, so before we set off, let&rsquo;s scan
-the territory charted by previous language implementers. It will help us
-understand where we are going and the alternate routes others have taken.</p>
+<p>We don&rsquo;t want to wander all over the place, so before we set off, let&rsquo;s scan the
+territory charted by previous language implementers. It will help us understand
+where we are going and the alternate routes others have taken.</p>
 <p>First, let me establish a shorthand. Much of this book is about a language&rsquo;s
 <em>implementation</em>, which is distinct from the <em>language itself</em> in some sort of
 Platonic ideal form. Things like &ldquo;stack&rdquo;, &ldquo;bytecode&rdquo;, and &ldquo;recursive descent&rdquo;,
@@ -166,10 +166,10 @@ does, except that English has thousands and thousands of &ldquo;keywords&rdquo; 
 overflowing cornucopia of ambiguity. Programming languages are much simpler.</p>
 <p>A <strong>parser</strong> takes the flat sequence of tokens and builds a tree structure that
 mirrors the nested nature of the grammar. These trees have a couple of different
-names<span class="em">&mdash;</span><strong>parse tree</strong> or <strong>abstract syntax tree</strong><span class="em">&mdash;</span>depending on how
-close to the bare syntactic structure of the source language they are. In
-practice, language hackers usually call them <strong>syntax trees</strong>, <strong>ASTs</strong>, or
-often just <strong>trees</strong>.</p><img src="image/a-map-of-the-territory/ast.png" alt="An abstract syntax tree." />
+names<span class="em">&mdash;</span><strong>parse tree</strong> or <strong>abstract syntax tree</strong><span class="em">&mdash;</span>depending on how close to
+the bare syntactic structure of the source language they are. In practice,
+language hackers usually call them <strong>syntax trees</strong>, <strong>ASTs</strong>, or often just
+<strong>trees</strong>.</p><img src="image/a-map-of-the-territory/ast.png" alt="An abstract syntax tree." />
 <p>Parsing has a long, rich history in computer science that is closely tied to the
 artificial intelligence community. Many of the techniques used today to parse
 programming languages were originally conceived to parse <em>human</em> languages by AI
@@ -206,9 +206,8 @@ analysis needs to be stored somewhere. There are a few places we can squirrel it
 away:</p>
 <ul>
 <li>
-<p>Often, it gets stored right back as <strong>attributes</strong> on the syntax tree
-itself<span class="em">&mdash;</span>extra fields in the nodes that aren&rsquo;t initialized during parsing
-but get filled in later.</p>
+<p>Often, it gets stored right back as <strong>attributes</strong> on the syntax tree itself<span class="em">&mdash;</span>extra fields in the nodes that aren&rsquo;t initialized during parsing but get
+filled in later.</p>
 </li>
 <li>
 <p>Other times, we may store data in a lookup table off to the side. Typically,
@@ -290,9 +289,9 @@ replacement of aggregates&rdquo;, &ldquo;dead code elimination&rdquo;, and &ldqu
 <h3><a href="#code-generation" id="code-generation"><small>2&#8202;.&#8202;1&#8202;.&#8202;6</small>Code generation</a></h3>
 <p>We have applied all of the optimizations we can think of to the user&rsquo;s program.
 The last step is converting it to a form the machine can actually run. In other
-words, <strong>generating code</strong> (or <strong>code gen</strong>), where &ldquo;code&rdquo; here usually refers to
-the kind of primitive assembly-like instructions a CPU runs and not the kind of
-&ldquo;source code&rdquo; a human might want to read.</p>
+words, <strong>generating code</strong> (or <strong>code gen</strong>), where &ldquo;code&rdquo; here usually refers
+to the kind of primitive assembly-like instructions a CPU runs and not the kind
+of &ldquo;source code&rdquo; a human might want to read.</p>
 <p>Finally, we are in the <strong>back end</strong>, descending the other side of the mountain.
 From here on out, our representation of the code becomes more and more
 primitive, like evolution run in reverse, as we get closer to something our
@@ -305,9 +304,9 @@ pipelines, and enough <span name="aad">historical baggage</span> to fill a 747&r
 luggage bay.</p>
 <p>Speaking the chip&rsquo;s language also means your compiler is tied to a specific
 architecture. If your compiler targets <a href="https://en.wikipedia.org/wiki/X86">x86</a> machine code, it&rsquo;s not going to
-run on an <a href="https://en.wikipedia.org/wiki/ARM_architecture">ARM</a> device. All the way back in the &rsquo;60s, during the
-Cambrian explosion of computer architectures, that lack of portability was a
-real obstacle.</p>
+run on an <a href="https://en.wikipedia.org/wiki/ARM_architecture">ARM</a> device. All the way back in the &rsquo;60s, during the Cambrian
+explosion of computer architectures, that lack of portability was a real
+obstacle.</p>
 <aside name="aad">
 <p>For example, the <a href="http://www.felixcloutier.com/x86/AAD.html">AAD</a> (&ldquo;ASCII Adjust AX Before Division&rdquo;) instruction lets
 you perform division, which sounds useful. Except that instruction takes, as
@@ -348,7 +347,7 @@ at runtime. Running bytecode in a VM is slower than translating it to native
 code ahead of time because every instruction must be simulated at runtime each
 time it executes. In return, you get simplicity and portability. Implement your
 VM in, say, C, and you can run your language on any platform that has a C
-compiler. This is how the second interpreter we build in this book works. #TODO</p>
+compiler. This is how the second interpreter we build in this book works.</p>
 <aside name="vm">
 <p>The term &ldquo;virtual machine&rdquo; also refers to a different kind of abstraction. A
 <strong>system virtual machine</strong> emulates an entire hardware platform and operating
@@ -375,7 +374,7 @@ some representation to keep track of the type of each object during execution.</
 gets inserted directly into the resulting executable. In, say, <a href="https://golang.org/">Go</a>, each
 compiled application has its own copy of Go&rsquo;s runtime directly embedded in it.
 If the language is run inside an interpreter or VM, then the runtime lives
-there. This is how most implementations of languages like Java, Python, and
+there. This is how most implementations of languages like Python, Python, and
 JavaScript work.</p>
 <h2><a href="#shortcuts-and-alternate-routes" id="shortcuts-and-alternate-routes"><small>2&#8202;.&#8202;2</small>Shortcuts and Alternate Routes</a></h2>
 <p>That&rsquo;s the long path covering every possible phase you might implement. Many
@@ -417,8 +416,8 @@ first interpreter rolls this way.</p>
 <aside name="ruby">
 <p>A notable exception is early versions of Ruby, which were tree walkers. At 1.9,
 the canonical implementation of Ruby switched from the original MRI (Matz&rsquo;s Ruby
-Interpreter) to Koichi Sasada&rsquo;s YARV (Yet Another Ruby VM). YARV is a
-bytecode virtual machine.</p>
+Interpreter) to Koichi Sasada&rsquo;s YARV (Yet Another Ruby VM). YARV is a bytecode
+virtual machine.</p>
 </aside>
 <h3><a href="#transpilers" id="transpilers"><small>2&#8202;.&#8202;2&#8202;.&#8202;3</small>Transpilers</a></h3>
 <p><span name="gary">Writing</span> a complete back end for a language can be a lot
@@ -441,10 +440,9 @@ That might seem straightforward, but keep in mind the 8080 was an 8-bit chip and
 the 8086 a 16-bit chip that could use each register as a pair of 8-bit ones.
 XLT86 did data flow analysis to track register usage in the source program and
 then efficiently map it to the register set of the 8086.</p>
-<p>It was written by Gary Kildall, a tragic hero of computer science if there
-ever was one. One of the first people to recognize the promise of
-microcomputers, he created PL/M and CP/M, the first high-level language and OS
-for them.</p>
+<p>It was written by Gary Kildall, a tragic hero of computer science if there ever
+was one. One of the first people to recognize the promise of microcomputers, he
+created PL/M and CP/M, the first high-level language and OS for them.</p>
 <p>He was a sea captain, business owner, licensed pilot, and motorcyclist. A TV
 host with the Kris Kristofferson-esque look sported by dashing bearded dudes in
 the &rsquo;80s. He took on Bill Gates and, like many, lost, before meeting his end in
@@ -550,8 +548,9 @@ you&rsquo;ll see that there is definitely some compiling going on.</p>
 interpreter, and it <em>has</em> a compiler. In practice, most scripting languages work
 this way, as you can see:</p>
 <aside name="go">
-<p>The <a href="https://golang.org/">Go tool</a> is even more of a horticultural curiosity. If you run <code>go build</code>, it compiles your Go source code to machine code and stops. If you type
-<code>go run</code>, it does that, then immediately executes the generated executable.</p>
+<p>The <a href="https://golang.org/">Go tool</a> is even more of a horticultural curiosity. If you run
+<code>go build</code>, it compiles your Go source code to machine code and stops. If you
+type <code>go run</code>, it does that, then immediately executes the generated executable.</p>
 <p>So <code>go</code> <em>is</em> a compiler (you can use it as a tool to compile code without
 running it), <em>is</em> an interpreter (you can invoke it to immediately run a program
 from source), and also <em>has</em> a compiler (when you use it as an interpreter, it
@@ -579,8 +578,8 @@ all you need to focus on is the path in front of you.</p>
 <li>
 <p>Pick an open source implementation of a language you like. Download the
 source code and poke around in it. Try to find the code that implements the
-scanner and parser. Are they handwritten, or generated using tools like
-Lex and Yacc? (<code>.l</code> or <code>.y</code> files usually imply the latter.)</p>
+scanner and parser. Are they handwritten, or generated using tools like Lex
+and Yacc? (<code>.l</code> or <code>.y</code> files usually imply the latter.)</p>
 </li>
 <li>
 <p>Just-in-time compilation tends to be the fastest way to implement dynamically

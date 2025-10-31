@@ -978,7 +978,8 @@ visiting is inside a function declaration.
 @resolve_node.register
 def _(stmt: Return, env: Env) -> None:
     if env.function_context is None:
-        env.error(stmt.keyword, "Can't return from top-level code.")
+        env.error(stmt.keyword,
+                  "Can't return from top-level code.")
     if stmt.value is not None:
         resolve_node(stmt.value, env)
 ```

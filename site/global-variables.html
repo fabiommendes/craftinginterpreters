@@ -189,68 +189,22 @@ declaration.</p>
 </pre></div>
 <p>Up to now, our VM considered a &ldquo;program&rdquo; to be a single expression since that&rsquo;s
 all we could parse and compile. In a full Lox implementation, a program is a
-sequence of declarations. We&rsquo;re ready to support that now.</p>
-<div class="codehilite"><pre class="insert-before">  advance();
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>compile</em>()<br>
-replace 2 lines</div>
-<pre class="insert">
-
-  <span class="k">while</span> (!<span class="i">match</span>(<span class="a">TOKEN_EOF</span>)) {
-    <span class="i">declaration</span>();
-  }
-
-</pre><pre class="insert-after">  endCompiler();
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>compile</em>(), replace 2 lines</div>
+sequence of declarations. We&rsquo;re ready to support that now.</p><strong>ERROR: Missing snippet compile</strong>
 
 <p>We keep compiling declarations until we hit the end of the source file. We
-compile a single declaration using this:</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-add after <em>expression</em>()</div>
-<pre><span class="k">static</span> <span class="t">void</span> <span class="i">declaration</span>() {
-  <span class="i">statement</span>();
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after <em>expression</em>()</div>
+compile a single declaration using this:</p><strong>ERROR: Missing snippet declaration</strong>
 
 <p>We&rsquo;ll get to variable declarations later in the chapter, so for now, we simply
-forward to <code>statement()</code>.</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-add after <em>declaration</em>()</div>
-<pre><span class="k">static</span> <span class="t">void</span> <span class="i">statement</span>() {
-  <span class="k">if</span> (<span class="i">match</span>(<span class="a">TOKEN_PRINT</span>)) {
-    <span class="i">printStatement</span>();
-  }
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after <em>declaration</em>()</div>
+forward to <code>statement()</code>.</p><strong>ERROR: Missing snippet statement</strong>
 
 <p>Blocks can contain declarations, and control flow statements can contain other
 statements. That means these two functions will eventually be recursive. We may
-as well write out the forward declarations now.</p>
-<div class="codehilite"><pre class="insert-before">static void expression();
-</pre><div class="source-file"><em>compiler.c</em><br>
-add after <em>expression</em>()</div>
-<pre class="insert"><span class="k">static</span> <span class="t">void</span> <span class="i">statement</span>();
-<span class="k">static</span> <span class="t">void</span> <span class="i">declaration</span>();
-</pre><pre class="insert-after">static ParseRule* getRule(TokenType type);
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after <em>expression</em>()</div>
+as well write out the forward declarations now.</p><strong>ERROR: Missing snippet forward-declarations</strong>
 
 <h3><a href="#print-statements" id="print-statements"><small>21&#8202;.&#8202;1&#8202;.&#8202;1</small>Print statements</a></h3>
 <p>We have two statement types to support in this chapter. Let&rsquo;s start with <code>print</code>
 statements, which begin, naturally enough, with a <code>print</code> token. We detect that
-using this helper function:</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-add after <em>consume</em>()</div>
-<pre><span class="k">static</span> <span class="t">bool</span> <span class="i">match</span>(<span class="t">TokenType</span> <span class="i">type</span>) {
-  <span class="k">if</span> (!<span class="i">check</span>(<span class="i">type</span>)) <span class="k">return</span> <span class="k">false</span>;
-  <span class="i">advance</span>();
-  <span class="k">return</span> <span class="k">true</span>;
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after <em>consume</em>()</div>
+using this helper function:</p><strong>ERROR: Missing snippet match</strong>
 
 <p>You may recognize it from jlox. If the current token has the given type, we
 consume the token and return <code>true</code>. Otherwise we leave the token alone and
@@ -258,14 +212,7 @@ return <code>false</code>. This <span name="turtles">helper</span> function is i
 in terms of this other helper:</p>
 <aside name="turtles">
 <p>It&rsquo;s helpers all the way down!</p>
-</aside>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-add after <em>consume</em>()</div>
-<pre><span class="k">static</span> <span class="t">bool</span> <span class="i">check</span>(<span class="t">TokenType</span> <span class="i">type</span>) {
-  <span class="k">return</span> <span class="i">parser</span>.<span class="i">current</span>.<span class="i">type</span> == <span class="i">type</span>;
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after <em>consume</em>()</div>
+</aside><strong>ERROR: Missing snippet check</strong>
 
 <p>The <code>check()</code> function returns <code>true</code> if the current token has the given type.
 It seems a little <span name="read">silly</span> to wrap this in a function, but
@@ -278,40 +225,13 @@ lines into one and makes the result a little more readable easily earns its
 keep.</p>
 </aside>
 <p>If we did match the <code>print</code> token, then we compile the rest of the statement
-here:</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-add after <em>expression</em>()</div>
-<pre><span class="k">static</span> <span class="t">void</span> <span class="i">printStatement</span>() {
-  <span class="i">expression</span>();
-  <span class="i">consume</span>(<span class="a">TOKEN_SEMICOLON</span>, <span class="s">&quot;Expect &#39;;&#39; after value.&quot;</span>);
-  <span class="i">emitByte</span>(<span class="a">OP_PRINT</span>);
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after <em>expression</em>()</div>
+here:</p><strong>ERROR: Missing snippet print-statement</strong>
 
 <p>A <code>print</code> statement evaluates an expression and prints the result, so we first
 parse and compile that expression. The grammar expects a semicolon after that,
-so we consume it. Finally, we emit a new instruction to print the result.</p>
-<div class="codehilite"><pre class="insert-before">  OP_NEGATE,
-</pre><div class="source-file"><em>chunk.h</em><br>
-in enum <em>OpCode</em></div>
-<pre class="insert">  <span class="a">OP_PRINT</span>,
-</pre><pre class="insert-after">  OP_RETURN,
-</pre></div>
-<div class="source-file-narrow"><em>chunk.h</em>, in enum <em>OpCode</em></div>
+so we consume it. Finally, we emit a new instruction to print the result.</p><strong>ERROR: Missing snippet op-print</strong>
 
-<p>At runtime, we execute this instruction like so:</p>
-<div class="codehilite"><pre class="insert-before">        break;
-</pre><div class="source-file"><em>vm.c</em><br>
-in <em>run</em>()</div>
-<pre class="insert">      <span class="k">case</span> <span class="a">OP_PRINT</span>: {
-        <span class="i">printValue</span>(<span class="i">pop</span>());
-        <span class="i">printf</span>(<span class="s">&quot;</span><span class="e">\n</span><span class="s">&quot;</span>);
-        <span class="k">break</span>;
-      }
-</pre><pre class="insert-after">      case OP_RETURN: {
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, in <em>run</em>()</div>
+<p>At runtime, we execute this instruction like so:</p><strong>ERROR: Missing snippet interpret-print</strong>
 
 <p>When the interpreter reaches this instruction, it has already executed the code
 for the expression, leaving the result value on top of the stack. Now we simply
@@ -334,15 +254,7 @@ it of course uses the stack while it&rsquo;s doing its thing. This is important
 because when we get to control flow and looping, a program might execute a long
 series of statements. If each statement grew or shrank the stack, it might
 eventually overflow or underflow.</p>
-<p>While we&rsquo;re in the interpreter loop, we should delete a bit of code.</p>
-<div class="codehilite"><pre class="insert-before">      case OP_RETURN: {
-</pre><div class="source-file"><em>vm.c</em><br>
-in <em>run</em>()<br>
-replace 2 lines</div>
-<pre class="insert">        <span class="c">// Exit interpreter.</span>
-</pre><pre class="insert-after">        return INTERPRET_OK;
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, in <em>run</em>(), replace 2 lines</div>
+<p>While we&rsquo;re in the interpreter loop, we should delete a bit of code.</p><strong>ERROR: Missing snippet op-return</strong>
 
 <p>When the VM only compiled and evaluated a single expression, we had some
 temporary code in <code>OP_RETURN</code> to output the value. Now that we have statements
@@ -352,15 +264,7 @@ name="return">step</span> closer to the complete implementation of clox.</p>
 <p>We&rsquo;re only one step closer, though. We will revisit <code>OP_RETURN</code> again when we
 add functions. Right now, it exits the entire interpreter loop.</p>
 </aside>
-<p>As usual, a new instruction needs support in the disassembler.</p>
-<div class="codehilite"><pre class="insert-before">      return simpleInstruction(&quot;OP_NEGATE&quot;, offset);
-</pre><div class="source-file"><em>debug.c</em><br>
-in <em>disassembleInstruction</em>()</div>
-<pre class="insert">    <span class="k">case</span> <span class="a">OP_PRINT</span>:
-      <span class="k">return</span> <span class="i">simpleInstruction</span>(<span class="s">&quot;OP_PRINT&quot;</span>, <span class="i">offset</span>);
-</pre><pre class="insert-after">    case OP_RETURN:
-</pre></div>
-<div class="source-file-narrow"><em>debug.c</em>, in <em>disassembleInstruction</em>()</div>
+<p>As usual, a new instruction needs support in the disassembler.</p><strong>ERROR: Missing snippet disassemble-print</strong>
 
 <p>That&rsquo;s our <code>print</code> statement. If you want, give it a whirl:</p>
 <div class="codehilite"><pre><span class="k">print</span> <span class="n">1</span> + <span class="n">2</span>;
@@ -370,26 +274,9 @@ in <em>disassembleInstruction</em>()</div>
 statements as we want now, which feels like progress.</p>
 <h3><a href="#expression-statements" id="expression-statements"><small>21&#8202;.&#8202;1&#8202;.&#8202;2</small>Expression statements</a></h3>
 <p>Wait until you see the next statement. If we <em>don&rsquo;t</em> see a <code>print</code> keyword, then
-we must be looking at an expression statement.</p>
-<div class="codehilite"><pre class="insert-before">    printStatement();
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>statement</em>()</div>
-<pre class="insert">  } <span class="k">else</span> {
-    <span class="i">expressionStatement</span>();
-</pre><pre class="insert-after">  }
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>statement</em>()</div>
+we must be looking at an expression statement.</p><strong>ERROR: Missing snippet parse-expressions-statement</strong>
 
-<p>It&rsquo;s parsed like so:</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-add after <em>expression</em>()</div>
-<pre><span class="k">static</span> <span class="t">void</span> <span class="i">expressionStatement</span>() {
-  <span class="i">expression</span>();
-  <span class="i">consume</span>(<span class="a">TOKEN_SEMICOLON</span>, <span class="s">&quot;Expect &#39;;&#39; after expression.&quot;</span>);
-  <span class="i">emitByte</span>(<span class="a">OP_POP</span>);
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after <em>expression</em>()</div>
+<p>It&rsquo;s parsed like so:</p><strong>ERROR: Missing snippet expression-statement</strong>
 
 <p>An &ldquo;expression statement&rdquo; is simply an expression followed by a semicolon.
 They&rsquo;re how you write an expression in a context where a statement is expected.
@@ -400,34 +287,12 @@ side effect, like this:</p>
 </pre></div>
 <p>Semantically, an expression statement evaluates the expression and discards the
 result. The compiler directly encodes that behavior. It compiles the expression,
-and then emits an <code>OP_POP</code> instruction.</p>
-<div class="codehilite"><pre class="insert-before">  OP_FALSE,
-</pre><div class="source-file"><em>chunk.h</em><br>
-in enum <em>OpCode</em></div>
-<pre class="insert">  <span class="a">OP_POP</span>,
-</pre><pre class="insert-after">  OP_EQUAL,
-</pre></div>
-<div class="source-file-narrow"><em>chunk.h</em>, in enum <em>OpCode</em></div>
+and then emits an <code>OP_POP</code> instruction.</p><strong>ERROR: Missing snippet pop-op</strong>
 
 <p>As the name implies, that instruction pops the top value off the stack and
-forgets it.</p>
-<div class="codehilite"><pre class="insert-before">      case OP_FALSE: push(BOOL_VAL(false)); break;
-</pre><div class="source-file"><em>vm.c</em><br>
-in <em>run</em>()</div>
-<pre class="insert">      <span class="k">case</span> <span class="a">OP_POP</span>: <span class="i">pop</span>(); <span class="k">break</span>;
-</pre><pre class="insert-after">      case OP_EQUAL: {
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, in <em>run</em>()</div>
+forgets it.</p><strong>ERROR: Missing snippet interpret-pop</strong>
 
-<p>We can disassemble it too.</p>
-<div class="codehilite"><pre class="insert-before">      return simpleInstruction(&quot;OP_FALSE&quot;, offset);
-</pre><div class="source-file"><em>debug.c</em><br>
-in <em>disassembleInstruction</em>()</div>
-<pre class="insert">    <span class="k">case</span> <span class="a">OP_POP</span>:
-      <span class="k">return</span> <span class="i">simpleInstruction</span>(<span class="s">&quot;OP_POP&quot;</span>, <span class="i">offset</span>);
-</pre><pre class="insert-after">    case OP_EQUAL:
-</pre></div>
-<div class="source-file-narrow"><em>debug.c</em>, in <em>disassembleInstruction</em>()</div>
+<p>We can disassemble it too.</p><strong>ERROR: Missing snippet disassemble-pop</strong>
 
 <p>Expression statements aren&rsquo;t very useful yet since we can&rsquo;t create any
 expressions that have side effects, but they&rsquo;ll be essential when we
@@ -443,46 +308,10 @@ loose end we left <a href="compiling-expressions.html#handling-syntax-errors">se
 mode error recovery to minimize the number of cascaded compile errors that it
 reports. The compiler exits panic mode when it reaches a synchronization point.
 For Lox, we chose statement boundaries as that point. Now that we have
-statements, we can implement synchronization.</p>
-<div class="codehilite"><pre class="insert-before">  statement();
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>declaration</em>()</div>
-<pre class="insert">
-
-  <span class="k">if</span> (<span class="i">parser</span>.<span class="i">panicMode</span>) <span class="i">synchronize</span>();
-</pre><pre class="insert-after">}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>declaration</em>()</div>
+statements, we can implement synchronization.</p><strong>ERROR: Missing snippet call-synchronize</strong>
 
 <p>If we hit a compile error while parsing the previous statement, we enter panic
-mode. When that happens, after the statement we start synchronizing.</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-add after <em>printStatement</em>()</div>
-<pre><span class="k">static</span> <span class="t">void</span> <span class="i">synchronize</span>() {
-  <span class="i">parser</span>.<span class="i">panicMode</span> = <span class="k">false</span>;
-
-  <span class="k">while</span> (<span class="i">parser</span>.<span class="i">current</span>.<span class="i">type</span> != <span class="a">TOKEN_EOF</span>) {
-    <span class="k">if</span> (<span class="i">parser</span>.<span class="i">previous</span>.<span class="i">type</span> == <span class="a">TOKEN_SEMICOLON</span>) <span class="k">return</span>;
-    <span class="k">switch</span> (<span class="i">parser</span>.<span class="i">current</span>.<span class="i">type</span>) {
-      <span class="k">case</span> <span class="a">TOKEN_CLASS</span>:
-      <span class="k">case</span> <span class="a">TOKEN_FUN</span>:
-      <span class="k">case</span> <span class="a">TOKEN_VAR</span>:
-      <span class="k">case</span> <span class="a">TOKEN_FOR</span>:
-      <span class="k">case</span> <span class="a">TOKEN_IF</span>:
-      <span class="k">case</span> <span class="a">TOKEN_WHILE</span>:
-      <span class="k">case</span> <span class="a">TOKEN_PRINT</span>:
-      <span class="k">case</span> <span class="a">TOKEN_RETURN</span>:
-        <span class="k">return</span>;
-
-      <span class="k">default</span>:
-        ; <span class="c">// Do nothing.</span>
-    }
-
-    <span class="i">advance</span>();
-  }
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after <em>printStatement</em>()</div>
+mode. When that happens, after the statement we start synchronizing.</p><strong>ERROR: Missing snippet synchronize</strong>
 
 <p>We skip tokens indiscriminately until we reach something that looks like a
 statement boundary. We recognize the boundary by looking for a preceding token
@@ -504,41 +333,10 @@ straw-lined stalls full of baby languages <em>moo</em>ing and <em>baa</em>ing at
 <li>Storing a new value in an existing variable using an assignment expression.</li>
 </ul>
 <p>We can&rsquo;t do either of the last two until we have some variables, so we start
-with declarations.</p>
-<div class="codehilite"><pre class="insert-before">static void declaration() {
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>declaration</em>()<br>
-replace 1 line</div>
-<pre class="insert">  <span class="k">if</span> (<span class="i">match</span>(<span class="a">TOKEN_VAR</span>)) {
-    <span class="i">varDeclaration</span>();
-  } <span class="k">else</span> {
-    <span class="i">statement</span>();
-  }
-</pre><pre class="insert-after">
-
-  if (parser.panicMode) synchronize();
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>declaration</em>(), replace 1 line</div>
+with declarations.</p><strong>ERROR: Missing snippet match-var</strong>
 
 <p>The placeholder parsing function we sketched out for the declaration grammar
-rule has an actual production now. If we match a <code>var</code> token, we jump here:</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-add after <em>expression</em>()</div>
-<pre><span class="k">static</span> <span class="t">void</span> <span class="i">varDeclaration</span>() {
-  <span class="t">uint8_t</span> <span class="i">global</span> = <span class="i">parseVariable</span>(<span class="s">&quot;Expect variable name.&quot;</span>);
-
-  <span class="k">if</span> (<span class="i">match</span>(<span class="a">TOKEN_EQUAL</span>)) {
-    <span class="i">expression</span>();
-  } <span class="k">else</span> {
-    <span class="i">emitByte</span>(<span class="a">OP_NIL</span>);
-  }
-  <span class="i">consume</span>(<span class="a">TOKEN_SEMICOLON</span>,
-          <span class="s">&quot;Expect &#39;;&#39; after variable declaration.&quot;</span>);
-
-  <span class="i">defineVariable</span>(<span class="i">global</span>);
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after <em>expression</em>()</div>
+rule has an actual production now. If we match a <code>var</code> token, we jump here:</p><strong>ERROR: Missing snippet var-declaration</strong>
 
 <p>The keyword is followed by the variable name. That&rsquo;s compiled by
 <code>parseVariable()</code>, which we&rsquo;ll get to in a second. Then we look for an <code>=</code>
@@ -557,30 +355,10 @@ expect the statement to be terminated with a semicolon.</p>
 latter.</p>
 </aside>
 <p>There are two new functions here for working with variables and identifiers.
-Here is the first:</p>
-<div class="codehilite"><pre class="insert-before">static void parsePrecedence(Precedence precedence);
-
-</pre><div class="source-file"><em>compiler.c</em><br>
-add after <em>parsePrecedence</em>()</div>
-<pre class="insert"><span class="k">static</span> <span class="t">uint8_t</span> <span class="i">parseVariable</span>(<span class="k">const</span> <span class="t">char</span>* <span class="i">errorMessage</span>) {
-  <span class="i">consume</span>(<span class="a">TOKEN_IDENTIFIER</span>, <span class="i">errorMessage</span>);
-  <span class="k">return</span> <span class="i">identifierConstant</span>(&amp;<span class="i">parser</span>.<span class="i">previous</span>);
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after <em>parsePrecedence</em>()</div>
+Here is the first:</p><strong>ERROR: Missing snippet parse-variable</strong>
 
 <p>It requires the next token to be an identifier, which it consumes and sends
-here:</p>
-<div class="codehilite"><pre class="insert-before">static void parsePrecedence(Precedence precedence);
-
-</pre><div class="source-file"><em>compiler.c</em><br>
-add after <em>parsePrecedence</em>()</div>
-<pre class="insert"><span class="k">static</span> <span class="t">uint8_t</span> <span class="i">identifierConstant</span>(<span class="t">Token</span>* <span class="i">name</span>) {
-  <span class="k">return</span> <span class="i">makeConstant</span>(<span class="a">OBJ_VAL</span>(<span class="i">copyString</span>(<span class="i">name</span>-&gt;<span class="i">start</span>,
-                                         <span class="i">name</span>-&gt;<span class="i">length</span>)));
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after <em>parsePrecedence</em>()</div>
+here:</p><strong>ERROR: Missing snippet identifier-constant</strong>
 
 <p>This function takes the given token and adds its lexeme to the chunk&rsquo;s constant
 table as a string. It then returns the index of that constant in the constant
@@ -591,14 +369,7 @@ to stuff into the bytecode stream as an operand. Instead, we store the string in
 the constant table and the instruction then refers to the name by its index in
 the table.</p>
 <p>This function returns that index all the way to <code>varDeclaration()</code> which later
-hands it over to here:</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-add after <em>parseVariable</em>()</div>
-<pre><span class="k">static</span> <span class="t">void</span> <span class="i">defineVariable</span>(<span class="t">uint8_t</span> <span class="i">global</span>) {
-  <span class="i">emitBytes</span>(<span class="a">OP_DEFINE_GLOBAL</span>, <span class="i">global</span>);
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after <em>parseVariable</em>()</div>
+hands it over to here:</p><strong>ERROR: Missing snippet define-variable</strong>
 
 <p><span name="helper">This</span> outputs the bytecode instruction that defines
 the new variable and stores its initial value. The index of the variable&rsquo;s name
@@ -612,28 +383,9 @@ more mileage out of them as we add more language features for working with
 names. Function and class declarations both declare new variables, and variable
 and assignment expressions access them.</p>
 </aside>
-<p>Over in the runtime, we begin with this new instruction:</p>
-<div class="codehilite"><pre class="insert-before">  OP_POP,
-</pre><div class="source-file"><em>chunk.h</em><br>
-in enum <em>OpCode</em></div>
-<pre class="insert">  <span class="a">OP_DEFINE_GLOBAL</span>,
-</pre><pre class="insert-after">  OP_EQUAL,
-</pre></div>
-<div class="source-file-narrow"><em>chunk.h</em>, in enum <em>OpCode</em></div>
+<p>Over in the runtime, we begin with this new instruction:</p><strong>ERROR: Missing snippet define-global-op</strong>
 
-<p>Thanks to our handy-dandy hash table, the implementation isn&rsquo;t too hard.</p>
-<div class="codehilite"><pre class="insert-before">      case OP_POP: pop(); break;
-</pre><div class="source-file"><em>vm.c</em><br>
-in <em>run</em>()</div>
-<pre class="insert">      <span class="k">case</span> <span class="a">OP_DEFINE_GLOBAL</span>: {
-        <span class="t">ObjString</span>* <span class="i">name</span> = <span class="a">READ_STRING</span>();
-        <span class="i">tableSet</span>(&amp;<span class="i">vm</span>.<span class="i">globals</span>, <span class="i">name</span>, <span class="i">peek</span>(<span class="n">0</span>));
-        <span class="i">pop</span>();
-        <span class="k">break</span>;
-      }
-</pre><pre class="insert-after">      case OP_EQUAL: {
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, in <em>run</em>()</div>
+<p>Thanks to our handy-dandy hash table, the implementation isn&rsquo;t too hard.</p><strong>ERROR: Missing snippet interpret-define-global</strong>
 
 <p>We get the name of the variable from the constant table. Then we <span
 name="pop">take</span> the value from the top of the stack and store it in a
@@ -648,14 +400,7 @@ possibility since the hash table requires dynamic allocation when it resizes.</p
 lax with global variables and lets you redefine them without error. That&rsquo;s
 useful in a REPL session, so the VM supports that by simply overwriting the
 value if the key happens to already be in the hash table.</p>
-<p>There&rsquo;s another little helper macro:</p>
-<div class="codehilite"><pre class="insert-before">#define READ_CONSTANT() (vm.chunk-&gt;constants.values[READ_BYTE()])
-</pre><div class="source-file"><em>vm.c</em><br>
-in <em>run</em>()</div>
-<pre class="insert"><span class="a">#define READ_STRING() AS_STRING(READ_CONSTANT())</span>
-</pre><pre class="insert-after">#define BINARY_OP(valueType, op) \
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, in <em>run</em>()</div>
+<p>There&rsquo;s another little helper macro:</p><strong>ERROR: Missing snippet read-string</strong>
 
 <p>It reads a one-byte operand from the bytecode chunk. It treats that as an index
 into the chunk&rsquo;s constant table and returns the string at that index. It doesn&rsquo;t
@@ -663,124 +408,40 @@ check that the value <em>is</em> a string<span class="em">&mdash;</span>it just 
 safe because the compiler never emits an instruction that refers to a non-string
 constant.</p>
 <p>Because we care about lexical hygiene, we also undefine this macro at the end of
-the interpret function.</p>
-<div class="codehilite"><pre class="insert-before">#undef READ_CONSTANT
-</pre><div class="source-file"><em>vm.c</em><br>
-in <em>run</em>()</div>
-<pre class="insert"><span class="a">#undef READ_STRING</span>
-</pre><pre class="insert-after">#undef BINARY_OP
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, in <em>run</em>()</div>
+the interpret function.</p><strong>ERROR: Missing snippet undef-read-string</strong>
 
 <p>I keep saying &ldquo;the hash table&rdquo;, but we don&rsquo;t actually have one yet. We need a
 place to store these globals. Since we want them to persist as long as clox is
-running, we store them right in the VM.</p>
-<div class="codehilite"><pre class="insert-before">  Value* stackTop;
-</pre><div class="source-file"><em>vm.h</em><br>
-in struct <em>VM</em></div>
-<pre class="insert">  <span class="t">Table</span> <span class="i">globals</span>;
-</pre><pre class="insert-after">  Table strings;
-</pre></div>
-<div class="source-file-narrow"><em>vm.h</em>, in struct <em>VM</em></div>
+running, we store them right in the VM.</p><strong>ERROR: Missing snippet vm-globals</strong>
 
 <p>As we did with the string table, we need to initialize the hash table to a valid
-state when the VM boots up.</p>
-<div class="codehilite"><pre class="insert-before">  vm.objects = NULL;
-</pre><div class="source-file"><em>vm.c</em><br>
-in <em>initVM</em>()</div>
-<pre class="insert">
-
-  <span class="i">initTable</span>(&amp;<span class="i">vm</span>.<span class="i">globals</span>);
-</pre><pre class="insert-after">  initTable(&amp;vm.strings);
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, in <em>initVM</em>()</div>
+state when the VM boots up.</p><strong>ERROR: Missing snippet init-globals</strong>
 
 <p>And we <span name="tear">tear</span> it down when we exit.</p>
 <aside name="tear">
 <p>The process will free everything on exit, but it feels undignified to require
 the operating system to clean up our mess.</p>
-</aside>
-<div class="codehilite"><pre class="insert-before">void freeVM() {
-</pre><div class="source-file"><em>vm.c</em><br>
-in <em>freeVM</em>()</div>
-<pre class="insert">  <span class="i">freeTable</span>(&amp;<span class="i">vm</span>.<span class="i">globals</span>);
-</pre><pre class="insert-after">  freeTable(&amp;vm.strings);
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, in <em>freeVM</em>()</div>
+</aside><strong>ERROR: Missing snippet free-globals</strong>
 
-<p>As usual, we want to be able to disassemble the new instruction too.</p>
-<div class="codehilite"><pre class="insert-before">      return simpleInstruction(&quot;OP_POP&quot;, offset);
-</pre><div class="source-file"><em>debug.c</em><br>
-in <em>disassembleInstruction</em>()</div>
-<pre class="insert">    <span class="k">case</span> <span class="a">OP_DEFINE_GLOBAL</span>:
-      <span class="k">return</span> <span class="i">constantInstruction</span>(<span class="s">&quot;OP_DEFINE_GLOBAL&quot;</span>, <span class="i">chunk</span>,
-                                 <span class="i">offset</span>);
-</pre><pre class="insert-after">    case OP_EQUAL:
-</pre></div>
-<div class="source-file-narrow"><em>debug.c</em>, in <em>disassembleInstruction</em>()</div>
+<p>As usual, we want to be able to disassemble the new instruction too.</p><strong>ERROR: Missing snippet disassemble-define-global</strong>
 
 <p>And with that, we can define global variables. Not that users can <em>tell</em> that
 they&rsquo;ve done so, because they can&rsquo;t actually <em>use</em> them. So let&rsquo;s fix that next.</p>
 <h2><a href="#reading-variables" id="reading-variables"><small>21&#8202;.&#8202;3</small>Reading Variables</a></h2>
 <p>As in every programming language ever, we access a variable&rsquo;s value using its
-name. We hook up identifier tokens to the expression parser here:</p>
-<div class="codehilite"><pre class="insert-before">  [TOKEN_LESS_EQUAL]    = {NULL,     binary, PREC_COMPARISON},
-</pre><div class="source-file"><em>compiler.c</em><br>
-replace 1 line</div>
-<pre class="insert">  [<span class="a">TOKEN_IDENTIFIER</span>]    = {<span class="i">variable</span>, <span class="a">NULL</span>,   <span class="a">PREC_NONE</span>},
-</pre><pre class="insert-after">  [TOKEN_STRING]        = {string,   NULL,   PREC_NONE},
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, replace 1 line</div>
+name. We hook up identifier tokens to the expression parser here:</p><strong>ERROR: Missing snippet table-identifier</strong>
 
-<p>That calls this new parser function:</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-add after <em>string</em>()</div>
-<pre><span class="k">static</span> <span class="t">void</span> <span class="i">variable</span>() {
-  <span class="i">namedVariable</span>(<span class="i">parser</span>.<span class="i">previous</span>);
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after <em>string</em>()</div>
+<p>That calls this new parser function:</p><strong>ERROR: Missing snippet variable-without-assign</strong>
 
 <p>Like with declarations, there are a couple of tiny helper functions that seem
-pointless now but will become more useful in later chapters. I promise.</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-add after <em>string</em>()</div>
-<pre><span class="k">static</span> <span class="t">void</span> <span class="i">namedVariable</span>(<span class="t">Token</span> <span class="i">name</span>) {
-  <span class="t">uint8_t</span> <span class="i">arg</span> = <span class="i">identifierConstant</span>(&amp;<span class="i">name</span>);
-  <span class="i">emitBytes</span>(<span class="a">OP_GET_GLOBAL</span>, <span class="i">arg</span>);
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after <em>string</em>()</div>
+pointless now but will become more useful in later chapters. I promise.</p><strong>ERROR: Missing snippet read-named-variable</strong>
 
 <p>This calls the same <code>identifierConstant()</code> function from before to take the
 given identifier token and add its lexeme to the chunk&rsquo;s constant table as a
 string. All that remains is to emit an instruction that loads the global
-variable with that name. Here&rsquo;s the instruction:</p>
-<div class="codehilite"><pre class="insert-before">  OP_POP,
-</pre><div class="source-file"><em>chunk.h</em><br>
-in enum <em>OpCode</em></div>
-<pre class="insert">  <span class="a">OP_GET_GLOBAL</span>,
-</pre><pre class="insert-after">  OP_DEFINE_GLOBAL,
-</pre></div>
-<div class="source-file-narrow"><em>chunk.h</em>, in enum <em>OpCode</em></div>
+variable with that name. Here&rsquo;s the instruction:</p><strong>ERROR: Missing snippet get-global-op</strong>
 
-<p>Over in the interpreter, the implementation mirrors <code>OP_DEFINE_GLOBAL</code>.</p>
-<div class="codehilite"><pre class="insert-before">      case OP_POP: pop(); break;
-</pre><div class="source-file"><em>vm.c</em><br>
-in <em>run</em>()</div>
-<pre class="insert">      <span class="k">case</span> <span class="a">OP_GET_GLOBAL</span>: {
-        <span class="t">ObjString</span>* <span class="i">name</span> = <span class="a">READ_STRING</span>();
-        <span class="t">Value</span> <span class="i">value</span>;
-        <span class="k">if</span> (!<span class="i">tableGet</span>(&amp;<span class="i">vm</span>.<span class="i">globals</span>, <span class="i">name</span>, &amp;<span class="i">value</span>)) {
-          <span class="i">runtimeError</span>(<span class="s">&quot;Undefined variable &#39;%s&#39;.&quot;</span>, <span class="i">name</span>-&gt;<span class="i">chars</span>);
-          <span class="k">return</span> <span class="a">INTERPRET_RUNTIME_ERROR</span>;
-        }
-        <span class="i">push</span>(<span class="i">value</span>);
-        <span class="k">break</span>;
-      }
-</pre><pre class="insert-after">      case OP_DEFINE_GLOBAL: {
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, in <em>run</em>()</div>
+<p>Over in the interpreter, the implementation mirrors <code>OP_DEFINE_GLOBAL</code>.</p><strong>ERROR: Missing snippet interpret-get-global</strong>
 
 <p>We pull the constant table index from the instruction&rsquo;s operand and get the
 variable name. Then we use that as a key to look up the variable&rsquo;s value in the
@@ -788,15 +449,7 @@ globals hash table.</p>
 <p>If the key isn&rsquo;t present in the hash table, it means that global variable has
 never been defined. That&rsquo;s a runtime error in Lox, so we report it and exit the
 interpreter loop if that happens. Otherwise, we take the value and push it
-onto the stack.</p>
-<div class="codehilite"><pre class="insert-before">      return simpleInstruction(&quot;OP_POP&quot;, offset);
-</pre><div class="source-file"><em>debug.c</em><br>
-in <em>disassembleInstruction</em>()</div>
-<pre class="insert">    <span class="k">case</span> <span class="a">OP_GET_GLOBAL</span>:
-      <span class="k">return</span> <span class="i">constantInstruction</span>(<span class="s">&quot;OP_GET_GLOBAL&quot;</span>, <span class="i">chunk</span>, <span class="i">offset</span>);
-</pre><pre class="insert-after">    case OP_DEFINE_GLOBAL:
-</pre></div>
-<div class="source-file-narrow"><em>debug.c</em>, in <em>disassembleInstruction</em>()</div>
+onto the stack.</p><strong>ERROR: Missing snippet disassemble-get-global</strong>
 
 <p>A little bit of disassembling, and we&rsquo;re done. Our interpreter is now able to
 run code like this:</p>
@@ -838,51 +491,14 @@ getter.</p>
 be used as an assignment target, we look for a subsequent <code>=</code> token. If we see
 one, we compile it as an assignment or setter instead of a variable access or
 getter.</p>
-<p>We don&rsquo;t have setters to worry about yet, so all we need to handle are variables.</p>
-<div class="codehilite"><pre class="insert-before">  uint8_t arg = identifierConstant(&amp;name);
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>namedVariable</em>()<br>
-replace 1 line</div>
-<pre class="insert">
-
-  <span class="k">if</span> (<span class="i">match</span>(<span class="a">TOKEN_EQUAL</span>)) {
-    <span class="i">expression</span>();
-    <span class="i">emitBytes</span>(<span class="a">OP_SET_GLOBAL</span>, <span class="i">arg</span>);
-  } <span class="k">else</span> {
-    <span class="i">emitBytes</span>(<span class="a">OP_GET_GLOBAL</span>, <span class="i">arg</span>);
-  }
-</pre><pre class="insert-after">}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>namedVariable</em>(), replace 1 line</div>
+<p>We don&rsquo;t have setters to worry about yet, so all we need to handle are variables.</p><strong>ERROR: Missing snippet named-variable</strong>
 
 <p>In the parse function for identifier expressions, we look for an equals sign
 after the identifier. If we find one, instead of emitting code for a variable
 access, we compile the assigned value and then emit an assignment instruction.</p>
-<p>That&rsquo;s the last instruction we need to add in this chapter.</p>
-<div class="codehilite"><pre class="insert-before">  OP_DEFINE_GLOBAL,
-</pre><div class="source-file"><em>chunk.h</em><br>
-in enum <em>OpCode</em></div>
-<pre class="insert">  <span class="a">OP_SET_GLOBAL</span>,
-</pre><pre class="insert-after">  OP_EQUAL,
-</pre></div>
-<div class="source-file-narrow"><em>chunk.h</em>, in enum <em>OpCode</em></div>
+<p>That&rsquo;s the last instruction we need to add in this chapter.</p><strong>ERROR: Missing snippet set-global-op</strong>
 
-<p>As you&rsquo;d expect, its runtime behavior is similar to defining a new variable.</p>
-<div class="codehilite"><pre class="insert-before">      }
-</pre><div class="source-file"><em>vm.c</em><br>
-in <em>run</em>()</div>
-<pre class="insert">      <span class="k">case</span> <span class="a">OP_SET_GLOBAL</span>: {
-        <span class="t">ObjString</span>* <span class="i">name</span> = <span class="a">READ_STRING</span>();
-        <span class="k">if</span> (<span class="i">tableSet</span>(&amp;<span class="i">vm</span>.<span class="i">globals</span>, <span class="i">name</span>, <span class="i">peek</span>(<span class="n">0</span>))) {
-          <span class="i">tableDelete</span>(&amp;<span class="i">vm</span>.<span class="i">globals</span>, <span class="i">name</span>);<span name="delete"> </span>
-          <span class="i">runtimeError</span>(<span class="s">&quot;Undefined variable &#39;%s&#39;.&quot;</span>, <span class="i">name</span>-&gt;<span class="i">chars</span>);
-          <span class="k">return</span> <span class="a">INTERPRET_RUNTIME_ERROR</span>;
-        }
-        <span class="k">break</span>;
-      }
-</pre><pre class="insert-after">      case OP_EQUAL: {
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, in <em>run</em>()</div>
+<p>As you&rsquo;d expect, its runtime behavior is similar to defining a new variable.</p><strong>ERROR: Missing snippet interpret-set-global</strong>
 
 <p>The main difference is what happens when the key doesn&rsquo;t already exist in the
 globals hash table. If the variable hasn&rsquo;t been defined yet, it&rsquo;s a runtime
@@ -897,16 +513,7 @@ care to delete that zombie value from the table.</p>
 <p>The other difference is that setting a variable doesn&rsquo;t pop the value off the
 stack. Remember, assignment is an expression, so it needs to leave that value
 there in case the assignment is nested inside some larger expression.</p>
-<p>Add a dash of disassembly:</p>
-<div class="codehilite"><pre class="insert-before">      return constantInstruction(&quot;OP_DEFINE_GLOBAL&quot;, chunk,
-                                 offset);
-</pre><div class="source-file"><em>debug.c</em><br>
-in <em>disassembleInstruction</em>()</div>
-<pre class="insert">    <span class="k">case</span> <span class="a">OP_SET_GLOBAL</span>:
-      <span class="k">return</span> <span class="i">constantInstruction</span>(<span class="s">&quot;OP_SET_GLOBAL&quot;</span>, <span class="i">chunk</span>, <span class="i">offset</span>);
-</pre><pre class="insert-after">    case OP_EQUAL:
-</pre></div>
-<div class="source-file-narrow"><em>debug.c</em>, in <em>disassembleInstruction</em>()</div>
+<p>Add a dash of disassembly:</p><strong>ERROR: Missing snippet disassemble-set-global</strong>
 
 <p>So we&rsquo;re done, right? Well<span class="ellipse">&thinsp;.&thinsp;.&thinsp;.&nbsp;</span>not quite. We&rsquo;ve made a mistake! Take a gander at:</p>
 <div class="codehilite"><pre><span class="i">a</span> * <span class="i">b</span> = <span class="i">c</span> + <span class="i">d</span>;
@@ -940,53 +547,15 @@ precedence to permit the <code>=</code>.</p>
 the context of a low-precedence expression. The code that knows the current
 precedence is, logically enough, <code>parsePrecedence()</code>. The <code>variable()</code> function
 doesn&rsquo;t need to know the actual level. It just cares that the precedence is low
-enough to allow assignment, so we pass that fact in as a Boolean.</p>
-<div class="codehilite"><pre class="insert-before">    error(&quot;Expect expression.&quot;);
-    return;
-  }
-
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>parsePrecedence</em>()<br>
-replace 1 line</div>
-<pre class="insert">  <span class="t">bool</span> <span class="i">canAssign</span> = <span class="i">precedence</span> &lt;= <span class="a">PREC_ASSIGNMENT</span>;
-  <span class="i">prefixRule</span>(<span class="i">canAssign</span>);
-</pre><pre class="insert-after">
-
-  while (precedence &lt;= getRule(parser.current.type)-&gt;precedence) {
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>parsePrecedence</em>(), replace 1 line</div>
+enough to allow assignment, so we pass that fact in as a Boolean.</p><strong>ERROR: Missing snippet prefix-rule</strong>
 
 <p>Since assignment is the lowest-precedence expression, the only time we allow an
 assignment is when parsing an assignment expression or top-level expression like
-in an expression statement. That flag makes its way to the parser function here:</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-function <em>variable</em>()<br>
-replace 3 lines</div>
-<pre><span class="k">static</span> <span class="t">void</span> <span class="i">variable</span>(<span class="t">bool</span> <span class="i">canAssign</span>) {
-  <span class="i">namedVariable</span>(<span class="i">parser</span>.<span class="i">previous</span>, <span class="i">canAssign</span>);
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, function <em>variable</em>(), replace 3 lines</div>
+in an expression statement. That flag makes its way to the parser function here:</p><strong>ERROR: Missing snippet variable</strong>
 
-<p>Which passes it through a new parameter:</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-function <em>namedVariable</em>()<br>
-replace 1 line</div>
-<pre class="insert"><span class="k">static</span> <span class="t">void</span> <span class="i">namedVariable</span>(<span class="t">Token</span> <span class="i">name</span>, <span class="t">bool</span> <span class="i">canAssign</span>) {
-</pre><pre class="insert-after">  uint8_t arg = identifierConstant(&amp;name);
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, function <em>namedVariable</em>(), replace 1 line</div>
+<p>Which passes it through a new parameter:</p><strong>ERROR: Missing snippet named-variable-signature</strong>
 
-<p>And then finally uses it here:</p>
-<div class="codehilite"><pre class="insert-before">  uint8_t arg = identifierConstant(&amp;name);
-
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>namedVariable</em>()<br>
-replace 1 line</div>
-<pre class="insert">  <span class="k">if</span> (<span class="i">canAssign</span> &amp;&amp; <span class="i">match</span>(<span class="a">TOKEN_EQUAL</span>)) {
-</pre><pre class="insert-after">    expression();
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>namedVariable</em>(), replace 1 line</div>
+<p>And then finally uses it here:</p><strong>ERROR: Missing snippet named-variable-can-assign</strong>
 
 <p>That&rsquo;s a lot of plumbing to get literally one bit of data to the right place in
 the compiler, but arrived it has. If the variable is nested inside some
@@ -1000,19 +569,7 @@ and then tries to enter the infix parsing loop. There is no parsing function
 associated with <code>=</code>, so it skips that loop.</p>
 <p>Then <code>parsePrecedence()</code> silently returns back to the caller. That also isn&rsquo;t
 right. If the <code>=</code> doesn&rsquo;t get consumed as part of the expression, nothing else
-is going to consume it. It&rsquo;s an error and we should report it.</p>
-<div class="codehilite"><pre class="insert-before">    infixRule();
-  }
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>parsePrecedence</em>()</div>
-<pre class="insert">
-
-  <span class="k">if</span> (<span class="i">canAssign</span> &amp;&amp; <span class="i">match</span>(<span class="a">TOKEN_EQUAL</span>)) {
-    <span class="i">error</span>(<span class="s">&quot;Invalid assignment target.&quot;</span>);
-  }
-</pre><pre class="insert-after">}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>parsePrecedence</em>()</div>
+is going to consume it. It&rsquo;s an error and we should report it.</p><strong>ERROR: Missing snippet invalid-assign</strong>
 
 <p>With that, the previous bad program correctly gets an error at compile time. OK,
 <em>now</em> are we done? Still not quite. See, we&rsquo;re passing an argument to one of the
@@ -1026,84 +583,23 @@ them <em>all</em> to accept the parameter.</p>
 would also allow assignment to support <code>array[index] = value</code>.</p>
 </aside>
 <p>So we&rsquo;re going to finish off this chapter with some grunt work. First, let&rsquo;s go
-ahead and pass the flag to the infix parse functions.</p>
-<div class="codehilite"><pre class="insert-before">    ParseFn infixRule = getRule(parser.previous.type)-&gt;infix;
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>parsePrecedence</em>()<br>
-replace 1 line</div>
-<pre class="insert">    <span class="i">infixRule</span>(<span class="i">canAssign</span>);
-</pre><pre class="insert-after">  }
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>parsePrecedence</em>(), replace 1 line</div>
+ahead and pass the flag to the infix parse functions.</p><strong>ERROR: Missing snippet infix-rule</strong>
 
 <p>We&rsquo;ll need that for setters eventually. Then we&rsquo;ll fix the typedef for the
-function type.</p>
-<div class="codehilite"><pre class="insert-before">} Precedence;
-
-</pre><div class="source-file"><em>compiler.c</em><br>
-add after enum <em>Precedence</em><br>
-replace 1 line</div>
-<pre class="insert"><span class="k">typedef</span> <span class="t">void</span> (*<span class="t">ParseFn</span>)(<span class="t">bool</span> <span class="i">canAssign</span>);
-</pre><pre class="insert-after">
-
-typedef struct {
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after enum <em>Precedence</em>, replace 1 line</div>
+function type.</p><strong>ERROR: Missing snippet parse-fn-type</strong>
 
 <p>And some completely tedious code to accept this parameter in all of our existing
-parse functions. Here:</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-function <em>binary</em>()<br>
-replace 1 line</div>
-<pre class="insert"><span class="k">static</span> <span class="t">void</span> <span class="i">binary</span>(<span class="t">bool</span> <span class="i">canAssign</span>) {
-</pre><pre class="insert-after">  TokenType operatorType = parser.previous.type;
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, function <em>binary</em>(), replace 1 line</div>
+parse functions. Here:</p><strong>ERROR: Missing snippet binary</strong>
 
-<p>And here:</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-function <em>literal</em>()<br>
-replace 1 line</div>
-<pre class="insert"><span class="k">static</span> <span class="t">void</span> <span class="i">literal</span>(<span class="t">bool</span> <span class="i">canAssign</span>) {
-</pre><pre class="insert-after">  switch (parser.previous.type) {
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, function <em>literal</em>(), replace 1 line</div>
+<p>And here:</p><strong>ERROR: Missing snippet parse-literal</strong>
 
-<p>And here:</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-function <em>grouping</em>()<br>
-replace 1 line</div>
-<pre class="insert"><span class="k">static</span> <span class="t">void</span> <span class="i">grouping</span>(<span class="t">bool</span> <span class="i">canAssign</span>) {
-</pre><pre class="insert-after">  expression();
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, function <em>grouping</em>(), replace 1 line</div>
+<p>And here:</p><strong>ERROR: Missing snippet grouping</strong>
 
-<p>And here:</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-function <em>number</em>()<br>
-replace 1 line</div>
-<pre class="insert"><span class="k">static</span> <span class="t">void</span> <span class="i">number</span>(<span class="t">bool</span> <span class="i">canAssign</span>) {
-</pre><pre class="insert-after">  double value = strtod(parser.previous.start, NULL);
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, function <em>number</em>(), replace 1 line</div>
+<p>And here:</p><strong>ERROR: Missing snippet number</strong>
 
-<p>And here too:</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-function <em>string</em>()<br>
-replace 1 line</div>
-<pre class="insert"><span class="k">static</span> <span class="t">void</span> <span class="i">string</span>(<span class="t">bool</span> <span class="i">canAssign</span>) {
-</pre><pre class="insert-after">  emitConstant(OBJ_VAL(copyString(parser.previous.start + 1,
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, function <em>string</em>(), replace 1 line</div>
+<p>And here too:</p><strong>ERROR: Missing snippet string</strong>
 
-<p>And, finally:</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-function <em>unary</em>()<br>
-replace 1 line</div>
-<pre class="insert"><span class="k">static</span> <span class="t">void</span> <span class="i">unary</span>(<span class="t">bool</span> <span class="i">canAssign</span>) {
-</pre><pre class="insert-after">  TokenType operatorType = parser.previous.type;
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, function <em>unary</em>(), replace 1 line</div>
+<p>And, finally:</p><strong>ERROR: Missing snippet unary</strong>
 
 <p>Phew! We&rsquo;re back to a C program we can compile. Fire it up and now you can run
 this:</p>

@@ -146,13 +146,13 @@ operations you would have to perform on the variable to get to a value of the
 base type. Clever idea, but I don&rsquo;t think it worked out great in practice.</p>
 <p>Lox doesn&rsquo;t have static types, so we avoid that.</p>
 </aside>
-<p>What C-like syntax has instead is something you&rsquo;ll often find more valuable
-in a language: <em>familiarity</em>. I know you are already comfortable with that style
-because the two languages we&rsquo;ll be using to <em>implement</em> Lox<span class="em">&mdash;</span>Java and C<span class="em">&mdash;</span>also inherit it. Using a similar syntax for Lox gives you one less thing to
+<p>What C-like syntax has instead is something you&rsquo;ll often find more valuable in a
+language: <em>familiarity</em>. I know you are already comfortable with that style
+because the two languages we&rsquo;ll be using to <em>implement</em> Lox<span class="em">&mdash;</span>Python and C<span class="em">&mdash;</span>also inherit it. Using a similar syntax for Lox gives you one less thing to
 learn.</p>
 <h2><a href="#a-high-level-language" id="a-high-level-language"><small>3&#8202;.&#8202;2</small>A High-Level Language</a></h2>
 <p>While this book ended up bigger than I was hoping, it&rsquo;s still not big enough to
-fit a huge language like Java in it. In order to fit two complete
+fit a huge language like Python in it. In order to fit two complete
 implementations of Lox in these pages, Lox itself has to be pretty compact.</p>
 <p>When I think of languages that are small but useful, what comes to mind are
 high-level &ldquo;scripting&rdquo; languages like <span name="js">JavaScript</span>, Scheme,
@@ -188,8 +188,8 @@ executing bits of code sooner if we defer our type checking to runtime.</p>
 statically typed.</p>
 </aside>
 <h3><a href="#automatic-memory-management" id="automatic-memory-management"><small>3&#8202;.&#8202;2&#8202;.&#8202;2</small>Automatic memory management</a></h3>
-<p>High-level languages exist to eliminate error-prone, low-level drudgery, and what
-could be more tedious than manually managing the allocation and freeing of
+<p>High-level languages exist to eliminate error-prone, low-level drudgery, and
+what could be more tedious than manually managing the allocation and freeing of
 storage? No one rises and greets the morning sun with, &ldquo;I can&rsquo;t wait to figure
 out the correct place to call <code>free()</code> for every byte of memory I allocate
 today!&rdquo;</p>
@@ -200,10 +200,10 @@ time, the limitations of ref counting become too troublesome. All of those
 languages eventually ended up adding a full tracing GC, or at least enough of
 one to clean up object cycles.</p>
 <aside name="gc">
-<p>In practice, ref counting and tracing are more ends of a continuum than
-opposing sides. Most ref counting systems end up doing some tracing to handle
-cycles, and the write barriers of a generational collector look a bit like
-retain calls if you squint.</p>
+<p>In practice, ref counting and tracing are more ends of a continuum than opposing
+sides. Most ref counting systems end up doing some tracing to handle cycles, and
+the write barriers of a generational collector look a bit like retain calls if
+you squint.</p>
 <p>For lots more on this, see &ldquo;<a href="https://researcher.watson.ibm.com/researcher/files/us-bacon/Bacon04Unified.pdf">A Unified Theory of Garbage Collection</a>&rdquo; (PDF).</p>
 </aside>
 <p>Tracing garbage collection has a fearsome reputation. It <em>is</em> a little harrowing
@@ -220,14 +220,13 @@ data types. There are only a few:</p>
 <p><strong><span name="bool">Booleans</span>.</strong> You can&rsquo;t code without logic and you
 can&rsquo;t logic without Boolean values. &ldquo;True&rdquo; and &ldquo;false&rdquo;, the yin and yang of
 software. Unlike some ancient languages that repurpose an existing type to
-represent truth and falsehood, Lox has a dedicated Boolean type. We may
-be roughing it on this expedition, but we aren&rsquo;t <em>savages</em>.</p>
+represent truth and falsehood, Lox has a dedicated Boolean type. We may be
+roughing it on this expedition, but we aren&rsquo;t <em>savages</em>.</p>
 <aside name="bool">
 <p>Boolean variables are the only data type in Lox named after a person, George
 Boole, which is why &ldquo;Boolean&rdquo; is capitalized. He died in 1864, nearly a
-century before digital computers turned his algebra into electricity. I
-wonder what he&rsquo;d think to see his name all over billions of lines of Java
-code.</p>
+century before digital computers turned his algebra into electricity. I wonder
+what he&rsquo;d think to see his name all over billions of lines of code.</p>
 </aside>
 <p>There are two Boolean values, obviously, and a literal for each one.</p>
 <div class="codehilite"><pre><span class="k">true</span>;  <span class="c">// Not false.</span>
@@ -235,9 +234,9 @@ code.</p>
 </pre></div>
 </li>
 <li>
-<p><strong>Numbers.</strong> Lox has only one kind of number: double-precision floating
-point. Since floating-point numbers can also represent a wide range of
-integers, that covers a lot of territory, while keeping things simple.</p>
+<p><strong>Numbers.</strong> Lox has only one kind of number: double-precision floating point.
+Since floating-point numbers can also represent a wide range of integers, that
+covers a lot of territory, while keeping things simple.</p>
 <p>Full-featured languages have lots of syntax for numbers<span class="em">&mdash;</span>hexadecimal,
 scientific notation, octal, all sorts of fun stuff. We&rsquo;ll settle for basic
 integer and decimal literals.</p>
@@ -246,8 +245,8 @@ integer and decimal literals.</p>
 </pre></div>
 </li>
 <li>
-<p><strong>Strings.</strong> We&rsquo;ve already seen one string literal in the first example.
-Like most languages, they are enclosed in double quotes.</p>
+<p><strong>Strings.</strong> We&rsquo;ve already seen one string literal in the first example. Like
+most languages, they are enclosed in double quotes.</p>
 <div class="codehilite"><pre><span class="s">&quot;I am a string&quot;</span>;
 <span class="s">&quot;&quot;</span>;    <span class="c">// The empty string.</span>
 <span class="s">&quot;123&quot;</span>; <span class="c">// This is a string, not a number.</span>
@@ -256,21 +255,20 @@ Like most languages, they are enclosed in double quotes.</p>
 complexity hiding in that innocuous sequence of <span
 name="char">characters</span>.</p>
 <aside name="char">
-<p>Even that word &ldquo;character&rdquo; is a trickster. Is it ASCII? Unicode? A
-code point or a &ldquo;grapheme cluster&rdquo;? How are characters encoded? Is each
-character a fixed size, or can they vary?</p>
+<p>Even that word &ldquo;character&rdquo; is a trickster. Is it ASCII? Unicode? A code point
+or a &ldquo;grapheme cluster&rdquo;? How are characters encoded? Is each character a fixed
+size, or can they vary?</p>
 </aside></li>
 <li>
-<p><strong>Nil.</strong> There&rsquo;s one last built-in value who&rsquo;s never invited to the party
-but always seems to show up. It represents &ldquo;no value&rdquo;. It&rsquo;s called &ldquo;null&rdquo; in
-many other languages. In Lox we spell it <code>nil</code>. (When we get to implementing
-it, that will help distinguish when we&rsquo;re talking about Lox&rsquo;s <code>nil</code> versus
-Java or C&rsquo;s <code>null</code>.)</p>
-<p>There are good arguments for not having a null value in a language since
-null pointer errors are the scourge of our industry. If we were doing a
-statically typed language, it would be worth trying to ban it. In a
-dynamically typed one, though, eliminating it is often more annoying
-than having it.</p>
+<p><strong>Nil.</strong> There&rsquo;s one last built-in value who&rsquo;s never invited to the party but
+always seems to show up. It represents &ldquo;no value&rdquo;. It&rsquo;s called &ldquo;null&rdquo; in many
+other languages. In Lox we spell it <code>nil</code>. (When we get to implementing it,
+that will help distinguish when we&rsquo;re talking about Lox&rsquo;s <code>nil</code> versus
+Python&rsquo;s <code>None</code> or C&rsquo;s <code>null</code>.)</p>
+<p>There are good arguments for not having a null value in a language since null
+pointer errors are the scourge of our industry. If we were doing a statically
+typed language, it would be worth trying to ban it. In a dynamically typed
+one, though, eliminating it is often more annoying than having it.</p>
 </li>
 </ul>
 <h2><a href="#expressions" id="expressions"><small>3&#8202;.&#8202;4</small>Expressions</a></h2>
@@ -333,8 +331,8 @@ versa.</p>
 </pre></div>
 <p>The other two logical operators really are control flow constructs in the guise
 of expressions. An <span name="and"><code>and</code></span> expression determines if two
-values are <em>both</em> true. It returns the left operand if it&rsquo;s false, or the
-right operand otherwise.</p>
+values are <em>both</em> true. It returns the left operand if it&rsquo;s false, or the right
+operand otherwise.</p>
 <div class="codehilite"><pre><span class="k">true</span> <span class="k">and</span> <span class="k">false</span>; <span class="c">// false.</span>
 <span class="k">true</span> <span class="k">and</span> <span class="k">true</span>;  <span class="c">// true.</span>
 </pre></div>
@@ -376,8 +374,8 @@ in some way<span class="em">&mdash;</span>usually modifying some state, reading 
 <p>You&rsquo;ve seen a couple of kinds of statements already. The first one was:</p>
 <div class="codehilite"><pre><span class="k">print</span> <span class="s">&quot;Hello, world!&quot;</span>;
 </pre></div>
-<p>A <span name="print"><code>print</code> statement</span> evaluates a single expression
-and displays the result to the user. You&rsquo;ve also seen some statements like:</p>
+<p>A <span name="print"><code>print</code> statement</span> evaluates a single expression and
+displays the result to the user. You&rsquo;ve also seen some statements like:</p>
 <aside name="print">
 <p>Baking <code>print</code> into the language instead of just making it a core library
 function is a hack. But it&rsquo;s a <em>useful</em> hack for us: it means our in-progress
@@ -421,7 +419,7 @@ anything to eat?</p>
 </aside>
 <p>I won&rsquo;t get into the rules for variable scope here, because we&rsquo;re going to spend
 a surprising amount of time in later chapters mapping every square inch of the
-rules. In most cases, it works like you would expect coming from C or Java.</p>
+rules. In most cases, it works like you would expect coming from C or Python.</p>
 <h2><a href="#control-flow" id="control-flow"><small>3&#8202;.&#8202;7</small>Control Flow</a></h2>
 <p>It&rsquo;s hard to write <span name="flow">useful</span> programs if you can&rsquo;t skip
 some code or execute some more than once. That means control flow. In addition
@@ -479,8 +477,8 @@ later, but I didn&rsquo;t think doing so would teach you anything super interest
 <p>You can also call a function without passing anything to it.</p>
 <div class="codehilite"><pre><span class="i">makeBreakfast</span>();
 </pre></div>
-<p>Unlike in, say, Ruby, the parentheses are mandatory in this case. If you leave them
-off, the name doesn&rsquo;t <em>call</em> the function, it just refers to it.</p>
+<p>Unlike in, say, Ruby, the parentheses are mandatory in this case. If you leave
+them off, the name doesn&rsquo;t <em>call</em> the function, it just refers to it.</p>
 <p>A language isn&rsquo;t very fun if you can&rsquo;t define your own functions. In Lox, you do
 that with <span name="fun"><code>fun</code></span>.</p>
 <aside name="fun">
@@ -497,14 +495,14 @@ and, to many, they are. We&rsquo;re going to spend a lot of time splitting the f
 of downy hairs around semantics, so let&rsquo;s sharpen our words. From here on out:</p>
 <ul>
 <li>
-<p>An <strong>argument</strong> is an actual value you pass to a function when you call it.
-So a function <em>call</em> has an <em>argument</em> list. Sometimes you hear <strong>actual
+<p>An <strong>argument</strong> is an actual value you pass to a function when you call it. So
+a function <em>call</em> has an <em>argument</em> list. Sometimes you hear <strong>actual
 parameter</strong> used for these.</p>
 </li>
 <li>
-<p>A <strong>parameter</strong> is a variable that holds the value of the argument inside
-the body of the function. Thus, a function <em>declaration</em> has a <em>parameter</em>
-list. Others call these <strong>formal parameters</strong> or simply <strong>formals</strong>.</p>
+<p>A <strong>parameter</strong> is a variable that holds the value of the argument inside the
+body of the function. Thus, a function <em>declaration</em> has a <em>parameter</em> list.
+Others call these <strong>formal parameters</strong> or simply <strong>formals</strong>.</p>
 </li>
 </ul>
 <aside name="define">
@@ -595,7 +593,7 @@ lot going for them, so I thought it was worth covering some of each.</p>
 <p>Since classes have come under fire for not living up to their hype, let me first
 explain why I put them into Lox and this book. There are really two questions:</p>
 <h3><a href="#why-might-any-language-want-to-be-object-oriented" id="why-might-any-language-want-to-be-object-oriented"><small>3&#8202;.&#8202;9&#8202;.&#8202;1</small>Why might any language want to be object oriented?</a></h3>
-<p>Now that object-oriented languages like Java have sold out and only play arena
+<p>Now that object-oriented languages like Python have sold out and only play arena
 shows, it&rsquo;s not cool to like them anymore. Why would anyone make a <em>new</em>
 language with objects? Isn&rsquo;t that like releasing music on 8-track?</p>
 <p>It is true that the &ldquo;all inheritance all the time&rdquo; binge of the &rsquo;90s produced
@@ -624,9 +622,9 @@ turns out to be pretty interesting. Not as hard as you might fear, but not as
 simple as you might presume, either.</p>
 <h3><a href="#classes-or-prototypes" id="classes-or-prototypes"><small>3&#8202;.&#8202;9&#8202;.&#8202;3</small>Classes or prototypes</a></h3>
 <p>When it comes to objects, there are actually two approaches to them, <a href="https://en.wikipedia.org/wiki/Class-based_programming">classes</a>
-and <a href="https://en.wikipedia.org/wiki/Prototype-based_programming">prototypes</a>. Classes came first, and are more common thanks to C++, Java,
-C#, and friends. Prototypes were a virtually forgotten offshoot until JavaScript
-accidentally took over the world.</p>
+and <a href="https://en.wikipedia.org/wiki/Prototype-based_programming">prototypes</a>. Classes came first, and are more common thanks to C++,
+Python, C#, and friends. Prototypes were a virtually forgotten offshoot until
+JavaScript accidentally took over the world.</p>
 <p>In class-based languages, there are two core concepts: instances and classes.
 Instances store the state for each object and have a reference to the instance&rsquo;s
 class. Classes contain the methods and inheritance chain. To call a method on an
@@ -746,8 +744,8 @@ initializer.</p>
 <h3><a href="#inheritance" id="inheritance"><small>3&#8202;.&#8202;9&#8202;.&#8202;6</small>Inheritance</a></h3>
 <p>Every object-oriented language lets you not only define methods, but reuse them
 across multiple classes or objects. For that, Lox supports single inheritance.
-When you declare a class, you can specify a class that it inherits from using a less-than
-<span name="less">(<code>&lt;</code>)</span> operator.</p>
+When you declare a class, you can specify a class that it inherits from using a
+less-than <span name="less">(<code>&lt;</code>)</span> operator.</p>
 <div class="codehilite"><pre><span class="k">class</span> <span class="t">Brunch</span> &lt; <span class="t">Breakfast</span> {
   <span class="i">drink</span>() {
     <span class="k">print</span> <span class="s">&quot;How about a Bloody Mary?&quot;</span>;
@@ -776,10 +774,10 @@ original one also needs to be called so that the superclass can maintain its
 state. We need some way to call a method on our own <em>instance</em> without hitting
 our own <em>methods</em>.</p>
 <aside name="init">
-<p>Lox is different from C++, Java, and C#, which do not inherit constructors, but
-similar to Smalltalk and Ruby, which do.</p>
+<p>Lox is different from C++, Python, and C#, which do not inherit constructors,
+but similar to Smalltalk and Ruby, which do.</p>
 </aside>
-<p>As in Java, you use <code>super</code> for that.</p>
+<p>Similarly as in Python, you use <code>super</code> for that.</p>
 <div class="codehilite"><pre><span class="k">class</span> <span class="t">Brunch</span> &lt; <span class="t">Breakfast</span> {
   <span class="i">init</span>(<span class="i">meat</span>, <span class="i">bread</span>, <span class="i">drink</span>) {
     <span class="k">super</span>.<span class="i">init</span>(<span class="i">meat</span>, <span class="i">bread</span>);
@@ -811,9 +809,9 @@ program started.</p>
 <p>And<span class="ellipse">&thinsp;.&thinsp;.&thinsp;.&nbsp;</span>that&rsquo;s it. I know, right? It&rsquo;s embarrassing.</p>
 <p>If you wanted to turn Lox into an actual useful language, the very first thing
 you should do is flesh this out. String manipulation, trigonometric functions,
-file I/O, networking, heck, even <em>reading input from the user</em> would help. But we
-don&rsquo;t need any of that for this book, and adding it wouldn&rsquo;t teach you anything
-interesting, so I&rsquo;ve left it out.</p>
+file I/O, networking, heck, even <em>reading input from the user</em> would help. But
+we don&rsquo;t need any of that for this book, and adding it wouldn&rsquo;t teach you
+anything interesting, so I&rsquo;ve left it out.</p>
 <p>Don&rsquo;t worry, we&rsquo;ll have plenty of exciting stuff in the language itself to keep
 us busy.</p>
 <div class="challenges">
@@ -847,8 +845,8 @@ decide what value it evaluates to. Some of those are easy:</p>
 <ul>
 <li>
 <p>An <code>if</code> expression evaluates to the result of whichever branch is chosen.
-Likewise, a <code>switch</code> or other multi-way branch evaluates to whichever case
-is picked.</p>
+Likewise, a <code>switch</code> or other multi-way branch evaluates to whichever case is
+picked.</p>
 </li>
 <li>
 <p>A variable declaration evaluates to the value of the variable.</p>

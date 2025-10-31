@@ -127,7 +127,7 @@ next chapter.</p>
 <p>Since this is our first real chapter, before we get to actually scanning some
 code we need to sketch out the basic shape of our interpreter, pylox. Everything
 starts with a module in Python.</p>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">lox</span>.<span class="i">py</span>
+<div class="codehilite"><pre><span class="c"># lox/__main__.py</span>
 <span class="k">import</span> <span class="i">sys</span>
 <span class="k">from</span> <span class="i">pathlib</span> <span class="k">import</span> <span class="t">Path</span>
 
@@ -144,6 +144,9 @@ starts with a module in Python.</p>
 <span class="k">if</span> <span class="i">__name__</span> == <span class="s">&quot;__main__&quot;</span>:
     <span class="i">main</span>()
 </pre></div>
+<p>We call this module <code>__main__</code> so that Python can run it as a script. If pylox
+is properly installed as a package, then the user can run it from the command
+line either with the command <code>pylox</code> or with <code>python -m lox</code>.</p>
 <aside name="64">
 <p>For exit codes, I&rsquo;m using the conventions defined in the UNIX
 <a href="https://www.freebsd.org/cgi/man.cgi?query=sysexits&apropos=0&sektion=0&manpath=FreeBSD+4.3-RELEASE&format=html">&ldquo;sysexits.h&rdquo;</a> header. It&rsquo;s the closest thing to a standard I could
@@ -162,7 +165,7 @@ the virtual environments for you:</p>
 <span class="i">requires</span>-<span class="i">python</span> = <span class="s">&quot;&gt;=3.12&quot;</span>
 
 [<span class="i">project</span>.<span class="i">scripts</span>]
-<span class="i">pylox</span> = <span class="s">&quot;lox.lox:main&quot;</span>
+<span class="i">pylox</span> = <span class="s">&quot;lox.__main__:main&quot;</span>
 
 [<span class="i">build</span>-<span class="i">system</span>]
 <span class="i">requires</span> = [<span class="s">&quot;hatchling&quot;</span>]
@@ -173,7 +176,7 @@ the virtual environments for you:</p>
 <p>Lox is a scripting language, which means it executes directly from source. Our
 interpreter supports two ways of running code. If you start pylox from the
 command line and give it a path to a file, it reads the file and executes it.</p>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">lox</span>.<span class="i">py</span> <span class="i">after</span> <span class="i">main</span>()
+<div class="codehilite"><pre><span class="c"># lox/__main__.py at top-level</span>
 <span class="k">def</span> <span class="i">run_file</span>(<span class="i">path</span>: <span class="t">Path</span>):
     <span class="i">src</span> = <span class="i">path</span>.<span class="i">read_text</span>(<span class="i">encoding</span>=<span class="i">sys</span>.<span class="i">getdefaultencoding</span>())
     <span class="i">lox</span> = <span class="t">Lox</span>()
@@ -191,7 +194,7 @@ a loop around a few built-in functions:</p>
 <p>Working outwards from the most nested call, you <strong>R</strong>ead a line of input,
 <strong>E</strong>valuate it, <strong>P</strong>rint the result, then <strong>L</strong>oop and do it all over again.</p>
 </aside>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">lox</span>.<span class="i">py</span> <span class="i">after</span> <span class="i">run_file</span>()
+<div class="codehilite"><pre><span class="c"># lox/__main__.py at top-level</span>
 <span class="k">def</span> <span class="i">run_prompt</span>():
     <span class="i">lox</span> = <span class="t">Lox</span>()
 
@@ -209,12 +212,12 @@ type Control-D. Doing so signals an &ldquo;end-of-file&rdquo; condition to the p
 that happens <code>input()</code> raises an <code>EOFError</code> exception, so we check for that to
 exit the loop.</p>
 <p>Both the prompt and the file runner are thin wrappers around this core method:</p>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">lox</span>.<span class="i">py</span> <span class="i">before</span> <span class="i">the</span> <span class="i">main</span>() <span class="i">function</span>
+<div class="codehilite"><pre><span class="c"># lox/__main__.py at top-level</span>
 <span class="k">class</span> <span class="t">Lox</span>:
-    <span class="k">def</span> <span class="i">run</span>(<span class="i">self</span>, <span class="i">source</span>: <span class="i">str</span>):
+    <span class="k">def</span> <span class="i">run</span>(<span class="i">self</span>, <span class="i">source</span>: <span class="t">str</span>):
         <span class="i">tokens</span> = <span class="i">tokenize</span>(<span class="i">source</span>)
 
-        # <span class="t">For</span> <span class="i">now</span>, <span class="i">just</span> <span class="k">print</span> <span class="i">the</span> <span class="i">tokens</span>.
+        <span class="c"># For now, just print the tokens.</span>
         <span class="k">for</span> <span class="i">token</span> <span class="k">in</span> <span class="i">tokens</span>:
             <span class="k">print</span>(<span class="i">token</span>)
 </pre></div>
@@ -239,10 +242,10 @@ handling all through the implementation of our interpreter, starting now.</p>
 bones. I&rsquo;d love to talk about interactive debuggers, static analyzers, and other
 fun stuff, but there&rsquo;s only so much ink in the pen.</p>
 </aside>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">lox</span>.<span class="i">py</span> <span class="i">after</span> <span class="i">the</span> <span class="t">Lox</span> <span class="k">class</span>
-<span class="k">class</span> <span class="t">LoxError</span>(<span class="t">Exception</span>):
-    <span class="k">def</span> <span class="i">__init__</span>(<span class="i">self</span>, <span class="i">line</span>: <span class="i">int</span>, <span class="i">message</span>: <span class="i">str</span>,
-                 <span class="i">where</span>: <span class="i">str</span> | <span class="t">None</span> = <span class="t">None</span>):
+<div class="codehilite"><pre><span class="c"># lox/errors.py after the Lox class</span>
+<span class="k">class</span> <span class="t">LoxSyntaxError</span>(<span class="t">Exception</span>):
+    <span class="k">def</span> <span class="i">__init__</span>(<span class="i">self</span>, <span class="i">line</span>: <span class="t">int</span>, <span class="i">message</span>: <span class="t">str</span>,
+                 <span class="i">where</span>: <span class="t">str</span> | <span class="t">None</span> = <span class="t">None</span>):
         <span class="i">super</span>().<span class="i">__init__</span>(<span class="i">line</span>, <span class="i">message</span>, <span class="i">where</span>)
         <span class="i">self</span>.<span class="i">line</span> = <span class="i">line</span>
         <span class="i">self</span>.<span class="i">message</span> = <span class="i">message</span>
@@ -252,13 +255,13 @@ fun stuff, but there&rsquo;s only so much ink in the pen.</p>
         <span class="k">if</span> <span class="i">self</span>.<span class="i">where</span> <span class="k">is</span> <span class="t">None</span>:
             <span class="i">where</span> = <span class="s">&quot;&quot;</span>
         <span class="k">else</span>:
-            <span class="i">where</span> = <span class="s">&quot; &quot;</span> + <span class="i">where</span>
+            <span class="i">where</span> = <span class="s">&quot; &quot;</span> + <span class="i">self</span>.<span class="i">where</span>
         <span class="k">return</span> <span class="i">f</span><span class="s">&quot;[line {self.line}] Error{where}: {self.message}&quot;</span>
 </pre></div>
-<p>This <code>LoxError</code> exception and its <code>__str__()</code> helper tells the user some syntax
-error occurred on a given line. That is really the bare minimum to be able to
-claim you even <em>have</em> error reporting. Imagine if you accidentally left a
-dangling comma in some function call and the interpreter printed out:</p>
+<p>This <code>LoxSyntaxError</code> exception and its <code>__str__()</code> renders it in a friendly
+manner. That is really the bare minimum to be able to claim you even <em>have</em>
+error reporting. Imagine if you accidentally left a dangling comma in some
+function call and the interpreter printed out:</p>
 <div class="codehilite"><pre>Error: Unexpected &quot;,&quot; somewhere in your code. Good luck finding it!
 </pre></div>
 <p>That&rsquo;s not very helpful. We need to at least point them to the right line. Even
@@ -274,8 +277,8 @@ that it&rsquo;s a lot of grungy string manipulation code. Very useful for users,
 not super fun to read in a book and not very technically interesting. So we&rsquo;ll
 stick with just a line number. In your own interpreters, please do as I say and
 not as I do.</p>
-<p>Notice our <code>LoxError</code> class receives the parameters necessary to construct the
-error message instead of a fully formed string with said message and its
+<p>Notice our <code>LoxSyntaxError</code> class receives the parameters necessary to construct
+the error message instead of a fully formed string with said message and its
 <code>__str__</code> method constructs the string message on the fly. This is to remind you
 that it&rsquo;s good engineering practice to separate the code that <em>generates</em> the
 errors from the code that <em>reports</em> them.</p>
@@ -292,7 +295,7 @@ error reporting into a different class.</p>
 <aside name="reporter">
 <p>I had exactly that when I first implemented the original jlox in Java. I ended
 up tearing it out because it felt over-engineered for the minimal interpreter in
-this book.</p>
+this book. The Python version follows suit.</p>
 </aside>
 <p>With some rudimentary error handling in place, our application shell is ready.
 Once we have a Scanner class with a <code>scan_tokens()</code> method, we can start running
@@ -326,37 +329,47 @@ punctuation, and literal type.</p>
 <p>After all, string comparison ends up looking at individual characters, and isn&rsquo;t
 that the scanner&rsquo;s job?</p>
 </aside>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">tokens</span>.<span class="i">py</span>
-<span class="k">from</span> <span class="i">enum</span> <span class="k">import</span> <span class="t">IntEnum</span>, <span class="i">auto</span>
+<div class="codehilite"><pre><span class="c"># lox/tokens.py</span>
+<span class="k">from</span> <span class="i">typing</span> <span class="k">import</span> <span class="t">Literal</span>, <span class="t">Any</span>
 
+<span class="k">type</span> <span class="t">TokenType</span> = <span class="t">Literal</span>[
+    <span class="c"># Single-character tokens.</span>
+    <span class="s">&quot;LEFT_PAREN&quot;</span>, <span class="s">&quot;RIGHT_PAREN&quot;</span>, <span class="s">&quot;LEFT_BRACE&quot;</span>, <span class="s">&quot;RIGHT_BRACE&quot;</span>,
+    <span class="s">&quot;COMMA&quot;</span>, <span class="s">&quot;DOT&quot;</span>, <span class="s">&quot;SEMICOLON&quot;</span>,
+    <span class="s">&quot;MINUS&quot;</span>, <span class="s">&quot;PLUS&quot;</span>, <span class="s">&quot;SLASH&quot;</span>, <span class="s">&quot;STAR&quot;</span>,
 
-<span class="k">class</span> <span class="t">TokenType</span>(<span class="t">IntEnum</span>):
-    # <span class="t">Single</span>-<span class="i">character</span> <span class="i">tokens</span>.
-    <span class="t">LEFT_PAREN</span> = <span class="i">auto</span>(); <span class="t">RIGHT_PAREN</span> = <span class="i">auto</span>()
-    <span class="t">LEFT_BRACE</span> = <span class="i">auto</span>(); <span class="t">RIGHT_BRACE</span> = <span class="i">auto</span>()
-    <span class="t">COMMA</span> = <span class="i">auto</span>(); <span class="t">DOT</span> = <span class="i">auto</span>(); <span class="t">SEMICOLON</span> = <span class="i">auto</span>()
-    <span class="t">MINUS</span> = <span class="i">auto</span>(); <span class="t">PLUS</span> = <span class="i">auto</span>(); <span class="t">SLASH</span> = <span class="i">auto</span>(); <span class="t">STAR</span> = <span class="i">auto</span>()
+    <span class="c"># One or two character tokens.</span>
+    <span class="s">&quot;BANG&quot;</span>, <span class="s">&quot;BANG_EQUAL&quot;</span>, <span class="s">&quot;EQUAL&quot;</span>, <span class="s">&quot;EQUAL_EQUAL&quot;</span>,
+    <span class="s">&quot;GREATER&quot;</span>, <span class="s">&quot;GREATER_EQUAL&quot;</span>, <span class="s">&quot;LESS&quot;</span>, <span class="s">&quot;LESS_EQUAL&quot;</span>,
 
+    <span class="c"># Literals.</span>
+    <span class="s">&quot;IDENTIFIER&quot;</span>, <span class="s">&quot;STRING&quot;</span>, <span class="s">&quot;NUMBER&quot;</span>,
 
-    # <span class="t">One</span> <span class="k">or</span> <span class="i">two</span> <span class="i">character</span> <span class="i">tokens</span>.
-    <span class="t">BANG</span> = <span class="i">auto</span>(); <span class="t">BANG_EQUAL</span> = <span class="i">auto</span>()
-    <span class="t">EQUAL</span>= <span class="i">auto</span>(); <span class="t">EQUAL_EQUAL</span> = <span class="i">auto</span>()
-    <span class="t">GREATER</span>= <span class="i">auto</span>(); <span class="t">GREATER_EQUAL</span> = <span class="i">auto</span>()
-    <span class="t">LESS</span>= <span class="i">auto</span>(); <span class="t">LESS_EQUAL</span> = <span class="i">auto</span>()
+    <span class="c"># Keywords.</span>
+    <span class="s">&quot;AND&quot;</span>, <span class="s">&quot;CLASS&quot;</span>, <span class="s">&quot;ELSE&quot;</span>, <span class="s">&quot;FALSE&quot;</span>, <span class="s">&quot;FUN&quot;</span>, <span class="s">&quot;FOR&quot;</span>, <span class="s">&quot;IF&quot;</span>,
+    <span class="s">&quot;NIL&quot;</span>, <span class="s">&quot;OR&quot;</span>, <span class="s">&quot;PRINT&quot;</span>, <span class="s">&quot;RETURN&quot;</span>, <span class="s">&quot;SUPER&quot;</span>, <span class="s">&quot;THIS&quot;</span>, <span class="s">&quot;TRUE&quot;</span>,
+    <span class="s">&quot;VAR&quot;</span>, <span class="s">&quot;WHILE&quot;</span>,
 
-    # <span class="t">Literals</span>.
-    <span class="t">IDENTIFIER</span> = <span class="i">auto</span>(); <span class="t">STRING</span> = <span class="i">auto</span>(); <span class="t">NUMBER</span> = <span class="i">auto</span>()
+    <span class="c"># Special tokens.</span>
+    <span class="s">&quot;EOF&quot;</span>, <span class="s">&quot;INVALID&quot;</span>,
+    <span class="s">&quot;UNTERMINATED_STRING&quot;</span>,
+]
+</pre></div>
+<p>We use strings token types here for simplicity, but we declare the allowed
+strings values explicitly using <code>Literal</code> so the Language Server can catch
+(some) typos in our code.</p>
+<aside name="enum">
+<p>I would probably use an <code>Enum</code> for token types in a production interpreter. That
+would give us better type safety and more robust error messages. However,
+Python&rsquo;s <code>Enum</code>s are somewhat clunky to work with compared to other languages,
+so I opted for this lower tech approach for the book.</p>
+</aside>
+<p>We will also gather many utility types in the <code>lox/types.py</code> module. While we&rsquo;re
+at it, let&rsquo;s define a <code>Literal</code> type to represent any Lox value that may be
+present literally in the source code.</p>
+<div class="codehilite"><pre><span class="c"># lox/tokens.py</span>
 
-    # <span class="t">Keywords</span>.
-    <span class="t">AND</span> = <span class="i">auto</span>(); <span class="t">CLASS</span> = <span class="i">auto</span>(); <span class="t">ELSE</span> = <span class="i">auto</span>(); <span class="t">FALSE</span> = <span class="i">auto</span>()
-    <span class="t">FUN</span> = <span class="i">auto</span>(); <span class="t">FOR</span> = <span class="i">auto</span>(); <span class="t">IF</span> = <span class="i">auto</span>(); <span class="t">NIL</span> = <span class="i">auto</span>()
-    <span class="t">OR</span> = <span class="i">auto</span>(); <span class="t">PRINT</span> = <span class="i">auto</span>(); <span class="t">RETURN</span> = <span class="i">auto</span>(); <span class="t">SUPER</span> = <span class="i">auto</span>()
-    <span class="t">THIS</span> = <span class="i">auto</span>(); <span class="t">TRUE</span> = <span class="i">auto</span>(); <span class="t">VAR</span> = <span class="i">auto</span>(); <span class="t">WHILE</span> = <span class="i">auto</span>()
-
-    # <span class="t">Special</span> <span class="i">tokens</span>.
-    <span class="t">EOF</span> = <span class="i">auto</span>()
-    <span class="t">INVALID</span> = <span class="i">auto</span>()
-    <span class="t">UNTERMINATED_STRING</span> = <span class="i">auto</span>()
+<span class="k">type</span> <span class="t">LiteralValue</span> = <span class="t">None</span> | <span class="t">str</span> | <span class="t">float</span> | <span class="t">bool</span>
 </pre></div>
 <h3><a href="#literal-value" id="literal-value"><small>4&#8202;.&#8202;2&#8202;.&#8202;2</small>Literal value</a></h3>
 <p>There are lexemes for literal values<span class="em">&mdash;</span>numbers and strings and the like. Since
@@ -381,23 +394,27 @@ those, the less time you spend calculating position information ahead of time,
 the better.</p>
 </aside>
 <p>We take all of this data and wrap it in a class.</p>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">tokens</span>.<span class="i">py</span> <span class="i">after</span> <span class="i">the</span> <span class="t">TokenType</span> <span class="k">class</span>
+<div class="codehilite"><pre><span class="c"># lox/tokens.py after the TokenType class</span>
 <span class="k">from</span> <span class="i">dataclasses</span> <span class="k">import</span> <span class="i">dataclass</span>
-<span class="k">from</span> <span class="i">typing</span> <span class="k">import</span> <span class="t">Any</span>
 
-
-@<span class="i">dataclass</span>
+<span class="a">@dataclass</span>
 <span class="k">class</span> <span class="t">Token</span>:
-    <span class="i">type</span>: <span class="t">TokenType</span>
-    <span class="i">lexeme</span>: <span class="i">str</span>
-    <span class="i">line</span>: <span class="i">int</span>
-    <span class="i">literal</span>: <span class="t">Any</span> = <span class="t">None</span>
+    <span class="k">type</span>: <span class="t">TokenType</span>
+    <span class="i">lexeme</span>: <span class="t">str</span>
+    <span class="i">line</span>: <span class="t">int</span>
+    <span class="i">literal</span>: <span class="t">LiteralValue</span> = <span class="t">None</span>
 
     <span class="k">def</span> <span class="i">__str__</span>(<span class="i">self</span>):
-        <span class="k">return</span> <span class="i">f</span><span class="s">&quot;{self.type.name} {self.lexeme!r} {self.literal}&quot;</span>
+        <span class="k">return</span> <span class="i">f</span><span class="s">&quot;{self.type} {self.lexeme!r} {self.literal}&quot;</span>
 </pre></div>
 <p>Now we have an object with enough structure to be useful for all of the later
 phases of the interpreter.</p>
+<aside name="dataclass">
+<p>We&rsquo;re using Python&rsquo;s [<code>dataclass</code>][dataclass] decorator to automatically
+generate the <code>__init__</code>, <code>__repr__</code>, and other useful methods for our <code>Token</code>
+class. This saves us from boilerplate code and makes our class easier to work
+with. Most of our classes will be defined this way throughout the book.</p>
+</aside>
 <h2><a href="#regular-languages-and-expressions" id="regular-languages-and-expressions"><small>4&#8202;.&#8202;3</small>Regular Languages and Expressions</a></h2>
 <p>Now that we know what we&rsquo;re trying to produce, let&rsquo;s, well, produce it. The core
 of the scanner is a loop. Starting at the first character of the source code,
@@ -446,17 +463,17 @@ billionaire among us.</p>
 delegating that task. We&rsquo;re about handcrafted goods.</p>
 <h2><a href="#the-scanner-class" id="the-scanner-class"><small>4&#8202;.&#8202;4</small>The Scanner Class</a></h2>
 <p>Without further ado, let&rsquo;s make ourselves a scanner.</p>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">scanner</span>.<span class="i">py</span>
+<div class="codehilite"><pre><span class="c"># lox/scanner.py</span>
 <span class="k">from</span> <span class="i">dataclasses</span> <span class="k">import</span> <span class="i">dataclass</span>, <span class="i">field</span>
 <span class="k">from</span> <span class="i">typing</span> <span class="k">import</span> <span class="t">Any</span>
-<span class="k">from</span> .<span class="i">tokens</span> <span class="k">import</span> <span class="t">Token</span>, <span class="t">TokenType</span> <span class="k">as</span> <span class="t">TT</span>
+<span class="k">from</span> <span class="i">lox</span>.<span class="i">tokens</span> <span class="k">import</span> <span class="t">Token</span>
 
-@<span class="i">dataclass</span>
+<span class="a">@dataclass</span>
 <span class="k">class</span> <span class="t">Scanner</span>:
-    <span class="i">source</span>: <span class="i">str</span>
-    <span class="i">tokens</span>: <span class="i">list</span>[<span class="t">Token</span>] = <span class="i">field</span>(<span class="i">default_factory</span>=<span class="i">list</span>)
+    <span class="i">source</span>: <span class="t">str</span>
+    <span class="i">tokens</span>: <span class="t">list</span>[<span class="t">Token</span>] = <span class="i">field</span>(<span class="i">default_factory</span>=<span class="t">list</span>)
 
-<span class="k">def</span> <span class="i">tokenize</span>(<span class="i">source</span>: <span class="i">str</span>) -&gt; <span class="i">list</span>[<span class="t">Token</span>]:
+<span class="k">def</span> <span class="i">tokenize</span>(<span class="i">source</span>: <span class="t">str</span>) -&gt; <span class="t">list</span>[<span class="t">Token</span>]:
     <span class="i">scanner</span> = <span class="t">Scanner</span>(<span class="i">source</span>)
     <span class="k">return</span> <span class="i">scanner</span>.<span class="i">scan_tokens</span>()
 </pre></div>
@@ -467,13 +484,13 @@ every time we analyze a new piece of code.</p>
 <p>We store the raw source code as a simple string, and we have a list ready to
 fill with tokens we&rsquo;re going to generate. The aforementioned loop that does that
 looks like this:</p>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">scanner</span>.<span class="i">py</span> <span class="i">method</span> <span class="k">in</span> <span class="k">class</span> <span class="t">Scanner</span>
-<span class="k">def</span> <span class="i">scan_tokens</span>(<span class="i">self</span>) -&gt; <span class="i">list</span>[<span class="t">Token</span>]:
+<div class="codehilite"><pre><span class="c"># lox/scanner.py Scanner method</span>
+<span class="k">def</span> <span class="i">scan_tokens</span>(<span class="i">self</span>) -&gt; <span class="t">list</span>[<span class="t">Token</span>]:
     <span class="k">while</span> <span class="k">not</span> <span class="i">self</span>.<span class="i">is_at_end</span>():
-        # <span class="t">We</span> <span class="i">are</span> <span class="i">at</span> <span class="i">the</span> <span class="i">beginning</span> <span class="i">of</span> <span class="i">the</span> <span class="i">next</span> <span class="i">lexeme</span>.
+        <span class="c"># We are at the beginning of the next lexeme.</span>
         <span class="i">self</span>.<span class="i">start</span> = <span class="i">self</span>.<span class="i">current</span>
         <span class="i">self</span>.<span class="i">scan_token</span>()
-    <span class="i">self</span>.<span class="i">tokens</span>.<span class="i">append</span>(<span class="t">Token</span>(<span class="t">TT</span>.<span class="t">EOF</span>, <span class="s">&quot;&quot;</span>, <span class="i">self</span>.<span class="i">line</span>))
+    <span class="i">self</span>.<span class="i">tokens</span>.<span class="i">append</span>(<span class="t">Token</span>(<span class="s">&quot;EOF&quot;</span>, <span class="s">&quot;&quot;</span>, <span class="i">self</span>.<span class="i">line</span>))
     <span class="k">return</span> <span class="i">self</span>.<span class="i">tokens</span>
 </pre></div>
 <p>The scanner works its way through the source code, adding tokens until it runs
@@ -481,10 +498,10 @@ out of characters. Then it appends one final &ldquo;end of file&rdquo; token. Th
 strictly needed, but it makes our parser a little cleaner.</p>
 <p>This loop depends on a couple of fields to keep track of where the scanner is in
 the source code.</p>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">scanner</span>.<span class="i">py</span> <span class="i">attributes</span> <span class="i">of</span> <span class="t">Scanner</span> <span class="k">class</span>
-    <span class="i">start</span>: <span class="i">int</span> = <span class="n">0</span>
-    <span class="i">current</span>: <span class="i">int</span> = <span class="n">0</span>
-    <span class="i">line</span>: <span class="i">int</span> = <span class="n">1</span>
+<div class="codehilite"><pre><span class="c"># lox/scanner.py Scanner attributes</span>
+    <span class="i">start</span>: <span class="t">int</span> = <span class="n">0</span>
+    <span class="i">current</span>: <span class="t">int</span> = <span class="n">0</span>
+    <span class="i">line</span>: <span class="t">int</span> = <span class="n">1</span>
 </pre></div>
 <p>The <code>start</code> and <code>current</code> fields are offsets that index into the string. The
 <code>start</code> field points to the first character in the lexeme being scanned, and
@@ -493,8 +510,8 @@ tracks what source line <code>current</code> is on so we can produce tokens that
 location.</p>
 <p>Then we have one little helper function that tells us if we&rsquo;ve consumed all the
 characters.</p>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">scanner</span>.<span class="i">py</span> <span class="i">method</span> <span class="i">of</span> <span class="i">the</span> <span class="t">Scanner</span> <span class="k">class</span>
-<span class="k">def</span> <span class="i">is_at_end</span>(<span class="i">self</span>) -&gt; <span class="i">bool</span>:
+<div class="codehilite"><pre><span class="c"># lox/scanner.py Scanner method</span>
+<span class="k">def</span> <span class="i">is_at_end</span>(<span class="i">self</span>) -&gt; <span class="t">bool</span>:
     <span class="k">return</span> <span class="i">self</span>.<span class="i">current</span> &gt;= <span class="i">len</span>(<span class="i">self</span>.<span class="i">source</span>)
 </pre></div>
 <h2><a href="#recognizing-lexemes" id="recognizing-lexemes"><small>4&#8202;.&#8202;5</small>Recognizing Lexemes</a></h2>
@@ -503,63 +520,43 @@ scanner. We&rsquo;ll start simple. Imagine if every lexeme were only a single
 character long. All you would need to do is consume the next character and pick
 a token type for it. Several lexemes <em>are</em> only a single character in Lox, so
 let&rsquo;s start with those.</p>
-<div class="codehilite"><div class="source-file"><em>lox/Scanner.java</em><br>
-create new file</div>
-<pre>  <span class="k">private</span> <span class="t">void</span> <span class="i">scanToken</span>() {
-    <span class="t">char</span> <span class="i">c</span> = <span class="i">advance</span>();
-    <span class="k">switch</span> (<span class="i">c</span>) {
-      <span class="k">case</span> <span class="s">&#39;(&#39;</span>: <span class="i">addToken</span>(<span class="i">LEFT_PAREN</span>); <span class="k">break</span>;
-      <span class="k">case</span> <span class="s">&#39;)&#39;</span>: <span class="i">addToken</span>(<span class="i">RIGHT_PAREN</span>); <span class="k">break</span>;
-      <span class="k">case</span> <span class="s">&#39;{&#39;</span>: <span class="i">addToken</span>(<span class="i">LEFT_BRACE</span>); <span class="k">break</span>;
-      <span class="k">case</span> <span class="s">&#39;}&#39;</span>: <span class="i">addToken</span>(<span class="i">RIGHT_BRACE</span>); <span class="k">break</span>;
-      <span class="k">case</span> <span class="s">&#39;,&#39;</span>: <span class="i">addToken</span>(<span class="i">COMMA</span>); <span class="k">break</span>;
-      <span class="k">case</span> <span class="s">&#39;.&#39;</span>: <span class="i">addToken</span>(<span class="i">DOT</span>); <span class="k">break</span>;
-      <span class="k">case</span> <span class="s">&#39;-&#39;</span>: <span class="i">addToken</span>(<span class="i">MINUS</span>); <span class="k">break</span>;
-      <span class="k">case</span> <span class="s">&#39;+&#39;</span>: <span class="i">addToken</span>(<span class="i">PLUS</span>); <span class="k">break</span>;
-      <span class="k">case</span> <span class="s">&#39;;&#39;</span>: <span class="i">addToken</span>(<span class="i">SEMICOLON</span>); <span class="k">break</span>;
-      <span class="k">case</span> <span class="s">&#39;*&#39;</span>: <span class="i">addToken</span>(<span class="i">STAR</span>); <span class="k">break</span>;<span name="slash"> </span>
-    }
-  }
-</pre></div>
-<div class="source-file-narrow"><em>lox/Scanner.java</em>, create new file</div>
-
 <aside name="slash">
 <p>Wondering why <code>/</code> isn&rsquo;t in here? Don&rsquo;t worry, we&rsquo;ll get to it.</p>
 </aside>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">scanner</span>.<span class="i">py</span> <span class="i">method</span> <span class="i">of</span> <span class="t">Scanner</span> <span class="k">class</span>
+<div class="codehilite"><pre><span class="c"># lox/scanner.py Scanner method</span>
 <span class="k">def</span> <span class="i">scan_token</span>(<span class="i">self</span>):
     <span class="i">match</span> <span class="i">self</span>.<span class="i">advance</span>():
         <span class="i">case</span> <span class="s">&quot;(&quot;</span>:
-            <span class="i">self</span>.<span class="i">add_token</span>(<span class="t">TT</span>.<span class="t">LEFT_PAREN</span>)
+            <span class="i">self</span>.<span class="i">add_token</span>(<span class="s">&quot;LEFT_PAREN&quot;</span>)
         <span class="i">case</span> <span class="s">&quot;)&quot;</span>:
-            <span class="i">self</span>.<span class="i">add_token</span>(<span class="t">TT</span>.<span class="t">RIGHT_PAREN</span>)
+            <span class="i">self</span>.<span class="i">add_token</span>(<span class="s">&quot;RIGHT_PAREN&quot;</span>)
         <span class="i">case</span> <span class="s">&quot;{&quot;</span>:
-            <span class="i">self</span>.<span class="i">add_token</span>(<span class="t">TT</span>.<span class="t">LEFT_BRACE</span>)
+            <span class="i">self</span>.<span class="i">add_token</span>(<span class="s">&quot;LEFT_BRACE&quot;</span>)
         <span class="i">case</span> <span class="s">&quot;}&quot;</span>:
-            <span class="i">self</span>.<span class="i">add_token</span>(<span class="t">TT</span>.<span class="t">RIGHT_BRACE</span>)
+            <span class="i">self</span>.<span class="i">add_token</span>(<span class="s">&quot;RIGHT_BRACE&quot;</span>)
         <span class="i">case</span> <span class="s">&quot;,&quot;</span>:
-            <span class="i">self</span>.<span class="i">add_token</span>(<span class="t">TT</span>.<span class="t">COMMA</span>)
+            <span class="i">self</span>.<span class="i">add_token</span>(<span class="s">&quot;COMMA&quot;</span>)
         <span class="i">case</span> <span class="s">&quot;.&quot;</span>:
-            <span class="i">self</span>.<span class="i">add_token</span>(<span class="t">TT</span>.<span class="t">DOT</span>)
+            <span class="i">self</span>.<span class="i">add_token</span>(<span class="s">&quot;DOT&quot;</span>)
         <span class="i">case</span> <span class="s">&quot;-&quot;</span>:
-            <span class="i">self</span>.<span class="i">add_token</span>(<span class="t">TT</span>.<span class="t">MINUS</span>)
+            <span class="i">self</span>.<span class="i">add_token</span>(<span class="s">&quot;MINUS&quot;</span>)
         <span class="i">case</span> <span class="s">&quot;+&quot;</span>:
-            <span class="i">self</span>.<span class="i">add_token</span>(<span class="t">TT</span>.<span class="t">PLUS</span>)
+            <span class="i">self</span>.<span class="i">add_token</span>(<span class="s">&quot;PLUS&quot;</span>)
         <span class="i">case</span> <span class="s">&quot;;&quot;</span>:
-            <span class="i">self</span>.<span class="i">add_token</span>(<span class="t">TT</span>.<span class="t">SEMICOLON</span>)
+            <span class="i">self</span>.<span class="i">add_token</span>(<span class="s">&quot;SEMICOLON&quot;</span>)
         <span class="i">case</span> <span class="s">&quot;*&quot;</span>:
-            <span class="i">self</span>.<span class="i">add_token</span>(<span class="t">TT</span>.<span class="t">STAR</span>)
+            <span class="i">self</span>.<span class="i">add_token</span>(<span class="s">&quot;STAR&quot;</span>)
 </pre></div>
 <p>Again, we need a couple of helper methods.</p>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">scanner</span>.<span class="i">py</span> <span class="i">add</span> <span class="i">methods</span> <span class="i">to</span> <span class="i">the</span> <span class="t">Scanner</span> <span class="k">class</span>
-<span class="k">def</span> <span class="i">advance</span>(<span class="i">self</span>) -&gt; <span class="i">str</span>:
+<div class="codehilite"><pre><span class="c"># lox/scanner.py Scanner methods</span>
+<span class="k">def</span> <span class="i">advance</span>(<span class="i">self</span>) -&gt; <span class="t">str</span>:
     <span class="i">char</span> = <span class="i">self</span>.<span class="i">source</span>[<span class="i">self</span>.<span class="i">current</span>]
     <span class="i">self</span>.<span class="i">current</span> += <span class="n">1</span>
     <span class="k">return</span> <span class="i">char</span>
 
-<span class="k">def</span> <span class="i">add_token</span>(<span class="i">self</span>, <span class="i">type</span>: <span class="t">TT</span>, <span class="i">literal</span>: <span class="t">Any</span> = <span class="t">None</span>):
+<span class="k">def</span> <span class="i">add_token</span>(<span class="i">self</span>, <span class="k">type</span>: <span class="i">TT</span>, <span class="i">literal</span>: <span class="t">Any</span> = <span class="t">None</span>):
     <span class="i">text</span> = <span class="i">self</span>.<span class="i">source</span>[<span class="i">self</span>.<span class="i">start</span>:<span class="i">self</span>.<span class="i">current</span>]
-    <span class="i">self</span>.<span class="i">tokens</span>.<span class="i">append</span>(<span class="t">Token</span>(<span class="i">type</span>, <span class="i">text</span>, <span class="i">self</span>.<span class="i">line</span>, <span class="i">literal</span>))
+    <span class="i">self</span>.<span class="i">tokens</span>.<span class="i">append</span>(<span class="t">Token</span>(<span class="k">type</span>, <span class="i">text</span>, <span class="i">self</span>.<span class="i">line</span>, <span class="i">literal</span>))
 </pre></div>
 <p>The <code>advance()</code> method consumes the next character in the source file and
 returns it. Where <code>advance()</code> is for input, <code>add_token()</code> is for output. It
@@ -572,9 +569,10 @@ characters Lox doesn&rsquo;t use, like <code>@#^</code>, at our interpreter? Rig
 characters get silently discarded. They aren&rsquo;t used by the Lox language, but
 that doesn&rsquo;t mean the interpreter can pretend they aren&rsquo;t there. Instead, we
 collect them as an error token.</p>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">scanner</span>.<span class="i">py</span> <span class="i">at</span> <span class="i">scan_token</span>()&#39;<span class="i">s</span> <span class="i">match</span>/<span class="i">case</span> <span class="i">statement</span>
-<span class="i">case</span> <span class="i">_</span>:
-    <span class="i">self</span>.<span class="i">add_token</span>(<span class="t">TT</span>.<span class="t">INVALID</span>)
+<div class="codehilite"><pre><span class="c"># lox/scanner.py at Scanner.scan_token()&#39;s match/case</span>
+    ...
+    <span class="i">case</span> <span class="i">_</span>:
+        <span class="i">self</span>.<span class="i">add_token</span>(<span class="s">&quot;INVALID&quot;</span>)
 </pre></div>
 <p>Note that the erroneous character is still <em>consumed</em> by the earlier call to
 <code>advance()</code>. That&rsquo;s important so that we don&rsquo;t get stuck in an infinite loop.</p>
@@ -598,27 +596,29 @@ can&rsquo;t write <code>! =</code> in Lox and have it behave like an inequality 
 why we need to scan <code>!=</code> as a single lexeme. Likewise, <code>&lt;</code>, <code>&gt;</code>, and <code>=</code> can all
 be followed by <code>=</code> to create the other equality and comparison operators.</p>
 <p>For all of these, we need to look at the second character.</p>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">scanner</span>.<span class="i">py</span> <span class="i">at</span> <span class="i">scan_token</span>()&#39;<span class="i">s</span> <span class="i">match</span>/<span class="i">case</span> <span class="i">statement</span>
-<span class="i">case</span> <span class="s">&quot;!&quot;</span> <span class="k">if</span> <span class="i">self</span>.<span class="i">match</span>(<span class="s">&quot;=&quot;</span>):
-    <span class="i">self</span>.<span class="i">add_token</span>(<span class="t">TT</span>.<span class="t">BANG_EQUAL</span>)
-<span class="i">case</span> <span class="s">&quot;!&quot;</span>:
-    <span class="i">self</span>.<span class="i">add_token</span>(<span class="t">TT</span>.<span class="t">BANG</span>)
-<span class="i">case</span> <span class="s">&quot;=&quot;</span> <span class="k">if</span> <span class="i">self</span>.<span class="i">match</span>(<span class="s">&quot;=&quot;</span>):
-    <span class="i">self</span>.<span class="i">add_token</span>(<span class="t">TT</span>.<span class="t">EQUAL_EQUAL</span>)
-<span class="i">case</span> <span class="s">&quot;=&quot;</span>:
-    <span class="i">self</span>.<span class="i">add_token</span>(<span class="t">TT</span>.<span class="t">EQUAL</span>)
-<span class="i">case</span> <span class="s">&quot;&lt;&quot;</span> <span class="k">if</span> <span class="i">self</span>.<span class="i">match</span>(<span class="s">&quot;=&quot;</span>):
-    <span class="i">self</span>.<span class="i">add_token</span>(<span class="t">TT</span>.<span class="t">LESS_EQUAL</span>)
-<span class="i">case</span> <span class="s">&quot;&lt;&quot;</span>:
-    <span class="i">self</span>.<span class="i">add_token</span>(<span class="t">TT</span>.<span class="t">LESS</span>)
-<span class="i">case</span> <span class="s">&quot;&gt;&quot;</span> <span class="k">if</span> <span class="i">self</span>.<span class="i">match</span>(<span class="s">&quot;=&quot;</span>):
-    <span class="i">self</span>.<span class="i">add_token</span>(<span class="t">TT</span>.<span class="t">GREATER_EQUAL</span>)
-<span class="i">case</span> <span class="s">&quot;&gt;&quot;</span>:
-    <span class="i">self</span>.<span class="i">add_token</span>(<span class="t">TT</span>.<span class="t">GREATER</span>)
+<div class="codehilite"><pre><span class="c"># lox/scanner.py at Scanner.scan_token()&#39;s match/case</span>
+    ...
+    <span class="i">case</span> <span class="s">&quot;!&quot;</span> <span class="k">if</span> <span class="i">self</span>.<span class="i">match</span>(<span class="s">&quot;=&quot;</span>):
+        <span class="i">self</span>.<span class="i">add_token</span>(<span class="s">&quot;BANG_EQUAL&quot;</span>)
+    <span class="i">case</span> <span class="s">&quot;!&quot;</span>:
+        <span class="i">self</span>.<span class="i">add_token</span>(<span class="s">&quot;BANG&quot;</span>)
+    <span class="i">case</span> <span class="s">&quot;=&quot;</span> <span class="k">if</span> <span class="i">self</span>.<span class="i">match</span>(<span class="s">&quot;=&quot;</span>):
+        <span class="i">self</span>.<span class="i">add_token</span>(<span class="s">&quot;EQUAL_EQUAL&quot;</span>)
+    <span class="i">case</span> <span class="s">&quot;=&quot;</span>:
+        <span class="i">self</span>.<span class="i">add_token</span>(<span class="s">&quot;EQUAL&quot;</span>)
+    <span class="i">case</span> <span class="s">&quot;&lt;&quot;</span> <span class="k">if</span> <span class="i">self</span>.<span class="i">match</span>(<span class="s">&quot;=&quot;</span>):
+        <span class="i">self</span>.<span class="i">add_token</span>(<span class="s">&quot;LESS_EQUAL&quot;</span>)
+    <span class="i">case</span> <span class="s">&quot;&lt;&quot;</span>:
+        <span class="i">self</span>.<span class="i">add_token</span>(<span class="s">&quot;LESS&quot;</span>)
+    <span class="i">case</span> <span class="s">&quot;&gt;&quot;</span> <span class="k">if</span> <span class="i">self</span>.<span class="i">match</span>(<span class="s">&quot;=&quot;</span>):
+        <span class="i">self</span>.<span class="i">add_token</span>(<span class="s">&quot;GREATER_EQUAL&quot;</span>)
+    <span class="i">case</span> <span class="s">&quot;&gt;&quot;</span>:
+        <span class="i">self</span>.<span class="i">add_token</span>(<span class="s">&quot;GREATER&quot;</span>)
+    ...
 </pre></div>
 <p>Those cases use this new method:</p>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">scanner</span>.<span class="i">py</span> <span class="i">method</span> <span class="i">of</span> <span class="i">the</span> <span class="t">Scanner</span> <span class="k">class</span>
-<span class="k">def</span> <span class="i">match</span>(<span class="i">self</span>, <span class="i">expected</span>: <span class="i">str</span>) -&gt; <span class="i">bool</span>:
+<div class="codehilite"><pre><span class="c"># lox/scanner.py Scanner method</span>
+<span class="k">def</span> <span class="i">match</span>(<span class="i">self</span>, <span class="i">expected</span>: <span class="t">str</span>) -&gt; <span class="t">bool</span>:
     <span class="k">if</span> <span class="i">self</span>.<span class="i">is_at_end</span>() <span class="k">or</span> <span class="i">self</span>.<span class="i">source</span>[<span class="i">self</span>.<span class="i">current</span>] != <span class="i">expected</span>:
         <span class="k">return</span> <span class="t">False</span>
     <span class="i">self</span>.<span class="i">current</span> += <span class="n">1</span>
@@ -633,13 +633,15 @@ merely a <code>!</code>.</p>
 <h2><a href="#longer-lexemes" id="longer-lexemes"><small>4&#8202;.&#8202;6</small>Longer Lexemes</a></h2>
 <p>We&rsquo;re still missing one operator: <code>/</code> for division. That character needs a
 little special handling because comments begin with a slash too.</p>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">scanner</span>.<span class="i">py</span> <span class="i">at</span> <span class="i">scan_token</span>()&#39;<span class="i">s</span> <span class="i">match</span>/<span class="i">case</span> <span class="i">statement</span>
-<span class="i">case</span> <span class="s">&quot;/&quot;</span> <span class="k">if</span> <span class="i">self</span>.<span class="i">match</span>(<span class="s">&quot;/&quot;</span>):
-    # <span class="t">A</span> <span class="i">comment</span> <span class="i">goes</span> <span class="i">until</span> <span class="i">the</span> <span class="i">end</span> <span class="i">of</span> <span class="i">the</span> <span class="i">line</span>.
-    <span class="k">while</span> <span class="i">self</span>.<span class="i">peek</span>() != &#39;\<span class="i">n</span>&#39; <span class="k">and</span> <span class="k">not</span> <span class="i">self</span>.<span class="i">is_at_end</span>():
-        <span class="i">self</span>.<span class="i">advance</span>()
-<span class="i">case</span> <span class="s">&quot;/&quot;</span>:
-    <span class="i">self</span>.<span class="i">add_token</span>(<span class="t">TT</span>.<span class="t">SLASH</span>)
+<div class="codehilite"><pre><span class="c"># lox/scanner.py at Scanner.scan_token()&#39;s match/case</span>
+    ...
+    <span class="i">case</span> <span class="s">&quot;/&quot;</span> <span class="k">if</span> <span class="i">self</span>.<span class="i">match</span>(<span class="s">&quot;/&quot;</span>):
+        <span class="c"># A comment goes until the end of the line.</span>
+        <span class="k">while</span> <span class="i">self</span>.<span class="i">peek</span>() != &#39;\<span class="i">n</span>&#39; <span class="k">and</span> <span class="k">not</span> <span class="i">self</span>.<span class="i">is_at_end</span>():
+            <span class="i">self</span>.<span class="i">advance</span>()
+    <span class="i">case</span> <span class="s">&quot;/&quot;</span>:
+        <span class="i">self</span>.<span class="i">add_token</span>(<span class="s">&quot;SLASH&quot;</span>)
+    ...
 </pre></div>
 <p>This is similar to the other two-character operators, except that when we find a
 second <code>/</code>, we don&rsquo;t end the token yet. Instead, we keep consuming characters
@@ -648,8 +650,8 @@ until we reach the end of the line.</p>
 beginning of one, we shunt over to some lexeme-specific code that keeps eating
 characters until it sees the end.</p>
 <p>We&rsquo;ve got another helper:</p>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">scanner</span>.<span class="i">py</span> <span class="i">method</span> <span class="i">of</span> <span class="i">the</span> <span class="t">Scanner</span> <span class="k">class</span>
-<span class="k">def</span> <span class="i">peek</span>(<span class="i">self</span>) -&gt; <span class="i">str</span>:
+<div class="codehilite"><pre><span class="c"># lox/scanner.py Scanner method</span>
+<span class="k">def</span> <span class="i">peek</span>(<span class="i">self</span>) -&gt; <span class="t">str</span>:
     <span class="k">if</span> <span class="i">self</span>.<span class="i">is_at_end</span>():
         <span class="k">return</span> <span class="s">&quot;&quot;</span>
     <span class="k">return</span> <span class="i">self</span>.<span class="i">source</span>[<span class="i">self</span>.<span class="i">current</span>]
@@ -670,12 +672,13 @@ deal with them. So when we reach the end of the comment, we <em>don&rsquo;t</em>
 reset and the comment&rsquo;s lexeme disappears in a puff of smoke.</p>
 <p>While we&rsquo;re at it, now&rsquo;s a good time to skip over those other meaningless
 characters: newlines and whitespace.</p>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">scanner</span>.<span class="i">py</span> <span class="i">at</span> <span class="i">scan_token</span>()&#39;<span class="i">s</span> <span class="i">match</span>/<span class="i">case</span> <span class="i">statement</span>
-...
-<span class="i">case</span> <span class="s">&quot; &quot;</span> | <span class="s">&quot;</span><span class="e">\r</span><span class="s">&quot;</span> | <span class="s">&quot;</span><span class="e">\t</span><span class="s">&quot;</span>:
-    <span class="k">pass</span> # <span class="t">Ignore</span> <span class="i">whitespace</span>.
-<span class="i">case</span> <span class="s">&quot;</span><span class="e">\n</span><span class="s">&quot;</span>:
-    <span class="i">self</span>.<span class="i">line</span> += <span class="n">1</span>
+<div class="codehilite"><pre><span class="c"># lox/scanner.py at Scanner.scan_token()&#39;s match/case</span>
+    ...
+    <span class="i">case</span> <span class="s">&quot; &quot;</span> | <span class="s">&quot;</span><span class="e">\r</span><span class="s">&quot;</span> | <span class="s">&quot;</span><span class="e">\t</span><span class="s">&quot;</span>:
+        <span class="k">pass</span> <span class="c"># Ignore whitespace.</span>
+    <span class="i">case</span> <span class="s">&quot;</span><span class="e">\n</span><span class="s">&quot;</span>:
+        <span class="i">self</span>.<span class="i">line</span> += <span class="n">1</span>
+    ...
 </pre></div>
 <p>When encountering whitespace, we simply go back to the beginning of the scan
 loop. That starts a new lexeme <em>after</em> the whitespace character. For newlines,
@@ -690,12 +693,14 @@ that newline to get us here so we can update <code>line</code>.)</p>
 <h3><a href="#string-literals" id="string-literals"><small>4&#8202;.&#8202;6&#8202;.&#8202;1</small>String literals</a></h3>
 <p>Now that we&rsquo;re comfortable with longer lexemes, we&rsquo;re ready to tackle literals.
 We&rsquo;ll do strings first, since they always begin with a specific character, <code>"</code>.</p>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">scanner</span>.<span class="i">py</span> <span class="i">at</span> <span class="i">scan_token</span>()&#39;<span class="i">s</span> <span class="i">match</span>/<span class="i">case</span> <span class="i">statement</span>
-<span class="i">case</span> &#39;<span class="err">&quot;&#39;:</span>
-    <span class="i">self</span>.<span class="i">string</span>()
+<div class="codehilite"><pre><span class="c"># lox/scanner.py at Scanner.scan_token()&#39;s match/case</span>
+    ...
+    <span class="i">case</span> &#39;<span class="err">&quot;&#39;:</span>
+        <span class="i">self</span>.<span class="i">string</span>()
+    ...
 </pre></div>
 <p>That calls:</p>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">scanner</span>.<span class="i">py</span> <span class="i">method</span> <span class="i">of</span> <span class="i">the</span> <span class="t">Scanner</span> <span class="k">class</span>
+<div class="codehilite"><pre><span class="c"># lox/scanner.py Scanner method</span>
 <span class="k">def</span> <span class="i">string</span>(<span class="i">self</span>):
     <span class="k">while</span> <span class="i">self</span>.<span class="i">peek</span>() != &#39;<span class="err">&quot;&#39; and not self.is_at_end():</span>
         <span class="k">if</span> <span class="i">self</span>.<span class="i">peek</span>() == &#39;\<span class="i">n</span>&#39;:
@@ -703,15 +708,15 @@ We&rsquo;ll do strings first, since they always begin with a specific character,
         <span class="i">self</span>.<span class="i">advance</span>()
 
     <span class="k">if</span> <span class="i">self</span>.<span class="i">is_at_end</span>():
-        <span class="i">self</span>.<span class="i">add_token</span>(<span class="t">TT</span>.<span class="t">UNTERMINATED_STRING</span>)
+        <span class="i">self</span>.<span class="i">add_token</span>(<span class="s">&quot;UNTERMINATED_STRING&quot;</span>)
         <span class="k">return</span>
 
-    # <span class="t">The</span> <span class="i">closing</span> <span class="err">&quot;.</span>
+    <span class="c"># The closing &quot;.</span>
     <span class="i">self</span>.<span class="i">advance</span>()
 
-    # <span class="t">Trim</span> <span class="i">the</span> <span class="i">surrounding</span> <span class="i">quotes</span>.
+    <span class="c"># Trim the surrounding quotes.</span>
     <span class="i">value</span> = <span class="i">self</span>.<span class="i">source</span>[<span class="i">self</span>.<span class="i">start</span> + <span class="n">1</span> : <span class="i">self</span>.<span class="i">current</span> - <span class="n">1</span>]
-    <span class="i">self</span>.<span class="i">add_token</span>(<span class="t">TT</span>.<span class="t">STRING</span>, <span class="i">value</span>)
+    <span class="i">self</span>.<span class="i">add_token</span>(<span class="s">&quot;STRING&quot;</span>, <span class="i">value</span>)
 </pre></div>
 <p>Like with comments, we consume characters until we hit the <code>"</code> that ends the
 string. We also gracefully handle running out of input before the string is
@@ -754,31 +759,33 @@ what you do, some case ends up weird.</p>
 <p>We could easily support the former, but I left it out to keep things simple. The
 latter gets weird if we ever want to allow methods on numbers like <code>123.sqrt()</code>.</p>
 <p>To recognize the beginning of a number lexeme, we look for any digit.</p>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">scanner</span>.<span class="i">py</span> <span class="i">at</span> <span class="i">scan_token</span>()&#39;<span class="i">s</span> <span class="i">match</span>/<span class="i">case</span> <span class="i">statement</span>
-<span class="i">case</span> <span class="s">&quot;0&quot;</span> | <span class="s">&quot;1&quot;</span> | <span class="s">&quot;2&quot;</span> | <span class="s">&quot;3&quot;</span> | <span class="s">&quot;4&quot;</span> | <span class="s">&quot;5&quot;</span> | <span class="s">&quot;6&quot;</span> | <span class="s">&quot;7&quot;</span> | <span class="s">&quot;8&quot;</span> | <span class="s">&quot;9&quot;</span>:
-    <span class="i">self</span>.<span class="i">number</span>()
+<div class="codehilite"><pre><span class="c"># lox/scanner.py at Scanner.scan_token()&#39;s match/case</span>
+    ...
+    <span class="i">case</span> <span class="s">&quot;0&quot;</span> | <span class="s">&quot;1&quot;</span> | <span class="s">&quot;2&quot;</span> | <span class="s">&quot;3&quot;</span> | <span class="s">&quot;4&quot;</span> | <span class="s">&quot;5&quot;</span> | <span class="s">&quot;6&quot;</span> | <span class="s">&quot;7&quot;</span> | <span class="s">&quot;8&quot;</span> | <span class="s">&quot;9&quot;</span>:
+        <span class="i">self</span>.<span class="i">number</span>()
+    ...
 </pre></div>
 <p>Once we know we are in a number, we branch to a separate method to consume the
 rest of the literal, like we do with strings.</p>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">scanner</span>.<span class="i">py</span> <span class="i">method</span> <span class="i">of</span> <span class="i">the</span> <span class="t">Scanner</span> <span class="k">class</span>
+<div class="codehilite"><pre><span class="c"># lox/scanner.py Scanner method</span>
 <span class="k">def</span> <span class="i">number</span>(<span class="i">self</span>):
     <span class="k">while</span> <span class="i">is_digit</span>(<span class="i">self</span>.<span class="i">peek</span>()):
         <span class="i">self</span>.<span class="i">advance</span>()
 
-    # <span class="t">Look</span> <span class="k">for</span> <span class="i">a</span> <span class="i">fractional</span> <span class="i">part</span>.
+    <span class="c"># Look for a fractional part.</span>
     <span class="k">if</span> <span class="i">self</span>.<span class="i">peek</span>() == &#39;.&#39; <span class="k">and</span> <span class="i">is_digit</span>(<span class="i">self</span>.<span class="i">peek_next</span>()):
-        # <span class="t">Consume</span> <span class="i">the</span> <span class="s">&quot;.&quot;</span>
+        <span class="c"># Consume the &quot;.&quot;</span>
         <span class="i">self</span>.<span class="i">advance</span>()
 
     <span class="k">while</span> (<span class="i">is_digit</span>(<span class="i">self</span>.<span class="i">peek</span>())):
         <span class="i">self</span>.<span class="i">advance</span>()
 
     <span class="i">substring</span> = <span class="i">self</span>.<span class="i">source</span>[<span class="i">self</span>.<span class="i">start</span>: <span class="i">self</span>.<span class="i">current</span>]
-    <span class="i">self</span>.<span class="i">add_token</span>(<span class="t">TT</span>.<span class="t">NUMBER</span>, <span class="i">float</span>(<span class="i">substring</span>))
+    <span class="i">self</span>.<span class="i">add_token</span>(<span class="s">&quot;NUMBER&quot;</span>, <span class="t">float</span>(<span class="i">substring</span>))
 </pre></div>
 <p>This relies on this little utility:</p>
-<div class="codehilite"><pre>#<span class="i">lox</span>/<span class="i">scanner</span>.<span class="i">py</span> <span class="i">after</span> <span class="i">the</span> <span class="t">Scanner</span> <span class="k">class</span>
-<span class="k">def</span> <span class="i">is_digit</span>(<span class="i">char</span>: <span class="i">str</span>) -&gt; <span class="i">bool</span>:
+<div class="codehilite"><pre><span class="c">#lox/scanner.py at top-level</span>
+<span class="k">def</span> <span class="i">is_digit</span>(<span class="i">char</span>: <span class="t">str</span>) -&gt; <span class="t">bool</span>:
     <span class="k">return</span> <span class="i">char</span>.<span class="i">isdigit</span>() <span class="k">and</span> <span class="i">char</span>.<span class="i">isascii</span>()
 </pre></div>
 <aside name="is-digit">
@@ -793,7 +800,7 @@ digits as we can find.</p>
 <p>Looking past the decimal point requires a second character of lookahead since we
 don&rsquo;t want to consume the <code>.</code> until we&rsquo;re sure there is a digit <em>after</em> it. So
 we add:</p>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">scanner</span>.<span class="i">py</span> <span class="i">method</span> <span class="i">of</span> <span class="i">the</span> <span class="t">Scanner</span> <span class="k">class</span>
+<div class="codehilite"><pre><span class="c"># lox/scanner.py Scanner method</span>
 <span class="k">def</span> <span class="i">peek_next</span>(<span class="i">self</span>):
     <span class="k">if</span> <span class="i">self</span>.<span class="i">current</span> + <span class="n">1</span> &gt;= <span class="i">len</span>(<span class="i">self</span>.<span class="i">source</span>):
         <span class="k">return</span> <span class="s">&quot;</span><span class="e">\0</span><span class="s">&quot;</span>
@@ -818,8 +825,8 @@ implement are identifiers and their close cousins, the reserved words. You might
 think we could match keywords like <code>or</code> in the same way we handle
 multiple-character operators like <code>&lt;=</code>.</p>
 <div class="codehilite"><pre><span class="i">case</span> <span class="s">&quot;o&quot;</span>:
-  <span class="k">if</span> <span class="i">self</span>.<span class="i">match</span>(<span class="s">&quot;r&quot;</span>):
-    <span class="i">self</span>.<span class="i">add_token</span>(<span class="t">TT</span>.<span class="t">OR</span>)
+    <span class="k">if</span> <span class="i">self</span>.<span class="i">match</span>(<span class="s">&quot;r&quot;</span>):
+        <span class="i">self</span>.<span class="i">add_token</span>(<span class="s">&quot;OR&quot;</span>)
 </pre></div>
 <p>Consider what would happen if a user named a variable <code>orchid</code>. The scanner
 would see the first two letters, <code>or</code>, and immediately emit an <code>or</code> keyword
@@ -852,54 +859,47 @@ an identifier, it&rsquo;s just one that has been claimed by the language for its
 use. That&rsquo;s where the term <strong>reserved word</strong> comes from.</p>
 <p>So we begin by assuming any lexeme starting with a letter or underscore is an
 identifier.</p>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">scanner</span>.<span class="i">py</span> <span class="i">at</span> <span class="i">scan_token</span>()&#39;<span class="i">s</span> <span class="i">match</span>/<span class="i">case</span> <span class="i">statement</span>
-<span class="i">case</span> <span class="i">c</span> <span class="k">if</span> <span class="i">is_alpha</span>(<span class="i">c</span>):
-    <span class="i">self</span>.<span class="i">identifier</span>()
+<div class="codehilite"><pre><span class="c"># lox/scanner.py at Scanner.scan_token()&#39;s match/case</span>
+    ...
+    <span class="i">case</span> <span class="i">c</span> <span class="k">if</span> <span class="i">is_alpha</span>(<span class="i">c</span>):
+        <span class="i">self</span>.<span class="i">identifier</span>()
+    ...
 </pre></div>
 <p>The rest of the code lives over here:</p>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">scanner</span>.<span class="i">py</span> <span class="i">method</span> <span class="i">of</span> <span class="i">the</span> <span class="t">Scanner</span> <span class="k">class</span>
+<div class="codehilite"><pre><span class="c"># lox/scanner.py Scanner method</span>
 <span class="k">def</span> <span class="i">identifier</span>(<span class="i">self</span>):
     <span class="k">while</span> <span class="i">is_alpha_numeric</span>(<span class="i">self</span>.<span class="i">peek</span>()):
         <span class="i">self</span>.<span class="i">advance</span>()
-    <span class="i">self</span>.<span class="i">add_token</span>(<span class="t">TT</span>.<span class="t">IDENTIFIER</span>)
+    <span class="i">self</span>.<span class="i">add_token</span>(<span class="s">&quot;IDENTIFIER&quot;</span>)
 </pre></div>
 <p>We define that in terms of these helpers:</p>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">scanner</span>.<span class="i">py</span> <span class="i">after</span> <span class="i">the</span> <span class="t">Scanner</span> <span class="k">class</span>
-<span class="k">def</span> <span class="i">is_alpha</span>(<span class="i">char</span>: <span class="i">str</span>) -&gt; <span class="i">bool</span>:
+<div class="codehilite"><pre><span class="c"># lox/scanner.py at top-level</span>
+<span class="k">def</span> <span class="i">is_alpha</span>(<span class="i">char</span>: <span class="t">str</span>) -&gt; <span class="t">bool</span>:
     <span class="k">return</span> <span class="i">char</span> == <span class="s">&quot;_&quot;</span> <span class="k">or</span> <span class="i">char</span>.<span class="i">isalpha</span>() <span class="k">and</span> <span class="i">char</span>.<span class="i">isascii</span>()
 
-<span class="k">def</span> <span class="i">is_alpha_numeric</span>(<span class="i">char</span>: <span class="i">str</span>) -&gt; <span class="i">bool</span>:
+<span class="k">def</span> <span class="i">is_alpha_numeric</span>(<span class="i">char</span>: <span class="t">str</span>) -&gt; <span class="t">bool</span>:
     <span class="k">return</span> <span class="i">is_alpha</span>(<span class="i">char</span>) <span class="k">or</span> <span class="i">is_digit</span>(<span class="i">char</span>)
 </pre></div>
 <p>That gets identifiers working. To handle keywords, we see if the identifier&rsquo;s
 lexeme is one of the reserved words. If so, we use a token type specific to that
 keyword. We define the set of reserved words in a map.</p>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">scanner</span>.<span class="i">py</span> <span class="i">after</span> <span class="i">the</span> <span class="i">imports</span>
-<span class="t">KEYWORDS</span> = {
-    <span class="s">&quot;and&quot;</span>: <span class="t">TT</span>.<span class="t">AND</span>,
-    <span class="s">&quot;class&quot;</span>: <span class="t">TT</span>.<span class="t">CLASS</span>,
-    <span class="s">&quot;else&quot;</span>: <span class="t">TT</span>.<span class="t">ELSE</span>,
-    <span class="s">&quot;false&quot;</span>: <span class="t">TT</span>.<span class="t">FALSE</span>,
-    <span class="s">&quot;for&quot;</span>: <span class="t">TT</span>.<span class="t">FOR</span>,
-    <span class="s">&quot;fun&quot;</span>: <span class="t">TT</span>.<span class="t">FUN</span>,
-    <span class="s">&quot;if&quot;</span>: <span class="t">TT</span>.<span class="t">IF</span>,
-    <span class="s">&quot;nil&quot;</span>: <span class="t">TT</span>.<span class="t">NIL</span>,
-    <span class="s">&quot;or&quot;</span>: <span class="t">TT</span>.<span class="t">OR</span>,
-    <span class="s">&quot;print&quot;</span>: <span class="t">TT</span>.<span class="t">PRINT</span>,
-    <span class="s">&quot;return&quot;</span>: <span class="t">TT</span>.<span class="t">RETURN</span>,
-    <span class="s">&quot;super&quot;</span>: <span class="t">TT</span>.<span class="t">SUPER</span>,
-    <span class="s">&quot;this&quot;</span>: <span class="t">TT</span>.<span class="t">THIS</span>,
-    <span class="s">&quot;true&quot;</span>: <span class="t">TT</span>.<span class="t">TRUE</span>,
-    <span class="s">&quot;var&quot;</span>: <span class="t">TT</span>.<span class="t">VAR</span>,
-    <span class="s">&quot;while&quot;</span>: <span class="t">TT</span>.<span class="t">WHILE</span>,
+<div class="codehilite"><pre><span class="c"># lox/scanner.py after the imports</span>
+<span class="i">KEYWORDS</span> = {
+    <span class="s">&quot;and&quot;</span>, <span class="s">&quot;class&quot;</span>, <span class="s">&quot;else&quot;</span>, <span class="s">&quot;false&quot;</span>, <span class="s">&quot;for&quot;</span>, <span class="s">&quot;fun&quot;</span>, <span class="s">&quot;if&quot;</span>,
+    <span class="s">&quot;nil&quot;</span>, <span class="s">&quot;or&quot;</span>, <span class="s">&quot;print&quot;</span>, <span class="s">&quot;return&quot;</span>, <span class="s">&quot;super&quot;</span>, <span class="s">&quot;this&quot;</span>,
+    <span class="s">&quot;true&quot;</span>, <span class="s">&quot;var&quot;</span>, <span class="s">&quot;while&quot;</span>,
 }
 </pre></div>
 <p>Then, after we scan an identifier, we check to see if it matches anything in the
 map.</p>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">scanner</span>.<span class="i">py</span> <span class="i">replace</span> <span class="i">the</span> <span class="i">self</span>.<span class="i">add_token</span>(...) <span class="i">line</span>
+<div class="codehilite"><pre><span class="c"># lox/scanner.py at Scanner.identifier()</span>
+<span class="c"># before the self.add_token(...) line</span>
+    ...
     <span class="i">text</span> = <span class="i">self</span>.<span class="i">source</span>[<span class="i">self</span>.<span class="i">start</span>: <span class="i">self</span>.<span class="i">current</span>]
-    <span class="i">kind</span> = <span class="t">KEYWORDS</span>.<span class="i">get</span>(<span class="i">text</span>, <span class="t">TT</span>.<span class="t">IDENTIFIER</span>)
-    <span class="i">self</span>.<span class="i">add_token</span>(<span class="i">kind</span>)
+    <span class="i">kind</span> = <span class="s">&quot;IDENTIFIER&quot;</span>
+    <span class="k">if</span> <span class="i">text</span> <span class="k">in</span> <span class="i">KEYWORDS</span>:
+        <span class="i">kind</span> = <span class="i">text</span>.<span class="i">upper</span>()
+    ...
 </pre></div>
 <p>If so, we use that keyword&rsquo;s token type. Otherwise, it&rsquo;s a regular user-defined
 identifier.</p>

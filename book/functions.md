@@ -95,8 +95,7 @@ incredibly common "zero or more comma-separated things" pattern. There are some
 sophisticated metasyntaxes that handle this better, but in our BNF and in many
 language specs I've seen, it is this cumbersome.
 
-Over in our syntax tree generator, we add a <span name="call-ast">new
-node</span>.
+Over in our syntax tree generator, we add a new node.
 
 ```python
 # lox/ast.py
@@ -162,7 +161,9 @@ def finish_call(self, callee: Expr) -> Expr:
         arguments.append(self.expression())
         while self.match("COMMA"):
             arguments.append(self.expression())
-    paren = self.consume("RIGHT_PAREN", "Expect ')' after arguments.")
+
+    paren = self.consume("RIGHT_PAREN",
+                         "Expect ')' after arguments.")
 
     return Call(callee, paren, arguments)
 ```
@@ -208,7 +209,8 @@ cases like this, so we'll add the same limit to pylox.
     ...
     # inside the while block
     if len(arguments) > 255:
-        self.error(self.previous(), "Can't have more than 255 arguments.")
+        self.error(self.previous(),
+                   "Can't have more than 255 arguments.")
     ...
 ```
 
@@ -376,7 +378,9 @@ the argument list's length matches the callable's arity.
 # lox/interpreter.py before the return statement in eval(Call)
 ...
 if len(arguments) != callee.arity:
-    msg = f"Expected {callee.arity} arguments but got {len(arguments)}."
+    arity = calle.arity
+    n_arguments = len(arguments)
+    msg = f"Expected {arity} arguments but got {n_arguments}."
     raise LoxRuntimeError(msg, expr.paren)
 ...
 ```
@@ -638,7 +642,7 @@ parameters     → IDENTIFIER ( "," IDENTIFIER )* ;
 
 It's like the earlier `arguments` rule, except that each parameter is an
 identifier, not an expression. That's a lot of new syntax for the parser to chew
-through, but the resulting AST <span name="fun-ast">node</span> isn't too bad.
+through, but the resulting AST node isn't too bad.
 
 ```python
 # lox/ast.py
@@ -690,14 +694,18 @@ Next, we parse the parameter list and the pair of parentheses wrapped around it.
     self.consume("LEFT_PAREN", f"Expect '(' after {kind} name.")
     parameters = []
     if not self.check("RIGHT_PAREN"):
-        argument = self.consume("IDENTIFIER", "Expect parameter name.")
+        argument = self.consume("IDENTIFIER",
+                                "Expect parameter name.")
         parameters.append(argument)
         while self.match("COMMA"):
-            argument = self.consume("IDENTIFIER", "Expect parameter name.")
+            argument = self.consume("IDENTIFIER",
+                                    "Expect parameter name.")
             parameters.append(argument)
             if len(parameters) > 255:
-                self.error(argument, "Can't have more than 255 parameters.")
-    self.consume("RIGHT_PAREN", "Expect ')' after parameters.")
+                self.error(argument,
+                           "Can't have more than 255 parameters.")
+    self.consume("RIGHT_PAREN",
+                 "Expect ')' after parameters.")
     ...
 ```
 
@@ -717,7 +725,8 @@ Finally, we parse the body and wrap it all up in a function node.
     if self.check("LEFT_BRACE"):
         body = self.block_statement()
     else:
-        raise self.error(self.peek(), "Expect '{' before function body.")
+        raise self.error(self.peek(),
+                         "Expect '{' before function body.")
     return Function(name, parameters, body.statements)
 ```
 
@@ -979,7 +988,7 @@ omit the value in a `return` statement, we simply treat it as equivalent to:
 return nil;
 ```
 
-Over in our AST generator, we add a <span name="return-ast">new node</span>.
+Over in our AST generator, we add a new node.
 
 ```python
 # lox/ast.py

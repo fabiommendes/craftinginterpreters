@@ -308,15 +308,11 @@ Basically just plumbing the new syntax through. OK, fire up the interpreter and
 give it a try. At this point, it's worth sketching out a little Lox program in a
 text file to run as a script. Something like:
 
-````lox
-print "one";
-print true;
-print 2 + 1;
 ```lox
 print "one";
 print true;
 print 2 + 1;
-````
+```
 
 It almost looks like a real program! Note that the REPL, too, now requires you
 to enter a full statement instead of a simple expression. Don't forget your
@@ -448,8 +444,7 @@ That `IDENTIFIER` clause matches a single identifier token, which is understood
 to be the name of the variable being accessed.
 
 These new grammar rules get their corresponding syntax trees. Over in the AST
-generator, we add a <span name="var-stmt-ast">new statement</span> node for a
-variable declaration.
+generator, we add a new statement node for a variable declaration.
 
 ```python
 # lox/ast.py
@@ -458,14 +453,6 @@ class Var(Stmt):
     name: Token
     initializer: Expr
 ```
-
-<aside name="var-stmt-ast">
-
-The generated code for the new node is in [Appendix II][appendix-var-stmt].
-
-[appendix-var-stmt]: appendix-ii.html#variable-statement
-
-</aside>
 
 It stores the name token so we know what it's declaring, along with the
 initializer expression. (If there isn't an initializer, that field is `null`.)
@@ -479,16 +466,7 @@ class Variable(Expr):
     name: Token
 ```
 
-<span name="var-expr-ast">It's</span> simply a wrapper around the token for the
-variable name. That's it.
-
-<aside name="var-expr-ast">
-
-The generated code for the new node is in [Appendix II][appendix-var-expr].
-
-[appendix-var-expr]: appendix-ii.html#variable-expression
-
-</aside>
+It's simply a wrapper around the token for the variable name. That's it.
 
 ### Parsing variables
 
@@ -573,7 +551,8 @@ def var_declaration(self) -> Var:
     else:
         initializer = Literal(None)
 
-    self.consume("SEMICOLON", "Expect ';' after variable declaration.")
+    self.consume("SEMICOLON",
+                 "Expect ';' after variable declaration.")
     return Var(name, initializer)
 
 ```
@@ -878,7 +857,8 @@ def _(expr: Variable, env: Env) -> Value:
     try:
         return env[expr.name.lexeme]
     except NameError as error:
-        raise LoxRuntimeError(expr.name, f"Undefined variable '{error}'")
+        msg = f"Undefined variable '{expr.name.lexeme}'."
+        raise LoxRuntimeError(msg, expr.name)
 ```
 
 This simply forwards to the environment which does the heavy lifting to make
@@ -1129,7 +1109,8 @@ def _(expr: Assign, env: Env) -> Value:
     try:
         env.assign(expr.name.lexeme, value)
     except NameError as error:
-        raise LoxRuntimeError(f"Undefined variable '{error}'.", expr.name)
+        msg = f"Undefined variable '{error}'."
+        raise LoxRuntimeError(msg, expr.name)
     return value
 ```
 

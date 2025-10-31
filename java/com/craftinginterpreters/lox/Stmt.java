@@ -1,4 +1,3 @@
-//> Appendix II stmt
 package com.craftinginterpreters.lox;
 
 import java.util.List;
@@ -166,4 +165,3 @@ abstract class Stmt {
 
   abstract <R> R accept(Visitor<R> visitor);
 }
-//< Appendix II stmt

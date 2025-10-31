@@ -89,8 +89,14 @@ final lox = Language(
 final python = Language(
   keywords: "and as assert break class continue def del elif else except "
       "exec finally for from global if import in is lambda not or pass "
-      "print raise range return try while with yield",
-  rules: _commonRules,
+      "print raise range return try while with yield type",
+  types: "bool str float list dict tuple int",
+  rules: [
+      Rule(r"#.*", "c"), // Line comment.
+      Rule(r"@[a-zA-Z_][.a-zA-Z0-9_]*", "a"), // Decorator
+      Rule(r"[A-Z][A-Z0-9_]+\b", "i"),
+      ..._commonRules,
+    ],
 );
 
 final toml = Language(

@@ -96,9 +96,6 @@ public class GenerateAst {
     String path = outputDir + "/" + baseName + ".java";
     PrintWriter writer = new PrintWriter(path, "UTF-8");
 
-//> omit
-    writer.println("//> Appendix II " + baseName.toLowerCase());
-//< omit
     writer.println("package com.craftinginterpreters.lox;");
     writer.println();
     writer.println("import java.util.List;");
@@ -129,9 +126,6 @@ public class GenerateAst {
 
 //< base-accept-method
     writer.println("}");
-//> omit
-    writer.println("//< Appendix II " + baseName.toLowerCase());
-//< omit
     writer.close();
   }
 //< define-ast

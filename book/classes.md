@@ -323,7 +323,9 @@ Implementing that interface requires two fields.
     ...
     arity : int = 0
 
-    def call(self, env: Env, arguments: list[Value]) -> LoxInstance:
+    def call(self,
+             env: Env,
+             arguments: list[Value]) -> LoxInstance:
         return LoxInstance(self)
     ...
 ```
@@ -492,7 +494,8 @@ property's value. To look up a property on an instance:
 def get(self, name: Token) -> Value:
     if name.lexeme in self.fields:
         return self.fields[name.lexeme]
-    raise LoxRuntimeError(f"Undefined property '{name.lexeme}'.", name)
+    msg = f"Undefined property '{name.lexeme}'."
+    raise LoxRuntimeError(msg, name)
 ```
 
 This method uses a few imports:
@@ -622,7 +625,8 @@ That leads us to the interpreter.
 def _(expr: Set, env: Env) -> Value:
     obj = eval(expr.object, env)
     if not isinstance(obj, LoxInstance):
-        raise LoxRuntimeError("Only instances have fields.", expr.name)
+        msg = "Only instances have fields."
+        raise LoxRuntimeError(msg, expr.name)
     value = eval(expr.value, env)
     obj.set(expr.name, value)
     return value
@@ -1168,7 +1172,8 @@ def _(expr: This, env: Env) -> Value:
     try:
         return env.get_at(expr.depth, "this")
     except NameError as error:
-        raise LoxRuntimeError(f"Undefined variable '{error}'.", expr.keyword)
+        msg = f"Undefined variable '{error}'."
+        raise LoxRuntimeError(msg, expr.keyword)
 ```
 
 Go ahead and give it a try using that cake example from earlier. With less than

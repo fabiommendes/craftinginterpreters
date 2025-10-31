@@ -53,7 +53,6 @@ const _tableOfContents = {
   ],
   'Backmatter': [
     'Appendix I',
-    'Appendix II',
   ],
 };
 
@@ -95,8 +94,6 @@ class Book {
           // Front- and backmatter chapters are specially numbered.
           if (chapter == "Appendix I") {
             chapterNumber = "A1";
-          } else if (chapter == "Appendix II") {
-            chapterNumber = "A2";
           }
         } else {
           chapterNumber = chapterIndex.toString();
@@ -114,28 +111,28 @@ class Book {
     }
 
     // Load the source files.
-    for (var language in ["java", "c"]) {
-      for (var file in Glob("$language/**.{c,h,java}").listSync()) {
-        var shortPath = p.relative(file.path, from: language);
-        var sourceFile = SourceFileParser(this, file.path, shortPath).parse();
+    // for (var language in ["java", "c"]) {
+    //   for (var file in Glob("$language/**.{c,h,java}").listSync()) {
+    //     var shortPath = p.relative(file.path, from: language);
+    //     var sourceFile = SourceFileParser(this, file.path, shortPath).parse();
 
-        // Create snippets from the lines in the file.
-        var lineIndex = 0;
-        for (var line in sourceFile.lines) {
-          var snippet = _snippets.putIfAbsent(
-              line.start, () => Snippet(sourceFile, line.start));
-          snippet.addLine(lineIndex, line);
+    //     // Create snippets from the lines in the file.
+    //     var lineIndex = 0;
+    //     for (var line in sourceFile.lines) {
+    //       var snippet = _snippets.putIfAbsent(
+    //           line.start, () => Snippet(sourceFile, line.start));
+    //       snippet.addLine(lineIndex, line);
 
-          if (line.end != null) {
-            var endSnippet = _snippets.putIfAbsent(
-                line.end, () => Snippet(sourceFile, line.end));
-            endSnippet.removeLine(lineIndex, line);
-          }
+    //       if (line.end != null) {
+    //         var endSnippet = _snippets.putIfAbsent(
+    //             line.end, () => Snippet(sourceFile, line.end));
+    //         endSnippet.removeLine(lineIndex, line);
+    //       }
 
-          lineIndex++;
-        }
-      }
-    }
+    //       lineIndex++;
+    //     }
+    //   }
+    // }
 
     for (var snippet in _snippets.values) {
       if (snippet.tag.name == "not-yet") continue;
@@ -145,8 +142,10 @@ class Book {
   }
 
   /// Looks for a page with [title].
-  Page findChapter(String title) =>
-      pages.firstWhere((page) => page.title == title);
+  Page findChapter(String title) {
+      print(title);
+      return pages.firstWhere((page) => page.title == title);
+  }
 
   /// Looks for a page with [number];
   Page findNumber(String number) =>

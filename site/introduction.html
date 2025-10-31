@@ -348,7 +348,7 @@ with the basic techniques and also hone our understanding of exactly how the
 language is supposed to behave.</p>
 <aside name="lang">
 <p>The book uses Python and Rust. The original version of this book, for instance,
-uses Java, and C and readers have ported the code to <a href="https://github.com/munificent/craftinginterpreters/wiki/Lox-implementations">many other
+uses Python, and C and readers have ported the code to <a href="https://github.com/munificent/craftinginterpreters/wiki/Lox-implementations">many other
 languages</a>.<br />
 If the languages I picked aren&rsquo;t your bag, take a look at those.</p>
 </aside>
@@ -390,13 +390,13 @@ very fast, but it&rsquo;s correct. However, we are only able to accomplish that 
 building on the Python interpreter&rsquo;s own runtime facilities. We want to learn
 how Python <em>itself</em> implements those things.</p>
 <h2><a href="#the-second-interpreter" id="the-second-interpreter"><small>1&#8202;.&#8202;4</small>The Second Interpreter</a></h2>
-<p>So in the next part, we start all over again, but this time in Rust. Rust is the
+<p>So in the next part, we start all over again, but this time in C. C is the
 perfect language for understanding how an implementation <em>really</em> works, all the
 way down to the bytes in memory and the code flowing through the CPU.</p>
-<p>#TODO: A big reason that we&rsquo;re using Rust is so I can show you things Rust is
-particularly good at, but that <em>does</em> mean you&rsquo;ll need to be pretty comfortable
-with it. You don&rsquo;t have to be the reincarnation of Dennis Ritchie, but you
-shouldn&rsquo;t be spooked by pointers either.</p>
+<p>A big reason that we&rsquo;re using C is so I can show you things C is particularly
+good at, but that <em>does</em> mean you&rsquo;ll need to be pretty comfortable with it. You
+don&rsquo;t have to be the reincarnation of Dennis Ritchie, but you shouldn&rsquo;t be
+spooked by pointers either.</p>
 <p>If you aren&rsquo;t there yet, pick up an introductory book on C and chew through it,
 then come back here when you&rsquo;re done. In return, you&rsquo;ll come away from this book
 an even stronger C programmer. That&rsquo;s useful given how many language
@@ -437,9 +437,9 @@ a debugger, get comfortable with it and step through your program as it
 runs.</p>
 </li>
 <li>
-<p>#TODO: Do the same thing for Rust. To get some practice with pointers,
-define a <a href="https://en.wikipedia.org/wiki/Doubly_linked_list">doubly linked list</a> of heap-allocated strings. Write functions
-to insert, find, and delete items from it. Test them.</p>
+<p>Do the same thing for C. To get some practice with pointers, define a
+<a href="https://en.wikipedia.org/wiki/Doubly_linked_list">doubly linked list</a> of heap-allocated strings. Write functions to insert,
+find, and delete items from it. Test them.</p>
 </li>
 </ol>
 </div>

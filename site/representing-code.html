@@ -455,7 +455,7 @@ name="token-data">homogeneous</span>. Unary expressions have a single operand,
 binary expressions have two, and literals have none.</p>
 <p>We <em>could</em> mush that all together into a single Expression class with an
 arbitrary list of children. Some compilers do. But I like getting the most out
-of Java&rsquo;s type system. So we&rsquo;ll define a base class for expressions. Then, for
+of Python&rsquo;s type system. So we&rsquo;ll define a base class for expressions. Then, for
 each kind of expression<span class="em">&mdash;</span>each production under <code>expression</code><span class="em">&mdash;</span>we create a
 subclass that has fields for the nonterminals specific to that rule. This way,
 we get a compile error if we, say, try to access the second operand of a unary
@@ -467,29 +467,29 @@ different classes for literals and other kinds of lexemes, but I figured I&rsquo
 keep things simpler.</p>
 </aside>
 <p>Something like this:</p>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">expr</span>.<span class="i">py</span>
+<div class="codehilite"><pre><span class="c"># lox/ast.py</span>
 <span class="k">from</span> <span class="i">dataclasses</span> <span class="k">import</span> <span class="i">dataclass</span>
 <span class="k">from</span> <span class="i">typing</span> <span class="k">import</span> <span class="t">Any</span>
-<span class="k">from</span> .<span class="i">tokens</span> <span class="k">import</span> <span class="t">Token</span>
+<span class="k">from</span> <span class="i">lox</span>.<span class="i">tokens</span> <span class="k">import</span> <span class="t">Token</span>
 
 <span class="k">class</span> <span class="t">Expr</span>:
     <span class="s">&quot;&quot;</span><span class="s">&quot;Abstract Base Class for expressions&quot;</span><span class="s">&quot;&quot;</span>
 
-@<span class="i">dataclass</span>
+<span class="a">@dataclass</span>
 <span class="k">class</span> <span class="t">Binary</span>(<span class="t">Expr</span>):
     <span class="i">left</span>: <span class="t">Expr</span>
     <span class="i">operator</span>: <span class="t">Token</span>
     <span class="i">right</span>: <span class="t">Expr</span>
 
-@<span class="i">dataclass</span>
+<span class="a">@dataclass</span>
 <span class="k">class</span> <span class="t">Grouping</span>(<span class="t">Expr</span>):
     <span class="i">expression</span>: <span class="t">Expr</span>
 
-@<span class="i">dataclass</span>
+<span class="a">@dataclass</span>
 <span class="k">class</span> <span class="t">Literal</span>(<span class="t">Expr</span>):
     <span class="i">value</span>: <span class="t">Any</span>
 
-@<span class="i">dataclass</span>
+<span class="a">@dataclass</span>
 <span class="k">class</span> <span class="t">Unary</span>(<span class="t">Expr</span>):
     <span class="i">operator</span>: <span class="t">Token</span>
     <span class="i">right</span>: <span class="t">Expr</span>
@@ -512,7 +512,7 @@ those territories, which means they are really owned by <em>neither</em>.</p>
 <em>communicate</em>. That lends itself to types that are simply data with no
 associated behavior. This style is very natural in functional languages like
 Lisp and ML where <em>all</em> data is separate from behavior, but it feels odd in
-Java.</p>
+Python.</p>
 <p>Functional programming aficionados right now are jumping up to exclaim &ldquo;See!
 Object-oriented languages are a bad fit for an interpreter!&rdquo; I won&rsquo;t go that
 far. You&rsquo;ll recall that the scanner itself was admirably suited to
@@ -535,7 +535,7 @@ the tree:</p>
         ...
     <span class="i">case</span> <span class="t">Grouping</span>(<span class="i">expr</span>):
         ...
-    # ...
+    <span class="c"># ...</span>
 </pre></div>
 <p>Unfortunally, Python treats each cases sequentially, as if it was a chain of
 if/else statements. But all of those sequential tests are slow. Expression types
@@ -566,10 +566,10 @@ types, and a handful of high-level operations like &ldquo;interpret&rdquo;. For 
 type and operation, we need a specific implementation. Picture a table:</p><img src="image/representing-code/table.png" alt="A table where rows are labeled with expression classes, and columns are function names." />
 <p>Rows are types, and columns are operations. Each cell represents the unique
 piece of code to implement that operation on that type.</p>
-<p>An object-oriented language like Java assumes that all of the code in one row
-naturally hangs together. It figures all the things you do with a type are
-likely related to each other, and the language makes it easy to define them
-together as methods inside the same class.</p><img src="image/representing-code/rows.png" alt="The table split into rows for each class." />
+<p>An object-oriented approach assumes that all of the code in one row naturally
+hangs together. It figures all the things you do with a type are likely related
+to each other, and the language makes it easy to define them together as methods
+inside the same class.</p><img src="image/representing-code/rows.png" alt="The table split into rows for each class." />
 <p>This makes it easy to extend the table by adding new rows. Simply define a new
 class. No existing code has to be touched. But imagine if you want to add a new
 <em>operation</em><span class="em">&mdash;</span>a new column. In pure object oriented designs, that means
@@ -624,7 +624,7 @@ standalone function using a match/case as hinted before:</p>
             <span class="k">return</span> ...
         <span class="i">case</span> <span class="t">Grouping</span>(<span class="i">expr</span>):
             <span class="k">return</span> ...
-        # ...
+        <span class="c"># ...</span>
 </pre></div>
 <p>As I mentioned before, this approach suffers from a serious performance problem:
 each case is tested sequentially. This means that as the number of cases grows,
@@ -666,20 +666,20 @@ previous night&rsquo;s revelry.</p>
 <p>We want to be able to define new pastry operations<span class="em">&mdash;</span>cooking them, eating them,
 decorating them, etc.<span class="em">&mdash;</span>without having to add a new method to each class every
 time. Here&rsquo;s how we do it. First, we define the fallback for the desired
-operation. If there is no universal fallback, we simply raise a TypeError.</p>
+operation. If there is no universal fallback, we simply raise a <code>TypeError</code>.</p>
 <div class="codehilite"><pre><span class="k">from</span> <span class="i">functools</span> <span class="k">import</span> <span class="i">singledispatch</span>
 
-@<span class="i">singledispatch</span>
+<span class="a">@singledispatch</span>
 <span class="k">def</span> <span class="i">cook</span>(<span class="i">obj</span>: <span class="t">Pastry</span>):
     <span class="i">msg</span> = <span class="i">f</span><span class="s">&quot;cannot cook {obj.__class__.__name__} objects&quot;</span>
     <span class="k">raise</span> <span class="t">TypeError</span>(<span class="i">msg</span>)
 </pre></div>
 <p>Then we provide a separate implementatation for each of the supported types:</p>
-<div class="codehilite"><pre>@<span class="i">cook</span>.<span class="i">register</span>:
+<div class="codehilite"><pre><span class="a">@cook.register</span>:
 <span class="k">def</span> <span class="i">_</span>(<span class="i">obj</span>: <span class="t">Beignet</span>):
     <span class="k">print</span>(<span class="s">&quot;Cooking a Beignet&quot;</span>)
 
-@<span class="i">cook</span>.<span class="i">register</span>:
+<span class="a">@cook.register</span>:
 <span class="k">def</span> <span class="i">_</span>(<span class="i">obj</span>: <span class="t">Cruller</span>):
     <span class="k">print</span>(<span class="s">&quot;Cooking a Cruller&quot;</span>)
 </pre></div>
@@ -717,27 +717,27 @@ parenthesized, and all of its subexpressions and tokens are contained in that.</
 </pre></div>
 <p>Not exactly &ldquo;pretty&rdquo;, but it does show the nesting and grouping explicitly. To
 implement this, we define a new single dispatch method.</p>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">printer</span>.<span class="i">py</span>
+<div class="codehilite"><pre><span class="c"># lox/printer.py</span>
 <span class="k">from</span> <span class="i">functools</span> <span class="k">import</span> <span class="i">singledispatch</span>
-<span class="k">from</span> .<span class="i">expr</span> <span class="k">import</span> *
+<span class="k">from</span> <span class="i">lox</span>.<span class="i">ast</span> <span class="k">import</span> *
 
-@<span class="i">singledispatch</span>
-<span class="k">def</span> <span class="i">pretty</span>(<span class="i">expr</span>: <span class="t">Expr</span>) -&gt; <span class="i">str</span>:
+<span class="a">@singledispatch</span>
+<span class="k">def</span> <span class="i">pretty</span>(<span class="i">expr</span>: <span class="t">Expr</span>) -&gt; <span class="t">str</span>:
     <span class="i">name</span> = <span class="i">expr</span>.<span class="i">__class__</span>.<span class="i">__name__</span>
     <span class="k">raise</span> <span class="t">TypeError</span>(<span class="i">f</span><span class="s">&quot;cannot display {name} objects&quot;</span>)
 </pre></div>
 <p>We now need to provide the implementation for each expression type</p>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">printer</span>.<span class="i">py</span> <span class="i">after</span> <span class="i">the</span> <span class="i">pretty</span>() <span class="i">definition</span>
-@<span class="i">pretty</span>.<span class="i">register</span>
+<div class="codehilite"><pre><span class="c"># lox/printer.py after the pretty() definition</span>
+<span class="a">@pretty.register</span>
 <span class="k">def</span> <span class="i">_</span>(<span class="i">expr</span>: <span class="t">Binary</span>):
     <span class="i">symbol</span> = <span class="i">expr</span>.<span class="i">operator</span>.<span class="i">lexeme</span>
     <span class="k">return</span> <span class="i">parenthesize</span>(<span class="i">symbol</span>, <span class="i">expr</span>.<span class="i">left</span>, <span class="i">expr</span>.<span class="i">right</span>)
 
-@<span class="i">pretty</span>.<span class="i">register</span>
+<span class="a">@pretty.register</span>
 <span class="k">def</span> <span class="i">_</span>(<span class="i">expr</span>: <span class="t">Grouping</span>):
   <span class="k">return</span> <span class="i">parenthesize</span>(<span class="s">&quot;group&quot;</span>, <span class="i">expr</span>.<span class="i">expression</span>)
 
-@<span class="i">pretty</span>.<span class="i">register</span>
+<span class="a">@pretty.register</span>
 <span class="k">def</span> <span class="i">_</span>(<span class="i">expr</span>: <span class="t">Literal</span>):
     <span class="k">if</span> <span class="i">expr</span>.<span class="i">value</span> <span class="k">is</span> <span class="t">None</span>:
         <span class="k">return</span> <span class="s">&quot;nil&quot;</span>
@@ -745,9 +745,9 @@ implement this, we define a new single dispatch method.</p>
         <span class="k">return</span> <span class="s">&quot;true&quot;</span>
     <span class="k">elif</span> <span class="i">expr</span>.<span class="i">value</span> <span class="k">is</span> <span class="t">False</span>:
         <span class="k">return</span> <span class="s">&quot;false&quot;</span>
-    <span class="k">return</span> <span class="i">str</span>(<span class="i">expr</span>.<span class="i">value</span>)
+    <span class="k">return</span> <span class="t">str</span>(<span class="i">expr</span>.<span class="i">value</span>)
 
-@<span class="i">pretty</span>.<span class="i">register</span>
+<span class="a">@pretty.register</span>
 <span class="k">def</span> <span class="i">_</span>(<span class="i">expr</span>: <span class="t">Unary</span>):
     <span class="i">symbol</span> = <span class="i">expr</span>.<span class="i">operator</span>.<span class="i">lexeme</span>
     <span class="k">return</span> <span class="i">parenthesize</span>(<span class="i">symbol</span>, <span class="i">expr</span>.<span class="i">right</span>)
@@ -756,8 +756,8 @@ implement this, we define a new single dispatch method.</p>
 check to handle Python&rsquo;s <code>None</code> standing in for Lox&rsquo;s <code>nil</code>. The other
 expressions have subexpressions, so they use this <code>parenthesize()</code> helper
 method:</p>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">printer</span>.<span class="i">py</span>
-<span class="k">def</span> <span class="i">parenthesize</span>(<span class="i">name</span>: <span class="i">str</span>, *<span class="i">exprs</span>: <span class="t">Expr</span>) -&gt; <span class="i">str</span>:
+<div class="codehilite"><pre><span class="c"># lox/printer.py</span>
+<span class="k">def</span> <span class="i">parenthesize</span>(<span class="i">name</span>: <span class="t">str</span>, *<span class="i">exprs</span>: <span class="t">Expr</span>) -&gt; <span class="t">str</span>:
     <span class="i">parts</span> = [<span class="i">name</span>, *<span class="i">map</span>(<span class="i">pretty</span>, <span class="i">exprs</span>)]
     <span class="k">return</span> <span class="s">&quot;(&quot;</span> + <span class="s">&quot; &quot;</span>.<span class="i">join</span>(<span class="i">parts</span>) + <span class="s">&quot;)&quot;</span>
 </pre></div>
@@ -771,12 +771,12 @@ tree.</p>
 <p>We don&rsquo;t have a parser yet, so it&rsquo;s hard to see this in action. For now, we&rsquo;ll
 hack together a little <code>main()</code> method that manually instantiates a tree and
 prints it.</p>
-<div class="codehilite"><pre># <span class="i">lox</span>/<span class="i">printer</span>.<span class="i">py</span> <span class="i">at</span> <span class="i">the</span> <span class="i">end</span> <span class="i">of</span> <span class="i">file</span>
-<span class="k">from</span> .<span class="i">tokens</span> <span class="k">import</span> <span class="t">Token</span>, <span class="t">TokenType</span> <span class="k">as</span> <span class="t">TT</span>
+<div class="codehilite"><pre><span class="c"># lox/printer.py at the end of file</span>
+<span class="k">from</span> <span class="i">lox</span>.<span class="i">tokens</span> <span class="k">import</span> <span class="t">Token</span>, <span class="t">TokenType</span> <span class="k">as</span> <span class="i">TT</span>
 
 <span class="k">def</span> <span class="i">main</span>():
-    <span class="i">minus</span> = <span class="t">Token</span>(<span class="t">TT</span>.<span class="t">MINUS</span>, <span class="s">&quot;-&quot;</span>, <span class="n">1</span>)
-    <span class="i">star</span> = <span class="t">Token</span>(<span class="t">TT</span>.<span class="t">STAR</span>, <span class="s">&quot;*&quot;</span>, <span class="n">1</span>)
+    <span class="i">minus</span> = <span class="t">Token</span>(<span class="s">&quot;MINUS&quot;</span>, <span class="s">&quot;-&quot;</span>, <span class="n">1</span>)
+    <span class="i">star</span> = <span class="t">Token</span>(<span class="s">&quot;STAR&quot;</span>, <span class="s">&quot;*&quot;</span>, <span class="n">1</span>)
     <span class="i">expr</span> = <span class="t">Binary</span>(
         <span class="t">Unary</span>(<span class="i">minus</span>, <span class="t">Literal</span>(<span class="n">123</span>)),
         <span class="i">star</span>,

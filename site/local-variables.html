@@ -181,22 +181,7 @@ go, so let&rsquo;s get started there. In jlox, we used a linked chain of &ldquo;
 HashMaps to track which local variables were currently in scope. That&rsquo;s sort of
 the classic, schoolbook way of representing lexical scope. For clox, as usual,
 we&rsquo;re going a little closer to the metal. All of the state lives in a new
-struct.</p>
-<div class="codehilite"><pre class="insert-before">} ParseRule;
-</pre><div class="source-file"><em>compiler.c</em><br>
-add after struct <em>ParseRule</em></div>
-<pre class="insert">
-
-<span class="k">typedef</span> <span class="k">struct</span> {
-  <span class="t">Local</span> <span class="i">locals</span>[<span class="a">UINT8_COUNT</span>];
-  <span class="t">int</span> <span class="i">localCount</span>;
-  <span class="t">int</span> <span class="i">scopeDepth</span>;
-} <span class="t">Compiler</span>;
-</pre><pre class="insert-after">
-
-Parser parser;
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after struct <em>ParseRule</em></div>
+struct.</p><strong>ERROR: Missing snippet compiler-struct</strong>
 
 <p>We have a simple, flat array of all locals that are in scope during each point in
 the compilation process. They are <span name="order">ordered</span> in the array
@@ -207,17 +192,7 @@ the locals array a fixed size.</p>
 <aside name="order">
 <p>We&rsquo;re writing a single-pass compiler, so it&rsquo;s not like we have <em>too</em> many other
 options for how to order them in the array.</p>
-</aside>
-<div class="codehilite"><pre class="insert-before">#define DEBUG_TRACE_EXECUTION
-</pre><div class="source-file"><em>common.h</em></div>
-<pre class="insert">
-
-<span class="a">#define UINT8_COUNT (UINT8_MAX + 1)</span>
-</pre><pre class="insert-after">
-
-#endif
-</pre></div>
-<div class="source-file-narrow"><em>common.h</em></div>
+</aside><strong>ERROR: Missing snippet uint8-count</strong>
 
 <p>Back in the Compiler struct, the <code>localCount</code> field tracks how many locals are
 in scope<span class="em">&mdash;</span>how many of those array slots are in use. We also track the &ldquo;scope
@@ -229,21 +204,7 @@ level of nesting where they appear. Zero is the global scope, one is the first
 top-level block, two is inside that, you get the idea. We use this to track
 which block each local belongs to so that we know which locals to discard when a
 block ends.</p>
-<p>Each local in the array is one of these:</p>
-<div class="codehilite"><pre class="insert-before">} ParseRule;
-</pre><div class="source-file"><em>compiler.c</em><br>
-add after struct <em>ParseRule</em></div>
-<pre class="insert">
-
-<span class="k">typedef</span> <span class="k">struct</span> {
-  <span class="t">Token</span> <span class="i">name</span>;
-  <span class="t">int</span> <span class="i">depth</span>;
-} <span class="t">Local</span>;
-</pre><pre class="insert-after">
-
-typedef struct {
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after struct <em>ParseRule</em></div>
+<p>Each local in the array is one of these:</p><strong>ERROR: Missing snippet local-struct</strong>
 
 <p>We store the name of the variable. When we&rsquo;re resolving an identifier, we
 compare the identifier&rsquo;s lexeme with each local&rsquo;s name to find a match. It&rsquo;s
@@ -262,35 +223,11 @@ the code we already wrote, so here&rsquo;s a global variable instead:</p>
 <p>In particular, if we ever want to use our compiler in a multi-threaded
 application, possibly with multiple compilers running in parallel, then using a
 global variable is a <em>bad</em> idea.</p>
-</aside>
-<div class="codehilite"><pre class="insert-before">Parser parser;
-</pre><div class="source-file"><em>compiler.c</em><br>
-add after variable <em>parser</em></div>
-<pre class="insert"><span class="t">Compiler</span>* <span class="i">current</span> = <span class="a">NULL</span>;
-</pre><pre class="insert-after">Chunk* compilingChunk;
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after variable <em>parser</em></div>
+</aside><strong>ERROR: Missing snippet current-compiler</strong>
 
-<p>Here&rsquo;s a little function to initialize the compiler:</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-add after <em>emitConstant</em>()</div>
-<pre><span class="k">static</span> <span class="t">void</span> <span class="i">initCompiler</span>(<span class="t">Compiler</span>* <span class="i">compiler</span>) {
-  <span class="i">compiler</span>-&gt;<span class="i">localCount</span> = <span class="n">0</span>;
-  <span class="i">compiler</span>-&gt;<span class="i">scopeDepth</span> = <span class="n">0</span>;
-  <span class="i">current</span> = <span class="i">compiler</span>;
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after <em>emitConstant</em>()</div>
+<p>Here&rsquo;s a little function to initialize the compiler:</p><strong>ERROR: Missing snippet init-compiler</strong>
 
-<p>When we first start up the VM, we call it to get everything into a clean state.</p>
-<div class="codehilite"><pre class="insert-before">  initScanner(source);
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>compile</em>()</div>
-<pre class="insert">  <span class="t">Compiler</span> <span class="i">compiler</span>;
-  <span class="i">initCompiler</span>(&amp;<span class="i">compiler</span>);
-</pre><pre class="insert-after">  compilingChunk = chunk;
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>compile</em>()</div>
+<p>When we first start up the VM, we call it to get everything into a clean state.</p><strong>ERROR: Missing snippet compiler</strong>
 
 <p>Our compiler has the data it needs, but not the operations on that data. There&rsquo;s
 no way to create and destroy scopes, or add and resolve variables. We&rsquo;ll add
@@ -315,35 +252,13 @@ statements. It could be worse, I suppose. Algol 58 called <code>begin</code> and
 &ldquo;statement parentheses&rdquo;.</p><img src="image/local-variables/block.png" alt="A cinder block." class="above" />
 </aside>
 <p>Blocks are a kind of statement, so the rule for them goes in the <code>statement</code>
-production. The corresponding code to compile one looks like this:</p>
-<div class="codehilite"><pre class="insert-before">  if (match(TOKEN_PRINT)) {
-    printStatement();
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>statement</em>()</div>
-<pre class="insert">  } <span class="k">else</span> <span class="k">if</span> (<span class="i">match</span>(<span class="a">TOKEN_LEFT_BRACE</span>)) {
-    <span class="i">beginScope</span>();
-    <span class="i">block</span>();
-    <span class="i">endScope</span>();
-</pre><pre class="insert-after">  } else {
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>statement</em>()</div>
+production. The corresponding code to compile one looks like this:</p><strong>ERROR: Missing snippet parse-block</strong>
 
 <p>After <span name="helper">parsing</span> the initial curly brace, we use this
 helper function to compile the rest of the block:</p>
 <aside name="helper">
 <p>This function will come in handy later for compiling function bodies.</p>
-</aside>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-add after <em>expression</em>()</div>
-<pre><span class="k">static</span> <span class="t">void</span> <span class="i">block</span>() {
-  <span class="k">while</span> (!<span class="i">check</span>(<span class="a">TOKEN_RIGHT_BRACE</span>) &amp;&amp; !<span class="i">check</span>(<span class="a">TOKEN_EOF</span>)) {
-    <span class="i">declaration</span>();
-  }
-
-  <span class="i">consume</span>(<span class="a">TOKEN_RIGHT_BRACE</span>, <span class="s">&quot;Expect &#39;}&#39; after block.&quot;</span>);
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after <em>expression</em>()</div>
+</aside><strong>ERROR: Missing snippet block</strong>
 
 <p>It keeps parsing declarations and statements until it hits the closing brace. As
 we do with any loop in the parser, we also check for the end of the token
@@ -352,25 +267,11 @@ the compiler doesn&rsquo;t get stuck in a loop.</p>
 <p>Executing a block simply means executing the statements it contains, one after
 the other, so there isn&rsquo;t much to compiling them. The semantically interesting
 thing blocks do is create scopes. Before we compile the body of a block, we call
-this function to enter a new local scope:</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-add after <em>endCompiler</em>()</div>
-<pre><span class="k">static</span> <span class="t">void</span> <span class="i">beginScope</span>() {
-  <span class="i">current</span>-&gt;<span class="i">scopeDepth</span>++;
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after <em>endCompiler</em>()</div>
+this function to enter a new local scope:</p><strong>ERROR: Missing snippet begin-scope</strong>
 
 <p>In order to &ldquo;create&rdquo; a scope, all we do is increment the current depth. This is
 certainly much faster than jlox, which allocated an entire new HashMap for
-each one. Given <code>beginScope()</code>, you can probably guess what <code>endScope()</code> does.</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-add after <em>beginScope</em>()</div>
-<pre><span class="k">static</span> <span class="t">void</span> <span class="i">endScope</span>() {
-  <span class="i">current</span>-&gt;<span class="i">scopeDepth</span>--;
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after <em>beginScope</em>()</div>
+each one. Given <code>beginScope()</code>, you can probably guess what <code>endScope()</code> does.</p><strong>ERROR: Missing snippet end-scope</strong>
 
 <p>That&rsquo;s it for blocks and scopes<span class="em">&mdash;</span>more or less<span class="em">&mdash;</span>so we&rsquo;re ready to stuff some
 variables into them.</p>
@@ -387,18 +288,7 @@ and then returns the constant table index where it was added. Then, after
 <code>varDeclaration()</code> compiles the initializer, it calls <code>defineVariable()</code> to emit
 the bytecode for storing the variable&rsquo;s value in the global variable hash table.</p>
 <p>Both of those helpers need a few changes to support local variables. In
-<code>parseVariable()</code>, we add:</p>
-<div class="codehilite"><pre class="insert-before">  consume(TOKEN_IDENTIFIER, errorMessage);
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>parseVariable</em>()</div>
-<pre class="insert">
-
-  <span class="i">declareVariable</span>();
-  <span class="k">if</span> (<span class="i">current</span>-&gt;<span class="i">scopeDepth</span> &gt; <span class="n">0</span>) <span class="k">return</span> <span class="n">0</span>;
-
-</pre><pre class="insert-after">  return identifierConstant(&amp;parser.previous);
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>parseVariable</em>()</div>
+<code>parseVariable()</code>, we add:</p><strong>ERROR: Missing snippet parse-local</strong>
 
 <p>First, we &ldquo;declare&rdquo; the variable. I&rsquo;ll get to what that means in a second. After
 that, we exit the function if we&rsquo;re in a local scope. At runtime, locals aren&rsquo;t
@@ -406,17 +296,7 @@ looked up by name. There&rsquo;s no need to stuff the variable&rsquo;s name into
 constant table, so if the declaration is inside a local scope, we return a dummy
 table index instead.</p>
 <p>Over in <code>defineVariable()</code>, we need to emit the code to store a local variable
-if we&rsquo;re in a local scope. It looks like this:</p>
-<div class="codehilite"><pre class="insert-before">static void defineVariable(uint8_t global) {
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>defineVariable</em>()</div>
-<pre class="insert">  <span class="k">if</span> (<span class="i">current</span>-&gt;<span class="i">scopeDepth</span> &gt; <span class="n">0</span>) {
-    <span class="k">return</span>;
-  }
-
-</pre><pre class="insert-after">  emitBytes(OP_DEFINE_GLOBAL, global);
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>defineVariable</em>()</div>
+if we&rsquo;re in a local scope. It looks like this:</p><strong>ERROR: Missing snippet define-variable</strong>
 
 <p>Wait, what? Yup. That&rsquo;s it. There is no code to create a local variable at
 runtime. Think about what state the VM is in. It has already executed the code
@@ -430,17 +310,7 @@ efficient than that.</p>
 <aside name="locals">
 <p>The code on the left compiles to the sequence of instructions on the right.</p>
 </aside>
-<p>OK, so what&rsquo;s &ldquo;declaring&rdquo; about? Here&rsquo;s what that does:</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-add after <em>identifierConstant</em>()</div>
-<pre><span class="k">static</span> <span class="t">void</span> <span class="i">declareVariable</span>() {
-  <span class="k">if</span> (<span class="i">current</span>-&gt;<span class="i">scopeDepth</span> == <span class="n">0</span>) <span class="k">return</span>;
-
-  <span class="t">Token</span>* <span class="i">name</span> = &amp;<span class="i">parser</span>.<span class="i">previous</span>;
-  <span class="i">addLocal</span>(*<span class="i">name</span>);
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after <em>identifierConstant</em>()</div>
+<p>OK, so what&rsquo;s &ldquo;declaring&rdquo; about? Here&rsquo;s what that does:</p><strong>ERROR: Missing snippet declare-variable</strong>
 
 <p>This is the point where the compiler records the existence of the variable. We
 only do this for locals, so if we&rsquo;re in the top-level global scope, we just bail
@@ -448,16 +318,7 @@ out. Because global variables are late bound, the compiler doesn&rsquo;t keep tr
 which declarations for them it has seen.</p>
 <p>But for local variables, the compiler does need to remember that the variable
 exists. That&rsquo;s what declaring it does<span class="em">&mdash;</span>it adds it to the compiler&rsquo;s list of
-variables in the current scope. We implement that using another new function.</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-add after <em>identifierConstant</em>()</div>
-<pre><span class="k">static</span> <span class="t">void</span> <span class="i">addLocal</span>(<span class="t">Token</span> <span class="i">name</span>) {
-  <span class="t">Local</span>* <span class="i">local</span> = &amp;<span class="i">current</span>-&gt;<span class="i">locals</span>[<span class="i">current</span>-&gt;<span class="i">localCount</span>++];
-  <span class="i">local</span>-&gt;<span class="i">name</span> = <span class="i">name</span>;
-  <span class="i">local</span>-&gt;<span class="i">depth</span> = <span class="i">current</span>-&gt;<span class="i">scopeDepth</span>;
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after <em>identifierConstant</em>()</div>
+variables in the current scope. We implement that using another new function.</p><strong>ERROR: Missing snippet add-local</strong>
 
 <p>This initializes the next available Local in the compiler&rsquo;s array of variables.
 It stores the variable&rsquo;s <span name="lexeme">name</span> and the depth of the
@@ -478,18 +339,7 @@ variables refer to them by slot index. That index is stored in a single-byte
 operand, which means the VM only supports up to 256 local variables in scope at
 one time.</p>
 <p>If we try to go over that, not only could we not refer to them at runtime, but
-the compiler would overwrite its own locals array, too. Let&rsquo;s prevent that.</p>
-<div class="codehilite"><pre class="insert-before">static void addLocal(Token name) {
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>addLocal</em>()</div>
-<pre class="insert">  <span class="k">if</span> (<span class="i">current</span>-&gt;<span class="i">localCount</span> == <span class="a">UINT8_COUNT</span>) {
-    <span class="i">error</span>(<span class="s">&quot;Too many local variables in function.&quot;</span>);
-    <span class="k">return</span>;
-  }
-
-</pre><pre class="insert-after">  Local* local = &amp;current-&gt;locals[current-&gt;localCount++];
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>addLocal</em>()</div>
+the compiler would overwrite its own locals array, too. Let&rsquo;s prevent that.</p><strong>ERROR: Missing snippet too-many-locals</strong>
 
 <p>The next case is trickier. Consider:</p>
 <div class="codehilite"><pre>{
@@ -518,25 +368,7 @@ code relies on it.</p>
 when the scopes overlap such that both are visible at the same time. That&rsquo;s
 shadowing, and Lox does allow that. It&rsquo;s only an error to have two variables
 with the same name in the <em>same</em> local scope.</p>
-<p>We detect that error like so:</p>
-<div class="codehilite"><pre class="insert-before">  Token* name = &amp;parser.previous;
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>declareVariable</em>()</div>
-<pre class="insert">  <span class="k">for</span> (<span class="t">int</span> <span class="i">i</span> = <span class="i">current</span>-&gt;<span class="i">localCount</span> - <span class="n">1</span>; <span class="i">i</span> &gt;= <span class="n">0</span>; <span class="i">i</span>--) {
-    <span class="t">Local</span>* <span class="i">local</span> = &amp;<span class="i">current</span>-&gt;<span class="i">locals</span>[<span class="i">i</span>];
-    <span class="k">if</span> (<span class="i">local</span>-&gt;<span class="i">depth</span> != -<span class="n">1</span> &amp;&amp; <span class="i">local</span>-&gt;<span class="i">depth</span> &lt; <span class="i">current</span>-&gt;<span class="i">scopeDepth</span>) {
-      <span class="k">break</span>;<span name="negative"> </span>
-    }
-
-    <span class="k">if</span> (<span class="i">identifiersEqual</span>(<span class="i">name</span>, &amp;<span class="i">local</span>-&gt;<span class="i">name</span>)) {
-      <span class="i">error</span>(<span class="s">&quot;Already a variable with this name in this scope.&quot;</span>);
-    }
-  }
-
-</pre><pre class="insert-after">  addLocal(*name);
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>declareVariable</em>()</div>
+<p>We detect that error like so:</p><strong>ERROR: Missing snippet existing-in-scope</strong>
 
 <aside name="negative">
 <p>Don&rsquo;t worry about that odd <code>depth != -1</code> part yet. We&rsquo;ll get to what that&rsquo;s
@@ -548,15 +380,7 @@ we start at the end and work backward, looking for an existing variable with the
 same name. If we find one in the current scope, we report the error. Otherwise,
 if we reach the beginning of the array or a variable owned by another scope,
 then we know we&rsquo;ve checked all of the existing variables in the scope.</p>
-<p>To see if two identifiers are the same, we use this:</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-add after <em>identifierConstant</em>()</div>
-<pre><span class="k">static</span> <span class="t">bool</span> <span class="i">identifiersEqual</span>(<span class="t">Token</span>* <span class="i">a</span>, <span class="t">Token</span>* <span class="i">b</span>) {
-  <span class="k">if</span> (<span class="i">a</span>-&gt;<span class="i">length</span> != <span class="i">b</span>-&gt;<span class="i">length</span>) <span class="k">return</span> <span class="k">false</span>;
-  <span class="k">return</span> <span class="i">memcmp</span>(<span class="i">a</span>-&gt;<span class="i">start</span>, <span class="i">b</span>-&gt;<span class="i">start</span>, <span class="i">a</span>-&gt;<span class="i">length</span>) == <span class="n">0</span>;
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after <em>identifierConstant</em>()</div>
+<p>To see if two identifiers are the same, we use this:</p><strong>ERROR: Missing snippet identifiers-equal</strong>
 
 <p>Since we know the lengths of both lexemes, we check that first. That will fail
 quickly for many non-equal strings. If the <span name="hash">lengths</span> are
@@ -565,33 +389,11 @@ need an include.</p>
 <aside name="hash">
 <p>It would be a nice little optimization if we could check their hashes, but
 tokens aren&rsquo;t full LoxStrings, so we haven&rsquo;t calculated their hashes yet.</p>
-</aside>
-<div class="codehilite"><pre class="insert-before">#include &lt;stdlib.h&gt;
-</pre><div class="source-file"><em>compiler.c</em></div>
-<pre class="insert"><span class="a">#include &lt;string.h&gt;</span>
-</pre><pre class="insert-after">
-
-#include &quot;common.h&quot;
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em></div>
+</aside><strong>ERROR: Missing snippet compiler-include-string</strong>
 
 <p>With this, we&rsquo;re able to bring variables into being. But, like ghosts, they
 linger on beyond the scope where they are declared. When a block ends, we need
-to put them to rest.</p>
-<div class="codehilite"><pre class="insert-before">  current-&gt;scopeDepth--;
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>endScope</em>()</div>
-<pre class="insert">
-
-  <span class="k">while</span> (<span class="i">current</span>-&gt;<span class="i">localCount</span> &gt; <span class="n">0</span> &amp;&amp;
-         <span class="i">current</span>-&gt;<span class="i">locals</span>[<span class="i">current</span>-&gt;<span class="i">localCount</span> - <span class="n">1</span>].<span class="i">depth</span> &gt;
-            <span class="i">current</span>-&gt;<span class="i">scopeDepth</span>) {
-    <span class="i">emitByte</span>(<span class="a">OP_POP</span>);
-    <span class="i">current</span>-&gt;<span class="i">localCount</span>--;
-  }
-</pre><pre class="insert-after">}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>endScope</em>()</div>
+to put them to rest.</p><strong>ERROR: Missing snippet pop-locals</strong>
 
 <p>When we pop a scope, we walk backward through the local array looking for any
 variables declared at the scope depth we just left. We discard them by simply
@@ -613,26 +415,7 @@ We&rsquo;ll do both variable access and assignment at the same time since they t
 the same functions in the compiler.</p>
 <p>We already have code for getting and setting global variables, and<span class="em">&mdash;</span>like good
 little software engineers<span class="em">&mdash;</span>we want to reuse as much of that existing code as
-we can. Something like this:</p>
-<div class="codehilite"><pre class="insert-before">static void namedVariable(Token name, bool canAssign) {
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>namedVariable</em>()<br>
-replace 1 line</div>
-<pre class="insert">  <span class="t">uint8_t</span> <span class="i">getOp</span>, <span class="i">setOp</span>;
-  <span class="t">int</span> <span class="i">arg</span> = <span class="i">resolveLocal</span>(<span class="i">current</span>, &amp;<span class="i">name</span>);
-  <span class="k">if</span> (<span class="i">arg</span> != -<span class="n">1</span>) {
-    <span class="i">getOp</span> = <span class="a">OP_GET_LOCAL</span>;
-    <span class="i">setOp</span> = <span class="a">OP_SET_LOCAL</span>;
-  } <span class="k">else</span> {
-    <span class="i">arg</span> = <span class="i">identifierConstant</span>(&amp;<span class="i">name</span>);
-    <span class="i">getOp</span> = <span class="a">OP_GET_GLOBAL</span>;
-    <span class="i">setOp</span> = <span class="a">OP_SET_GLOBAL</span>;
-  }
-</pre><pre class="insert-after">
-
-  if (canAssign &amp;&amp; match(TOKEN_EQUAL)) {
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>namedVariable</em>(), replace 1 line</div>
+we can. Something like this:</p><strong>ERROR: Missing snippet named-local</strong>
 
 <p>Instead of hardcoding the bytecode instructions emitted for variable access and
 assignment, we use a couple of C variables. First, we try to find a local
@@ -640,44 +423,12 @@ variable with the given name. If we find one, we use the instructions for
 working with locals. Otherwise, we assume it&rsquo;s a global variable and use the
 existing bytecode instructions for globals.</p>
 <p>A little further down, we use those variables to emit the right instructions.
-For assignment:</p>
-<div class="codehilite"><pre class="insert-before">  if (canAssign &amp;&amp; match(TOKEN_EQUAL)) {
-    expression();
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>namedVariable</em>()<br>
-replace 1 line</div>
-<pre class="insert">    <span class="i">emitBytes</span>(<span class="i">setOp</span>, (<span class="t">uint8_t</span>)<span class="i">arg</span>);
-</pre><pre class="insert-after">  } else {
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>namedVariable</em>(), replace 1 line</div>
+For assignment:</p><strong>ERROR: Missing snippet emit-set</strong>
 
-<p>And for access:</p>
-<div class="codehilite"><pre class="insert-before">    emitBytes(setOp, (uint8_t)arg);
-  } else {
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>namedVariable</em>()<br>
-replace 1 line</div>
-<pre class="insert">    <span class="i">emitBytes</span>(<span class="i">getOp</span>, (<span class="t">uint8_t</span>)<span class="i">arg</span>);
-</pre><pre class="insert-after">  }
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>namedVariable</em>(), replace 1 line</div>
+<p>And for access:</p><strong>ERROR: Missing snippet emit-get</strong>
 
 <p>The real heart of this chapter, the part where we resolve a local variable, is
-here:</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-add after <em>identifiersEqual</em>()</div>
-<pre><span class="k">static</span> <span class="t">int</span> <span class="i">resolveLocal</span>(<span class="t">Compiler</span>* <span class="i">compiler</span>, <span class="t">Token</span>* <span class="i">name</span>) {
-  <span class="k">for</span> (<span class="t">int</span> <span class="i">i</span> = <span class="i">compiler</span>-&gt;<span class="i">localCount</span> - <span class="n">1</span>; <span class="i">i</span> &gt;= <span class="n">0</span>; <span class="i">i</span>--) {
-    <span class="t">Local</span>* <span class="i">local</span> = &amp;<span class="i">compiler</span>-&gt;<span class="i">locals</span>[<span class="i">i</span>];
-    <span class="k">if</span> (<span class="i">identifiersEqual</span>(<span class="i">name</span>, &amp;<span class="i">local</span>-&gt;<span class="i">name</span>)) {
-      <span class="k">return</span> <span class="i">i</span>;
-    }
-  }
-
-  <span class="k">return</span> -<span class="n">1</span>;
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after <em>identifiersEqual</em>()</div>
+here:</p><strong>ERROR: Missing snippet resolve-local</strong>
 
 <p>For all that, it&rsquo;s straightforward. We walk the list of locals that are
 currently in scope. If one has the same name as the identifier token, the
@@ -697,27 +448,9 @@ name, it must not be a local. In that case, we return <code>-1</code> to signal 
 wasn&rsquo;t found and should be assumed to be a global variable instead.</p>
 <h3><a href="#interpreting-local-variables" id="interpreting-local-variables"><small>22&#8202;.&#8202;4&#8202;.&#8202;1</small>Interpreting local variables</a></h3>
 <p>Our compiler is emitting two new instructions, so let&rsquo;s get them working. First
-is loading a local variable:</p>
-<div class="codehilite"><pre class="insert-before">  OP_POP,
-</pre><div class="source-file"><em>chunk.h</em><br>
-in enum <em>OpCode</em></div>
-<pre class="insert">  <span class="a">OP_GET_LOCAL</span>,
-</pre><pre class="insert-after">  OP_GET_GLOBAL,
-</pre></div>
-<div class="source-file-narrow"><em>chunk.h</em>, in enum <em>OpCode</em></div>
+is loading a local variable:</p><strong>ERROR: Missing snippet get-local-op</strong>
 
-<p>And its implementation:</p>
-<div class="codehilite"><pre class="insert-before">      case OP_POP: pop(); break;
-</pre><div class="source-file"><em>vm.c</em><br>
-in <em>run</em>()</div>
-<pre class="insert">      <span class="k">case</span> <span class="a">OP_GET_LOCAL</span>: {
-        <span class="t">uint8_t</span> <span class="i">slot</span> = <span class="a">READ_BYTE</span>();
-        <span class="i">push</span>(<span class="i">vm</span>.<span class="i">stack</span>[<span class="i">slot</span>]);<span name="slot"> </span>
-        <span class="k">break</span>;
-      }
-</pre><pre class="insert-after">      case OP_GET_GLOBAL: {
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, in <em>run</em>()</div>
+<p>And its implementation:</p><strong>ERROR: Missing snippet interpret-get-local</strong>
 
 <p>It takes a single-byte operand for the stack slot where the local lives. It
 loads the value from that index and then pushes it on top of the stack where
@@ -730,44 +463,16 @@ aspect that makes our bytecode instruction set <em>stack</em>-based.
 <a href="a-virtual-machine.html#design-note">Register-based</a> bytecode instruction sets avoid this stack juggling at the
 cost of having larger instructions with more operands.</p>
 </aside>
-<p>Next is assignment:</p>
-<div class="codehilite"><pre class="insert-before">  OP_GET_LOCAL,
-</pre><div class="source-file"><em>chunk.h</em><br>
-in enum <em>OpCode</em></div>
-<pre class="insert">  <span class="a">OP_SET_LOCAL</span>,
-</pre><pre class="insert-after">  OP_GET_GLOBAL,
-</pre></div>
-<div class="source-file-narrow"><em>chunk.h</em>, in enum <em>OpCode</em></div>
+<p>Next is assignment:</p><strong>ERROR: Missing snippet set-local-op</strong>
 
-<p>You can probably predict the implementation.</p>
-<div class="codehilite"><pre class="insert-before">      }
-</pre><div class="source-file"><em>vm.c</em><br>
-in <em>run</em>()</div>
-<pre class="insert">      <span class="k">case</span> <span class="a">OP_SET_LOCAL</span>: {
-        <span class="t">uint8_t</span> <span class="i">slot</span> = <span class="a">READ_BYTE</span>();
-        <span class="i">vm</span>.<span class="i">stack</span>[<span class="i">slot</span>] = <span class="i">peek</span>(<span class="n">0</span>);
-        <span class="k">break</span>;
-      }
-</pre><pre class="insert-after">      case OP_GET_GLOBAL: {
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, in <em>run</em>()</div>
+<p>You can probably predict the implementation.</p><strong>ERROR: Missing snippet interpret-set-local</strong>
 
 <p>It takes the assigned value from the top of the stack and stores it in the stack
 slot corresponding to the local variable. Note that it doesn&rsquo;t pop the value
 from the stack. Remember, assignment is an expression, and every expression
 produces a value. The value of an assignment expression is the assigned value
 itself, so the VM just leaves the value on the stack.</p>
-<p>Our disassembler is incomplete without support for these two new instructions.</p>
-<div class="codehilite"><pre class="insert-before">      return simpleInstruction(&quot;OP_POP&quot;, offset);
-</pre><div class="source-file"><em>debug.c</em><br>
-in <em>disassembleInstruction</em>()</div>
-<pre class="insert">    <span class="k">case</span> <span class="a">OP_GET_LOCAL</span>:
-      <span class="k">return</span> <span class="i">byteInstruction</span>(<span class="s">&quot;OP_GET_LOCAL&quot;</span>, <span class="i">chunk</span>, <span class="i">offset</span>);
-    <span class="k">case</span> <span class="a">OP_SET_LOCAL</span>:
-      <span class="k">return</span> <span class="i">byteInstruction</span>(<span class="s">&quot;OP_SET_LOCAL&quot;</span>, <span class="i">chunk</span>, <span class="i">offset</span>);
-</pre><pre class="insert-after">    case OP_GET_GLOBAL:
-</pre></div>
-<div class="source-file-narrow"><em>debug.c</em>, in <em>disassembleInstruction</em>()</div>
+<p>Our disassembler is incomplete without support for these two new instructions.</p><strong>ERROR: Missing snippet disassemble-local</strong>
 
 <p>The compiler compiles local variables to direct slot access. The local
 variable&rsquo;s name never leaves the compiler to make it into the chunk at all.
@@ -780,17 +485,7 @@ implement a debugger for our VM. When users step through code, they expect to
 see the values of local variables organized by their names. To support that,
 we&rsquo;d need to output some additional information that tracks the name of each
 local variable at each stack slot.</p>
-</aside>
-<div class="codehilite"><div class="source-file"><em>debug.c</em><br>
-add after <em>simpleInstruction</em>()</div>
-<pre><span class="k">static</span> <span class="t">int</span> <span class="i">byteInstruction</span>(<span class="k">const</span> <span class="t">char</span>* <span class="i">name</span>, <span class="t">Chunk</span>* <span class="i">chunk</span>,
-                           <span class="t">int</span> <span class="i">offset</span>) {
-  <span class="t">uint8_t</span> <span class="i">slot</span> = <span class="i">chunk</span>-&gt;<span class="i">code</span>[<span class="i">offset</span> + <span class="n">1</span>];
-  <span class="i">printf</span>(<span class="s">&quot;%-16s %4d</span><span class="e">\n</span><span class="s">&quot;</span>, <span class="i">name</span>, <span class="i">slot</span>);
-  <span class="k">return</span> <span class="i">offset</span> + <span class="n">2</span>;<span name="debug"> </span>
-}
-</pre></div>
-<div class="source-file-narrow"><em>debug.c</em>, add after <em>simpleInstruction</em>()</div>
+</aside><strong>ERROR: Missing snippet byte-instruction</strong>
 
 <h3><a href="#another-scope-edge-case" id="another-scope-edge-case"><small>22&#8202;.&#8202;4&#8202;.&#8202;2</small>Another scope edge case</a></h3>
 <p>We already sunk some time into handling a couple of weird edge cases around
@@ -822,51 +517,18 @@ for use.</p>
 <p>To implement this, when we declare a local, we need to indicate the
 &ldquo;uninitialized&rdquo; state somehow. We could add a new field to Local, but let&rsquo;s be a
 little more parsimonious with memory. Instead, we&rsquo;ll set the variable&rsquo;s scope
-depth to a special sentinel value, <code>-1</code>.</p>
-<div class="codehilite"><pre class="insert-before">  local-&gt;name = name;
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>addLocal</em>()<br>
-replace 1 line</div>
-<pre class="insert">  <span class="i">local</span>-&gt;<span class="i">depth</span> = -<span class="n">1</span>;
-</pre><pre class="insert-after">}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>addLocal</em>(), replace 1 line</div>
+depth to a special sentinel value, <code>-1</code>.</p><strong>ERROR: Missing snippet declare-undefined</strong>
 
 <p>Later, once the variable&rsquo;s initializer has been compiled, we mark it
-initialized.</p>
-<div class="codehilite"><pre class="insert-before">  if (current-&gt;scopeDepth &gt; 0) {
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>defineVariable</em>()</div>
-<pre class="insert">    <span class="i">markInitialized</span>();
-</pre><pre class="insert-after">    return;
-  }
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>defineVariable</em>()</div>
+initialized.</p><strong>ERROR: Missing snippet define-local</strong>
 
-<p>That is implemented like so:</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-add after <em>parseVariable</em>()</div>
-<pre><span class="k">static</span> <span class="t">void</span> <span class="i">markInitialized</span>() {
-  <span class="i">current</span>-&gt;<span class="i">locals</span>[<span class="i">current</span>-&gt;<span class="i">localCount</span> - <span class="n">1</span>].<span class="i">depth</span> =
-      <span class="i">current</span>-&gt;<span class="i">scopeDepth</span>;
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after <em>parseVariable</em>()</div>
+<p>That is implemented like so:</p><strong>ERROR: Missing snippet mark-initialized</strong>
 
 <p>So this is <em>really</em> what &ldquo;declaring&rdquo; and &ldquo;defining&rdquo; a variable means in the
 compiler. &ldquo;Declaring&rdquo; is when the variable is added to the scope, and &ldquo;defining&rdquo;
 is when it becomes available for use.</p>
 <p>When we resolve a reference to a local variable, we check the scope depth to see
-if it&rsquo;s fully defined.</p>
-<div class="codehilite"><pre class="insert-before">    if (identifiersEqual(name, &amp;local-&gt;name)) {
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>resolveLocal</em>()</div>
-<pre class="insert">      <span class="k">if</span> (<span class="i">local</span>-&gt;<span class="i">depth</span> == -<span class="n">1</span>) {
-        <span class="i">error</span>(<span class="s">&quot;Can&#39;t read local variable in its own initializer.&quot;</span>);
-      }
-</pre><pre class="insert-after">      return i;
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>resolveLocal</em>()</div>
+if it&rsquo;s fully defined.</p><strong>ERROR: Missing snippet own-initializer-error</strong>
 
 <p>If the variable has the sentinel depth, it must be a reference to a variable in
 its own initializer, and we report that as an error.</p>

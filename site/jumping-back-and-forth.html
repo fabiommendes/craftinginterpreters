@@ -151,32 +151,9 @@ and get started with that.</p>
 <h2><a href="#if-statements" id="if-statements"><small>23&#8202;.&#8202;1</small>If Statements</a></h2>
 <p>This many chapters in, you know the drill. Any new feature starts in the front
 end and works its way through the pipeline. An <code>if</code> statement is, well, a
-statement, so that&rsquo;s where we hook it into the parser.</p>
-<div class="codehilite"><pre class="insert-before">  if (match(TOKEN_PRINT)) {
-    printStatement();
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>statement</em>()</div>
-<pre class="insert">  } <span class="k">else</span> <span class="k">if</span> (<span class="i">match</span>(<span class="a">TOKEN_IF</span>)) {
-    <span class="i">ifStatement</span>();
-</pre><pre class="insert-after">  } else if (match(TOKEN_LEFT_BRACE)) {
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>statement</em>()</div>
+statement, so that&rsquo;s where we hook it into the parser.</p><strong>ERROR: Missing snippet parse-if</strong>
 
-<p>When we see an <code>if</code> keyword, we hand off compilation to this function:</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-add after <em>expressionStatement</em>()</div>
-<pre><span class="k">static</span> <span class="t">void</span> <span class="i">ifStatement</span>() {
-  <span class="i">consume</span>(<span class="a">TOKEN_LEFT_PAREN</span>, <span class="s">&quot;Expect &#39;(&#39; after &#39;if&#39;.&quot;</span>);
-  <span class="i">expression</span>();
-  <span class="i">consume</span>(<span class="a">TOKEN_RIGHT_PAREN</span>, <span class="s">&quot;Expect &#39;)&#39; after condition.&quot;</span>);<span name="paren"> </span>
-
-  <span class="t">int</span> <span class="i">thenJump</span> = <span class="i">emitJump</span>(<span class="a">OP_JUMP_IF_FALSE</span>);
-  <span class="i">statement</span>();
-
-  <span class="i">patchJump</span>(<span class="i">thenJump</span>);
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after <em>expressionStatement</em>()</div>
+<p>When we see an <code>if</code> keyword, we hand off compilation to this function:</p><strong>ERROR: Missing snippet if-statement</strong>
 
 <aside name="paren">
 <p>Have you ever noticed that the <code>(</code> after the <code>if</code> keyword doesn&rsquo;t actually do
@@ -211,17 +188,7 @@ half-finished instruction is. Next, we compile the then body. Once that&rsquo;s 
 we know how far to jump. So we go back and replace that placeholder offset with
 the real one now that we can calculate it. Sort of like sewing a patch onto the
 existing fabric of the compiled code.</p><img src="image/jumping-back-and-forth/patch.png" alt="A patch containing a number being sewn onto a sheet of bytecode." />
-<p>We encode this trick into two helper functions.</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-add after <em>emitBytes</em>()</div>
-<pre><span class="k">static</span> <span class="t">int</span> <span class="i">emitJump</span>(<span class="t">uint8_t</span> <span class="i">instruction</span>) {
-  <span class="i">emitByte</span>(<span class="i">instruction</span>);
-  <span class="i">emitByte</span>(<span class="n">0xff</span>);
-  <span class="i">emitByte</span>(<span class="n">0xff</span>);
-  <span class="k">return</span> <span class="i">currentChunk</span>()-&gt;<span class="i">count</span> - <span class="n">2</span>;
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after <em>emitBytes</em>()</div>
+<p>We encode this trick into two helper functions.</p><strong>ERROR: Missing snippet emit-jump</strong>
 
 <p>The first emits a bytecode instruction and writes a placeholder operand for the
 jump offset. We pass in the opcode as an argument because later we&rsquo;ll have two
@@ -233,22 +200,7 @@ to 65,535 bytes of code, which should be plenty for our needs.</p>
 operands for when you need to jump a greater distance.</p>
 </aside>
 <p>The function returns the offset of the emitted instruction in the chunk. After
-compiling the then branch, we take that offset and pass it to this:</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-add after <em>emitConstant</em>()</div>
-<pre><span class="k">static</span> <span class="t">void</span> <span class="i">patchJump</span>(<span class="t">int</span> <span class="i">offset</span>) {
-  <span class="c">// -2 to adjust for the bytecode for the jump offset itself.</span>
-  <span class="t">int</span> <span class="i">jump</span> = <span class="i">currentChunk</span>()-&gt;<span class="i">count</span> - <span class="i">offset</span> - <span class="n">2</span>;
-
-  <span class="k">if</span> (<span class="i">jump</span> &gt; <span class="a">UINT16_MAX</span>) {
-    <span class="i">error</span>(<span class="s">&quot;Too much code to jump over.&quot;</span>);
-  }
-
-  <span class="i">currentChunk</span>()-&gt;<span class="i">code</span>[<span class="i">offset</span>] = (<span class="i">jump</span> &gt;&gt; <span class="n">8</span>) &amp; <span class="n">0xff</span>;
-  <span class="i">currentChunk</span>()-&gt;<span class="i">code</span>[<span class="i">offset</span> + <span class="n">1</span>] = <span class="i">jump</span> &amp; <span class="n">0xff</span>;
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after <em>emitConstant</em>()</div>
+compiling the then branch, we take that offset and pass it to this:</p><strong>ERROR: Missing snippet patch-jump</strong>
 
 <p>This goes back into the bytecode and replaces the operand at the given location
 with the calculated jump offset. We call <code>patchJump()</code> right before we emit the
@@ -256,49 +208,15 @@ next instruction that we want the jump to land on, so it uses the current
 bytecode count to determine how far to jump. In the case of an <code>if</code> statement,
 that means right after we compile the then branch and before we compile the next
 statement.</p>
-<p>That&rsquo;s all we need at compile time. Let&rsquo;s define the new instruction.</p>
-<div class="codehilite"><pre class="insert-before">  OP_PRINT,
-</pre><div class="source-file"><em>chunk.h</em><br>
-in enum <em>OpCode</em></div>
-<pre class="insert">  <span class="a">OP_JUMP_IF_FALSE</span>,
-</pre><pre class="insert-after">  OP_RETURN,
-</pre></div>
-<div class="source-file-narrow"><em>chunk.h</em>, in enum <em>OpCode</em></div>
+<p>That&rsquo;s all we need at compile time. Let&rsquo;s define the new instruction.</p><strong>ERROR: Missing snippet jump-if-false-op</strong>
 
-<p>Over in the VM, we get it working like so:</p>
-<div class="codehilite"><pre class="insert-before">        break;
-      }
-</pre><div class="source-file"><em>vm.c</em><br>
-in <em>run</em>()</div>
-<pre class="insert">      <span class="k">case</span> <span class="a">OP_JUMP_IF_FALSE</span>: {
-        <span class="t">uint16_t</span> <span class="i">offset</span> = <span class="a">READ_SHORT</span>();
-        <span class="k">if</span> (<span class="i">isFalsey</span>(<span class="i">peek</span>(<span class="n">0</span>))) <span class="i">vm</span>.<span class="i">ip</span> += <span class="i">offset</span>;
-        <span class="k">break</span>;
-      }
-</pre><pre class="insert-after">      case OP_RETURN: {
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, in <em>run</em>()</div>
+<p>Over in the VM, we get it working like so:</p><strong>ERROR: Missing snippet op-jump-if-false</strong>
 
 <p>This is the first instruction we&rsquo;ve added that takes a 16-bit operand. To read
-that from the chunk, we use a new macro.</p>
-<div class="codehilite"><pre class="insert-before">#define READ_CONSTANT() (vm.chunk-&gt;constants.values[READ_BYTE()])
-</pre><div class="source-file"><em>vm.c</em><br>
-in <em>run</em>()</div>
-<pre class="insert"><span class="a">#define READ_SHORT() \</span>
-<span class="a">    (vm.ip += 2, (uint16_t)((vm.ip[-2] &lt;&lt; 8) | vm.ip[-1]))</span>
-</pre><pre class="insert-after">#define READ_STRING() AS_STRING(READ_CONSTANT())
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, in <em>run</em>()</div>
+that from the chunk, we use a new macro.</p><strong>ERROR: Missing snippet read-short</strong>
 
 <p>It yanks the next two bytes from the chunk and builds a 16-bit unsigned integer
-out of them. As usual, we clean up our macro when we&rsquo;re done with it.</p>
-<div class="codehilite"><pre class="insert-before">#undef READ_BYTE
-</pre><div class="source-file"><em>vm.c</em><br>
-in <em>run</em>()</div>
-<pre class="insert"><span class="a">#undef READ_SHORT</span>
-</pre><pre class="insert-after">#undef READ_CONSTANT
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, in <em>run</em>()</div>
+out of them. As usual, we clean up our macro when we&rsquo;re done with it.</p><strong>ERROR: Missing snippet undef-read-short</strong>
 
 <p>After reading the offset, we check the condition value on top of the stack.
 <span name="if">If</span> it&rsquo;s falsey, we apply this jump offset to the <code>ip</code>.
@@ -333,16 +251,7 @@ support it at runtime in the VM.</p>
 <h3><a href="#else-clauses" id="else-clauses"><small>23&#8202;.&#8202;1&#8202;.&#8202;1</small>Else clauses</a></h3>
 <p>An <code>if</code> statement without support for <code>else</code> clauses is like Morticia Addams
 without Gomez. So, after we compile the then branch, we look for an <code>else</code>
-keyword. If we find one, we compile the else branch.</p>
-<div class="codehilite"><pre class="insert-before">  patchJump(thenJump);
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>ifStatement</em>()</div>
-<pre class="insert">
-
-  <span class="k">if</span> (<span class="i">match</span>(<span class="a">TOKEN_ELSE</span>)) <span class="i">statement</span>();
-</pre><pre class="insert-after">}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>ifStatement</em>()</div>
+keyword. If we find one, we compile the else branch.</p><strong>ERROR: Missing snippet compile-else</strong>
 
 <p>When the condition is falsey, we&rsquo;ll jump over the then branch. If there&rsquo;s an
 else branch, the <code>ip</code> will land right at the beginning of its code. But that&rsquo;s
@@ -351,50 +260,15 @@ not enough, though. Here&rsquo;s the flow that leads to:</p><img src="image/jump
 that, execution rolls right on through into the else branch. Oops! When the
 condition is true, after we run the then branch, we need to jump over the else
 branch. That way, in either case, we only execute a single branch, like this:</p><img src="image/jumping-back-and-forth/if-else.png" alt="Flowchart of the compiled bytecode for an if with an else clause." />
-<p>To implement that, we need another jump from the end of the then branch.</p>
-<div class="codehilite"><pre class="insert-before">  statement();
+<p>To implement that, we need another jump from the end of the then branch.</p><strong>ERROR: Missing snippet jump-over-else</strong>
 
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>ifStatement</em>()</div>
-<pre class="insert">  <span class="t">int</span> <span class="i">elseJump</span> = <span class="i">emitJump</span>(<span class="a">OP_JUMP</span>);
-
-</pre><pre class="insert-after">  patchJump(thenJump);
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>ifStatement</em>()</div>
-
-<p>We patch that offset after the end of the else body.</p>
-<div class="codehilite"><pre class="insert-before">  if (match(TOKEN_ELSE)) statement();
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>ifStatement</em>()</div>
-<pre class="insert">  <span class="i">patchJump</span>(<span class="i">elseJump</span>);
-</pre><pre class="insert-after">}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>ifStatement</em>()</div>
+<p>We patch that offset after the end of the else body.</p><strong>ERROR: Missing snippet patch-else</strong>
 
 <p>After executing the then branch, this jumps to the next statement after the else
 branch. Unlike the other jump, this jump is unconditional. We always take it, so
-we need another instruction that expresses that.</p>
-<div class="codehilite"><pre class="insert-before">  OP_PRINT,
-</pre><div class="source-file"><em>chunk.h</em><br>
-in enum <em>OpCode</em></div>
-<pre class="insert">  <span class="a">OP_JUMP</span>,
-</pre><pre class="insert-after">  OP_JUMP_IF_FALSE,
-</pre></div>
-<div class="source-file-narrow"><em>chunk.h</em>, in enum <em>OpCode</em></div>
+we need another instruction that expresses that.</p><strong>ERROR: Missing snippet jump-op</strong>
 
-<p>We interpret it like so:</p>
-<div class="codehilite"><pre class="insert-before">        break;
-      }
-</pre><div class="source-file"><em>vm.c</em><br>
-in <em>run</em>()</div>
-<pre class="insert">      <span class="k">case</span> <span class="a">OP_JUMP</span>: {
-        <span class="t">uint16_t</span> <span class="i">offset</span> = <span class="a">READ_SHORT</span>();
-        <span class="i">vm</span>.<span class="i">ip</span> += <span class="i">offset</span>;
-        <span class="k">break</span>;
-      }
-</pre><pre class="insert-after">      case OP_JUMP_IF_FALSE: {
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, in <em>run</em>()</div>
+<p>We interpret it like so:</p><strong>ERROR: Missing snippet op-jump</strong>
 
 <p>Nothing too surprising here<span class="em">&mdash;</span>the only difference is that it doesn&rsquo;t check a
 condition and always applies the offset.</p>
@@ -408,25 +282,9 @@ want the condition popped. Instead, we&rsquo;ll have the compiler emit a couple 
 explicit <code>OP_POP</code> instructions when compiling an <code>if</code> statement. We need to take
 care that every execution path through the generated code pops the condition.</p>
 <p>When the condition is truthy, we pop it right before the code inside the then
-branch.</p>
-<div class="codehilite"><pre class="insert-before">  int thenJump = emitJump(OP_JUMP_IF_FALSE);
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>ifStatement</em>()</div>
-<pre class="insert">  <span class="i">emitByte</span>(<span class="a">OP_POP</span>);
-</pre><pre class="insert-after">  statement();
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>ifStatement</em>()</div>
+branch.</p><strong>ERROR: Missing snippet pop-then</strong>
 
-<p>Otherwise, we pop it at the beginning of the else branch.</p>
-<div class="codehilite"><pre class="insert-before">  patchJump(thenJump);
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>ifStatement</em>()</div>
-<pre class="insert">  <span class="i">emitByte</span>(<span class="a">OP_POP</span>);
-</pre><pre class="insert-after">
-
-  if (match(TOKEN_ELSE)) statement();
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>ifStatement</em>()</div>
+<p>Otherwise, we pop it at the beginning of the else branch.</p><strong>ERROR: Missing snippet pop-end</strong>
 
 <p>This little instruction here also means that every <code>if</code> statement has an
 implicit else branch even if the user didn&rsquo;t write an <code>else</code> clause. In the case
@@ -434,32 +292,10 @@ where they left it off, all the branch does is discard the condition value.</p>
 <p>The full correct flow looks like this:</p><img src="image/jumping-back-and-forth/full-if-else.png" alt="Flowchart of the compiled bytecode including necessary pop instructions." />
 <p>If you trace through, you can see that it always executes a single branch and
 ensures the condition is popped first. All that remains is a little disassembler
-support.</p>
-<div class="codehilite"><pre class="insert-before">      return simpleInstruction(&quot;OP_PRINT&quot;, offset);
-</pre><div class="source-file"><em>debug.c</em><br>
-in <em>disassembleInstruction</em>()</div>
-<pre class="insert">    <span class="k">case</span> <span class="a">OP_JUMP</span>:
-      <span class="k">return</span> <span class="i">jumpInstruction</span>(<span class="s">&quot;OP_JUMP&quot;</span>, <span class="n">1</span>, <span class="i">chunk</span>, <span class="i">offset</span>);
-    <span class="k">case</span> <span class="a">OP_JUMP_IF_FALSE</span>:
-      <span class="k">return</span> <span class="i">jumpInstruction</span>(<span class="s">&quot;OP_JUMP_IF_FALSE&quot;</span>, <span class="n">1</span>, <span class="i">chunk</span>, <span class="i">offset</span>);
-</pre><pre class="insert-after">    case OP_RETURN:
-</pre></div>
-<div class="source-file-narrow"><em>debug.c</em>, in <em>disassembleInstruction</em>()</div>
+support.</p><strong>ERROR: Missing snippet disassemble-jump</strong>
 
 <p>These two instructions have a new format with a 16-bit operand, so we add a new
-utility function to disassemble them.</p>
-<div class="codehilite"><div class="source-file"><em>debug.c</em><br>
-add after <em>byteInstruction</em>()</div>
-<pre><span class="k">static</span> <span class="t">int</span> <span class="i">jumpInstruction</span>(<span class="k">const</span> <span class="t">char</span>* <span class="i">name</span>, <span class="t">int</span> <span class="i">sign</span>,
-                           <span class="t">Chunk</span>* <span class="i">chunk</span>, <span class="t">int</span> <span class="i">offset</span>) {
-  <span class="t">uint16_t</span> <span class="i">jump</span> = (<span class="t">uint16_t</span>)(<span class="i">chunk</span>-&gt;<span class="i">code</span>[<span class="i">offset</span> + <span class="n">1</span>] &lt;&lt; <span class="n">8</span>);
-  <span class="i">jump</span> |= <span class="i">chunk</span>-&gt;<span class="i">code</span>[<span class="i">offset</span> + <span class="n">2</span>];
-  <span class="i">printf</span>(<span class="s">&quot;%-16s %4d -&gt; %d</span><span class="e">\n</span><span class="s">&quot;</span>, <span class="i">name</span>, <span class="i">offset</span>,
-         <span class="i">offset</span> + <span class="n">3</span> + <span class="i">sign</span> * <span class="i">jump</span>);
-  <span class="k">return</span> <span class="i">offset</span> + <span class="n">3</span>;
-}
-</pre></div>
-<div class="source-file-narrow"><em>debug.c</em>, add after <em>byteInstruction</em>()</div>
+utility function to disassemble them.</p><strong>ERROR: Missing snippet jump-instruction</strong>
 
 <p>There we go, that&rsquo;s one complete control flow construct. If this were an &rsquo;80s
 movie, the montage music would kick in and the rest of the control flow syntax
@@ -476,28 +312,9 @@ the left one, they work more like control flow expressions.</p>
 <p>They&rsquo;re basically a little variation on an <code>if</code> statement with an <code>else</code> clause.
 The easiest way to explain them is to just show you the compiler code and the
 control flow it produces in the resulting bytecode. Starting with <code>and</code>, we hook
-it into the expression parsing table here:</p>
-<div class="codehilite"><pre class="insert-before">  [TOKEN_NUMBER]        = {number,   NULL,   PREC_NONE},
-</pre><div class="source-file"><em>compiler.c</em><br>
-replace 1 line</div>
-<pre class="insert">  [<span class="a">TOKEN_AND</span>]           = {<span class="a">NULL</span>,     <span class="i">and_</span>,   <span class="a">PREC_AND</span>},
-</pre><pre class="insert-after">  [TOKEN_CLASS]         = {NULL,     NULL,   PREC_NONE},
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, replace 1 line</div>
+it into the expression parsing table here:</p><strong>ERROR: Missing snippet table-and</strong>
 
-<p>That hands off to a new parser function.</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-add after <em>defineVariable</em>()</div>
-<pre><span class="k">static</span> <span class="t">void</span> <span class="i">and_</span>(<span class="t">bool</span> <span class="i">canAssign</span>) {
-  <span class="t">int</span> <span class="i">endJump</span> = <span class="i">emitJump</span>(<span class="a">OP_JUMP_IF_FALSE</span>);
-
-  <span class="i">emitByte</span>(<span class="a">OP_POP</span>);
-  <span class="i">parsePrecedence</span>(<span class="a">PREC_AND</span>);
-
-  <span class="i">patchJump</span>(<span class="i">endJump</span>);
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after <em>defineVariable</em>()</div>
+<p>That hands off to a new parser function.</p><strong>ERROR: Missing snippet and</strong>
 
 <p>At the point this is called, the left-hand side expression has already been
 compiled. That means at runtime, its value will be on top of the stack. If that
@@ -518,30 +335,9 @@ VM, it&rsquo;s worth exploring adding more specialized instructions and seeing h
 they affect performance.</p>
 </aside>
 <h3><a href="#logical-or-operator" id="logical-or-operator"><small>23&#8202;.&#8202;2&#8202;.&#8202;1</small>Logical or operator</a></h3>
-<p>The <code>or</code> operator is a little more complex. First we add it to the parse table.</p>
-<div class="codehilite"><pre class="insert-before">  [TOKEN_NIL]           = {literal,  NULL,   PREC_NONE},
-</pre><div class="source-file"><em>compiler.c</em><br>
-replace 1 line</div>
-<pre class="insert">  [<span class="a">TOKEN_OR</span>]            = {<span class="a">NULL</span>,     <span class="i">or_</span>,    <span class="a">PREC_OR</span>},
-</pre><pre class="insert-after">  [TOKEN_PRINT]         = {NULL,     NULL,   PREC_NONE},
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, replace 1 line</div>
+<p>The <code>or</code> operator is a little more complex. First we add it to the parse table.</p><strong>ERROR: Missing snippet table-or</strong>
 
-<p>When that parser consumes an infix <code>or</code> token, it calls this:</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-add after <em>number</em>()</div>
-<pre><span class="k">static</span> <span class="t">void</span> <span class="i">or_</span>(<span class="t">bool</span> <span class="i">canAssign</span>) {
-  <span class="t">int</span> <span class="i">elseJump</span> = <span class="i">emitJump</span>(<span class="a">OP_JUMP_IF_FALSE</span>);
-  <span class="t">int</span> <span class="i">endJump</span> = <span class="i">emitJump</span>(<span class="a">OP_JUMP</span>);
-
-  <span class="i">patchJump</span>(<span class="i">elseJump</span>);
-  <span class="i">emitByte</span>(<span class="a">OP_POP</span>);
-
-  <span class="i">parsePrecedence</span>(<span class="a">PREC_OR</span>);
-  <span class="i">patchJump</span>(<span class="i">endJump</span>);
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after <em>number</em>()</div>
+<p>When that parser consumes an infix <code>or</code> token, it calls this:</p><strong>ERROR: Missing snippet or</strong>
 
 <p>In an <code>or</code> expression, if the left-hand side is <em>truthy</em>, then we skip over the
 right operand. Thus we need to jump when a value is truthy. We could add a
@@ -564,33 +360,9 @@ and maybe a conditional expression like <code>?:</code>, but Lox keeps it simple
 <h2><a href="#while-statements" id="while-statements"><small>23&#8202;.&#8202;3</small>While Statements</a></h2>
 <p>That takes us to the <em>looping</em> statements, which jump <em>backward</em> so that code
 can be executed more than once. Lox only has two loop constructs, <code>while</code> and
-<code>for</code>. A <code>while</code> loop is (much) simpler, so we start the party there.</p>
-<div class="codehilite"><pre class="insert-before">    ifStatement();
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>statement</em>()</div>
-<pre class="insert">  } <span class="k">else</span> <span class="k">if</span> (<span class="i">match</span>(<span class="a">TOKEN_WHILE</span>)) {
-    <span class="i">whileStatement</span>();
-</pre><pre class="insert-after">  } else if (match(TOKEN_LEFT_BRACE)) {
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>statement</em>()</div>
+<code>for</code>. A <code>while</code> loop is (much) simpler, so we start the party there.</p><strong>ERROR: Missing snippet parse-while</strong>
 
-<p>When we reach a <code>while</code> token, we call:</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-add after <em>printStatement</em>()</div>
-<pre><span class="k">static</span> <span class="t">void</span> <span class="i">whileStatement</span>() {
-  <span class="i">consume</span>(<span class="a">TOKEN_LEFT_PAREN</span>, <span class="s">&quot;Expect &#39;(&#39; after &#39;while&#39;.&quot;</span>);
-  <span class="i">expression</span>();
-  <span class="i">consume</span>(<span class="a">TOKEN_RIGHT_PAREN</span>, <span class="s">&quot;Expect &#39;)&#39; after condition.&quot;</span>);
-
-  <span class="t">int</span> <span class="i">exitJump</span> = <span class="i">emitJump</span>(<span class="a">OP_JUMP_IF_FALSE</span>);
-  <span class="i">emitByte</span>(<span class="a">OP_POP</span>);
-  <span class="i">statement</span>();
-
-  <span class="i">patchJump</span>(<span class="i">exitJump</span>);
-  <span class="i">emitByte</span>(<span class="a">OP_POP</span>);
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after <em>printStatement</em>()</div>
+<p>When we reach a <code>while</code> token, we call:</p><strong>ERROR: Missing snippet while-statement</strong>
 
 <p>Most of this mirrors <code>if</code> statements<span class="em">&mdash;</span>we compile the condition expression,
 surrounded by mandatory parentheses. That&rsquo;s followed by a jump instruction that
@@ -601,49 +373,20 @@ only difference from an <code>if</code> statement is the loop. That looks like t
 <aside name="pop">
 <p>Really starting to second-guess my decision to use the same jump instructions
 for the logical operators.</p>
-</aside>
-<div class="codehilite"><pre class="insert-before">  statement();
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>whileStatement</em>()</div>
-<pre class="insert">  <span class="i">emitLoop</span>(<span class="i">loopStart</span>);
-</pre><pre class="insert-after">
-
-  patchJump(exitJump);
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>whileStatement</em>()</div>
+</aside><strong>ERROR: Missing snippet loop</strong>
 
 <p>After the body, we call this function to emit a &ldquo;loop&rdquo; instruction. That
 instruction needs to know how far back to jump. When jumping forward, we had to
 emit the instruction in two stages since we didn&rsquo;t know how far we were going to
 jump until after we emitted the jump instruction. We don&rsquo;t have that problem
 now. We&rsquo;ve already compiled the point in code that we want to jump back to<span class="em">&mdash;</span>it&rsquo;s right before the condition expression.</p>
-<p>All we need to do is capture that location as we compile it.</p>
-<div class="codehilite"><pre class="insert-before">static void whileStatement() {
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>whileStatement</em>()</div>
-<pre class="insert">  <span class="t">int</span> <span class="i">loopStart</span> = <span class="i">currentChunk</span>()-&gt;<span class="i">count</span>;
-</pre><pre class="insert-after">  consume(TOKEN_LEFT_PAREN, &quot;Expect '(' after 'while'.&quot;);
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>whileStatement</em>()</div>
+<p>All we need to do is capture that location as we compile it.</p><strong>ERROR: Missing snippet loop-start</strong>
 
 <p>After executing the body of a <code>while</code> loop, we jump all the way back to before
 the condition. That way, we re-evaluate the condition expression on each
 iteration. We store the chunk&rsquo;s current instruction count in <code>loopStart</code> to
 record the offset in the bytecode right before the condition expression we&rsquo;re
-about to compile. Then we pass that into this helper function:</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-add after <em>emitBytes</em>()</div>
-<pre><span class="k">static</span> <span class="t">void</span> <span class="i">emitLoop</span>(<span class="t">int</span> <span class="i">loopStart</span>) {
-  <span class="i">emitByte</span>(<span class="a">OP_LOOP</span>);
-
-  <span class="t">int</span> <span class="i">offset</span> = <span class="i">currentChunk</span>()-&gt;<span class="i">count</span> - <span class="i">loopStart</span> + <span class="n">2</span>;
-  <span class="k">if</span> (<span class="i">offset</span> &gt; <span class="a">UINT16_MAX</span>) <span class="i">error</span>(<span class="s">&quot;Loop body too large.&quot;</span>);
-
-  <span class="i">emitByte</span>((<span class="i">offset</span> &gt;&gt; <span class="n">8</span>) &amp; <span class="n">0xff</span>);
-  <span class="i">emitByte</span>(<span class="i">offset</span> &amp; <span class="n">0xff</span>);
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after <em>emitBytes</em>()</div>
+about to compile. Then we pass that into this helper function:</p><strong>ERROR: Missing snippet emit-loop</strong>
 
 <p>It&rsquo;s a bit like <code>emitJump()</code> and <code>patchJump()</code> combined. It emits a new loop
 instruction, which unconditionally jumps <em>backwards</em> by a given offset. Like the
@@ -657,38 +400,12 @@ a single instruction for both and given it a signed offset operand. But I
 figured it was a little easier to sidestep the annoying bit twiddling required
 to manually pack a signed 16-bit integer into two bytes, and we&rsquo;ve got the
 opcode space available, so why not use it?</p>
-<p>The new instruction is here:</p>
-<div class="codehilite"><pre class="insert-before">  OP_JUMP_IF_FALSE,
-</pre><div class="source-file"><em>chunk.h</em><br>
-in enum <em>OpCode</em></div>
-<pre class="insert">  <span class="a">OP_LOOP</span>,
-</pre><pre class="insert-after">  OP_RETURN,
-</pre></div>
-<div class="source-file-narrow"><em>chunk.h</em>, in enum <em>OpCode</em></div>
+<p>The new instruction is here:</p><strong>ERROR: Missing snippet loop-op</strong>
 
-<p>And in the VM, we implement it thusly:</p>
-<div class="codehilite"><pre class="insert-before">      }
-</pre><div class="source-file"><em>vm.c</em><br>
-in <em>run</em>()</div>
-<pre class="insert">      <span class="k">case</span> <span class="a">OP_LOOP</span>: {
-        <span class="t">uint16_t</span> <span class="i">offset</span> = <span class="a">READ_SHORT</span>();
-        <span class="i">vm</span>.<span class="i">ip</span> -= <span class="i">offset</span>;
-        <span class="k">break</span>;
-      }
-</pre><pre class="insert-after">      case OP_RETURN: {
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, in <em>run</em>()</div>
+<p>And in the VM, we implement it thusly:</p><strong>ERROR: Missing snippet op-loop</strong>
 
 <p>The only difference from <code>OP_JUMP</code> is a subtraction instead of an addition.
-Disassembly is similar too.</p>
-<div class="codehilite"><pre class="insert-before">      return jumpInstruction(&quot;OP_JUMP_IF_FALSE&quot;, 1, chunk, offset);
-</pre><div class="source-file"><em>debug.c</em><br>
-in <em>disassembleInstruction</em>()</div>
-<pre class="insert">    <span class="k">case</span> <span class="a">OP_LOOP</span>:
-      <span class="k">return</span> <span class="i">jumpInstruction</span>(<span class="s">&quot;OP_LOOP&quot;</span>, -<span class="n">1</span>, <span class="i">chunk</span>, <span class="i">offset</span>);
-</pre><pre class="insert-after">    case OP_RETURN:
-</pre></div>
-<div class="source-file-narrow"><em>debug.c</em>, in <em>disassembleInstruction</em>()</div>
+Disassembly is similar too.</p><strong>ERROR: Missing snippet disassemble-loop</strong>
 
 <p>That&rsquo;s our <code>while</code> statement. It contains two jumps<span class="em">&mdash;</span>a conditional forward one
 to escape the loop when the condition is not met, and an unconditional loop
@@ -720,33 +437,10 @@ loop with some extra stuff before it and at the end of the body. We&rsquo;ll do
 something similar, though we won&rsquo;t go through anything like an AST. Instead,
 our bytecode compiler will use the jump and loop instructions we already have.</p>
 <p>We&rsquo;ll work our way through the implementation a piece at a time, starting with
-the <code>for</code> keyword.</p>
-<div class="codehilite"><pre class="insert-before">    printStatement();
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>statement</em>()</div>
-<pre class="insert">  } <span class="k">else</span> <span class="k">if</span> (<span class="i">match</span>(<span class="a">TOKEN_FOR</span>)) {
-    <span class="i">forStatement</span>();
-</pre><pre class="insert-after">  } else if (match(TOKEN_IF)) {
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>statement</em>()</div>
+the <code>for</code> keyword.</p><strong>ERROR: Missing snippet parse-for</strong>
 
 <p>It calls a helper function. If we only supported <code>for</code> loops with empty clauses
-like <code>for (;;)</code>, then we could implement it like this:</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-add after <em>expressionStatement</em>()</div>
-<pre><span class="k">static</span> <span class="t">void</span> <span class="i">forStatement</span>() {
-  <span class="i">consume</span>(<span class="a">TOKEN_LEFT_PAREN</span>, <span class="s">&quot;Expect &#39;(&#39; after &#39;for&#39;.&quot;</span>);
-  <span class="i">consume</span>(<span class="a">TOKEN_SEMICOLON</span>, <span class="s">&quot;Expect &#39;;&#39;.&quot;</span>);
-
-  <span class="t">int</span> <span class="i">loopStart</span> = <span class="i">currentChunk</span>()-&gt;<span class="i">count</span>;
-  <span class="i">consume</span>(<span class="a">TOKEN_SEMICOLON</span>, <span class="s">&quot;Expect &#39;;&#39;.&quot;</span>);
-  <span class="i">consume</span>(<span class="a">TOKEN_RIGHT_PAREN</span>, <span class="s">&quot;Expect &#39;)&#39; after for clauses.&quot;</span>);
-
-  <span class="i">statement</span>();
-  <span class="i">emitLoop</span>(<span class="i">loopStart</span>);
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, add after <em>expressionStatement</em>()</div>
+like <code>for (;;)</code>, then we could implement it like this:</p><strong>ERROR: Missing snippet for-statement</strong>
 
 <p>There&rsquo;s a bunch of mandatory punctuation at the top. Then we compile the body.
 Like we did for <code>while</code> loops, we record the bytecode offset at the top of the
@@ -758,23 +452,7 @@ a runtime error.</p>
 </aside>
 <h3><a href="#initializer-clause" id="initializer-clause"><small>23&#8202;.&#8202;4&#8202;.&#8202;1</small>Initializer clause</a></h3>
 <p>Now we&rsquo;ll add the first clause, the initializer. It executes only once, before
-the body, so compiling is straightforward.</p>
-<div class="codehilite"><pre class="insert-before">  consume(TOKEN_LEFT_PAREN, &quot;Expect '(' after 'for'.&quot;);
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>forStatement</em>()<br>
-replace 1 line</div>
-<pre class="insert">  <span class="k">if</span> (<span class="i">match</span>(<span class="a">TOKEN_SEMICOLON</span>)) {
-    <span class="c">// No initializer.</span>
-  } <span class="k">else</span> <span class="k">if</span> (<span class="i">match</span>(<span class="a">TOKEN_VAR</span>)) {
-    <span class="i">varDeclaration</span>();
-  } <span class="k">else</span> {
-    <span class="i">expressionStatement</span>();
-  }
-</pre><pre class="insert-after">
-
-  int loopStart = currentChunk()-&gt;count;
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>forStatement</em>(), replace 1 line</div>
+the body, so compiling is straightforward.</p><strong>ERROR: Missing snippet for-initializer</strong>
 
 <p>The syntax is a little complex since we allow either a variable declaration or
 an expression. We use the presence of the <code>var</code> keyword to tell which we have.
@@ -783,43 +461,12 @@ For the expression case, we call <code>expressionStatement()</code> instead of
 emits an <code>OP_POP</code> instruction to discard the value. We don&rsquo;t want the
 initializer to leave anything on the stack.</p>
 <p>If a <code>for</code> statement declares a variable, that variable should be scoped to the
-loop body. We ensure that by wrapping the whole statement in a scope.</p>
-<div class="codehilite"><pre class="insert-before">static void forStatement() {
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>forStatement</em>()</div>
-<pre class="insert">  <span class="i">beginScope</span>();
-</pre><pre class="insert-after">  consume(TOKEN_LEFT_PAREN, &quot;Expect '(' after 'for'.&quot;);
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>forStatement</em>()</div>
+loop body. We ensure that by wrapping the whole statement in a scope.</p><strong>ERROR: Missing snippet for-begin-scope</strong>
 
-<p>Then we close it at the end.</p>
-<div class="codehilite"><pre class="insert-before">  emitLoop(loopStart);
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>forStatement</em>()</div>
-<pre class="insert">  <span class="i">endScope</span>();
-</pre><pre class="insert-after">}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>forStatement</em>()</div>
+<p>Then we close it at the end.</p><strong>ERROR: Missing snippet for-end-scope</strong>
 
 <h3><a href="#condition-clause" id="condition-clause"><small>23&#8202;.&#8202;4&#8202;.&#8202;2</small>Condition clause</a></h3>
-<p>Next, is the condition expression that can be used to exit the loop.</p>
-<div class="codehilite"><pre class="insert-before">  int loopStart = currentChunk()-&gt;count;
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>forStatement</em>()<br>
-replace 1 line</div>
-<pre class="insert">  <span class="t">int</span> <span class="i">exitJump</span> = -<span class="n">1</span>;
-  <span class="k">if</span> (!<span class="i">match</span>(<span class="a">TOKEN_SEMICOLON</span>)) {
-    <span class="i">expression</span>();
-    <span class="i">consume</span>(<span class="a">TOKEN_SEMICOLON</span>, <span class="s">&quot;Expect &#39;;&#39; after loop condition.&quot;</span>);
-
-    <span class="c">// Jump out of the loop if the condition is false.</span>
-    <span class="i">exitJump</span> = <span class="i">emitJump</span>(<span class="a">OP_JUMP_IF_FALSE</span>);
-    <span class="i">emitByte</span>(<span class="a">OP_POP</span>); <span class="c">// Condition.</span>
-  }
-
-</pre><pre class="insert-after">  consume(TOKEN_RIGHT_PAREN, &quot;Expect ')' after for clauses.&quot;);
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>forStatement</em>(), replace 1 line</div>
+<p>Next, is the condition expression that can be used to exit the loop.</p><strong>ERROR: Missing snippet for-exit</strong>
 
 <p>Since the clause is optional, we need to see if it&rsquo;s actually present. If the
 clause is omitted, the next token must be a semicolon, so we look for that to
@@ -828,21 +475,7 @@ tell. If there isn&rsquo;t a semicolon, there must be a condition expression.</p
 jump that exits the loop if the condition is falsey. Since the jump leaves the
 value on the stack, we pop it before executing the body. That ensures we discard
 the value when the condition is true.</p>
-<p>After the loop body, we need to patch that jump.</p>
-<div class="codehilite"><pre class="insert-before">  emitLoop(loopStart);
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>forStatement</em>()</div>
-<pre class="insert">
-
-  <span class="k">if</span> (<span class="i">exitJump</span> != -<span class="n">1</span>) {
-    <span class="i">patchJump</span>(<span class="i">exitJump</span>);
-    <span class="i">emitByte</span>(<span class="a">OP_POP</span>); <span class="c">// Condition.</span>
-  }
-
-</pre><pre class="insert-after">  endScope();
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>forStatement</em>()</div>
+<p>After the loop body, we need to patch that jump.</p><strong>ERROR: Missing snippet exit-jump</strong>
 
 <p>We do this only when there is a condition clause. If there isn&rsquo;t, there&rsquo;s no
 jump to patch and no condition value on the stack to pop.</p>
@@ -856,28 +489,7 @@ only makes a single pass over the code. Instead, we&rsquo;ll <em>jump over</em> 
 increment, run the body, jump <em>back</em> up to the increment, run it, and then go to
 the next iteration.</p>
 <p>I know, a little weird, but hey, it beats manually managing ASTs in memory in C,
-right? Here&rsquo;s the code:</p>
-<div class="codehilite"><pre class="insert-before">  }
-
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>forStatement</em>()<br>
-replace 1 line</div>
-<pre class="insert">  <span class="k">if</span> (!<span class="i">match</span>(<span class="a">TOKEN_RIGHT_PAREN</span>)) {
-    <span class="t">int</span> <span class="i">bodyJump</span> = <span class="i">emitJump</span>(<span class="a">OP_JUMP</span>);
-    <span class="t">int</span> <span class="i">incrementStart</span> = <span class="i">currentChunk</span>()-&gt;<span class="i">count</span>;
-    <span class="i">expression</span>();
-    <span class="i">emitByte</span>(<span class="a">OP_POP</span>);
-    <span class="i">consume</span>(<span class="a">TOKEN_RIGHT_PAREN</span>, <span class="s">&quot;Expect &#39;)&#39; after for clauses.&quot;</span>);
-
-    <span class="i">emitLoop</span>(<span class="i">loopStart</span>);
-    <span class="i">loopStart</span> = <span class="i">incrementStart</span>;
-    <span class="i">patchJump</span>(<span class="i">bodyJump</span>);
-  }
-</pre><pre class="insert-after">
-
-  statement();
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>forStatement</em>(), replace 1 line</div>
+right? Here&rsquo;s the code:</p><strong>ERROR: Missing snippet for-increment</strong>
 
 <p>Again, it&rsquo;s optional. Since this is the last clause, when omitted, the next
 token will be the closing parenthesis. When an increment is present, we need to

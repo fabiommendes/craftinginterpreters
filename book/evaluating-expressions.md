@@ -655,9 +655,12 @@ one:
 
 ```python
 # lox/eval.py at top-level
-def check_number_operands(operator: Token, left: Value, right: Value):
-    if not (isinstance(left, float) and isinstance(right, float)):
-        raise LoxRuntimeError("Operands must be numbers.", operator)
+def check_number_operands(operator: Token,
+                          left: Value,
+                          right: Value):
+    if isinstance(left, float) and isinstance(right, float):
+        return
+    raise LoxRuntimeError("Operands must be numbers.", operator)
 ```
 
 <aside name="operand">
@@ -684,7 +687,8 @@ operators.
 # lox/interpreter.py at eval(Binary) match/case
     ...
     case "PLUS":
-        if type(left) == type(right) and type(left) in (float, str):
+        if (type(left) == type(right) and
+            type(left) in (float, str)):
             return left + right
         msg = "Operands must be two numbers or two strings."
         raise LoxRuntimeError(msg, expr.operator)

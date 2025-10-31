@@ -74,6 +74,7 @@ class SourceFileParser {
       _updateLocationBefore(line, i);
 
       if (!_updateState(line)) {
+        // print(_currentState);
         var sourceLine =
             SourceLine(line, _location, _currentState.start, _currentState.end);
         _file.lines.add(sourceLine);

@@ -111,44 +111,13 @@ series of them.</p>
 <h2><a href="#an-instruction-execution-machine" id="an-instruction-execution-machine"><small>15&#8202;.&#8202;1</small>An Instruction Execution Machine</a></h2>
 <p>The virtual machine is one part of our interpreter&rsquo;s internal architecture. You
 hand it a chunk of code<span class="em">&mdash;</span>literally a Chunk<span class="em">&mdash;</span>and it runs it. The code and
-data structures for the VM reside in a new module.</p>
-<div class="codehilite"><div class="source-file"><em>vm.h</em><br>
-create new file</div>
-<pre><span class="a">#ifndef clox_vm_h</span>
-<span class="a">#define clox_vm_h</span>
-
-<span class="a">#include &quot;chunk.h&quot;</span>
-
-<span class="k">typedef</span> <span class="k">struct</span> {
-  <span class="t">Chunk</span>* <span class="i">chunk</span>;
-} <span class="a">VM</span>;
-
-<span class="t">void</span> <span class="i">initVM</span>();
-<span class="t">void</span> <span class="i">freeVM</span>();
-
-<span class="a">#endif</span>
-</pre></div>
-<div class="source-file-narrow"><em>vm.h</em>, create new file</div>
+data structures for the VM reside in a new module.</p><strong>ERROR: Missing snippet vm-h</strong>
 
 <p>As usual, we start simple. The VM will gradually acquire a whole pile of state
 it needs to keep track of, so we define a struct now to stuff that all in.
 Currently, all we store is the chunk that it executes.</p>
 <p>Like we do with most of the data structures we create, we also define functions
-to create and tear down a VM. Here&rsquo;s the implementation:</p>
-<div class="codehilite"><div class="source-file"><em>vm.c</em><br>
-create new file</div>
-<pre><span class="a">#include &quot;common.h&quot;</span>
-<span class="a">#include &quot;vm.h&quot;</span>
-
-<span class="a">VM</span> <span class="i">vm</span>;<span name="one"> </span>
-
-<span class="t">void</span> <span class="i">initVM</span>() {
-}
-
-<span class="t">void</span> <span class="i">freeVM</span>() {
-}
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, create new file</div>
+to create and tear down a VM. Here&rsquo;s the implementation:</p><strong>ERROR: Missing snippet vm-c</strong>
 
 <p>OK, calling those functions &ldquo;implementations&rdquo; is a stretch. We don&rsquo;t have any
 interesting state to initialize or free yet, so the functions are empty. Trust
@@ -171,89 +140,27 @@ global variables</a> is still true when programming in the large. But when
 keeping things small for a book<span class="ellipse">&thinsp;.&thinsp;.&thinsp;.&nbsp;</span></p>
 </aside>
 <p>Before we start pumping fun code into our VM, let&rsquo;s go ahead and wire it up to
-the interpreter&rsquo;s main entrypoint.</p>
-<div class="codehilite"><pre class="insert-before">int main(int argc, const char* argv[]) {
-</pre><div class="source-file"><em>main.c</em><br>
-in <em>main</em>()</div>
-<pre class="insert">  <span class="i">initVM</span>();
-
-</pre><pre class="insert-after">  Chunk chunk;
-</pre></div>
-<div class="source-file-narrow"><em>main.c</em>, in <em>main</em>()</div>
+the interpreter&rsquo;s main entrypoint.</p><strong>ERROR: Missing snippet main-init-vm</strong>
 
 <p>We spin up the VM when the interpreter first starts. Then when we&rsquo;re about to
-exit, we wind it down.</p>
-<div class="codehilite"><pre class="insert-before">  disassembleChunk(&amp;chunk, &quot;test chunk&quot;);
-</pre><div class="source-file"><em>main.c</em><br>
-in <em>main</em>()</div>
-<pre class="insert">  <span class="i">freeVM</span>();
-</pre><pre class="insert-after">  freeChunk(&amp;chunk);
-</pre></div>
-<div class="source-file-narrow"><em>main.c</em>, in <em>main</em>()</div>
+exit, we wind it down.</p><strong>ERROR: Missing snippet main-free-vm</strong>
 
-<p>One last ceremonial obligation:</p>
-<div class="codehilite"><pre class="insert-before">#include &quot;debug.h&quot;
-</pre><div class="source-file"><em>main.c</em></div>
-<pre class="insert"><span class="a">#include &quot;vm.h&quot;</span>
-</pre><pre class="insert-after">
-
-int main(int argc, const char* argv[]) {
-</pre></div>
-<div class="source-file-narrow"><em>main.c</em></div>
+<p>One last ceremonial obligation:</p><strong>ERROR: Missing snippet main-include-vm</strong>
 
 <p>Now when you run clox, it starts up the VM before it creates that hand-authored
 chunk from the <a href="chunks-of-bytecode.html#disassembling-chunks">last chapter</a>. The VM is ready and waiting, so let&rsquo;s teach it
 to do something.</p>
 <h3><a href="#executing-instructions" id="executing-instructions"><small>15&#8202;.&#8202;1&#8202;.&#8202;1</small>Executing instructions</a></h3>
-<p>The VM springs into action when we command it to interpret a chunk of bytecode.</p>
-<div class="codehilite"><pre class="insert-before">  disassembleChunk(&amp;chunk, &quot;test chunk&quot;);
-</pre><div class="source-file"><em>main.c</em><br>
-in <em>main</em>()</div>
-<pre class="insert">  <span class="i">interpret</span>(&amp;<span class="i">chunk</span>);
-</pre><pre class="insert-after">  freeVM();
-</pre></div>
-<div class="source-file-narrow"><em>main.c</em>, in <em>main</em>()</div>
+<p>The VM springs into action when we command it to interpret a chunk of bytecode.</p><strong>ERROR: Missing snippet main-interpret</strong>
 
-<p>This function is the main entrypoint into the VM. It&rsquo;s declared like so:</p>
-<div class="codehilite"><pre class="insert-before">void freeVM();
-</pre><div class="source-file"><em>vm.h</em><br>
-add after <em>freeVM</em>()</div>
-<pre class="insert"><span class="t">InterpretResult</span> <span class="i">interpret</span>(<span class="t">Chunk</span>* <span class="i">chunk</span>);
-</pre><pre class="insert-after">
+<p>This function is the main entrypoint into the VM. It&rsquo;s declared like so:</p><strong>ERROR: Missing snippet interpret-h</strong>
 
-#endif
-</pre></div>
-<div class="source-file-narrow"><em>vm.h</em>, add after <em>freeVM</em>()</div>
-
-<p>The VM runs the chunk and then responds with a value from this enum:</p>
-<div class="codehilite"><pre class="insert-before">} VM;
-
-</pre><div class="source-file"><em>vm.h</em><br>
-add after struct <em>VM</em></div>
-<pre class="insert"><span class="k">typedef</span> <span class="k">enum</span> {
-  <span class="a">INTERPRET_OK</span>,
-  <span class="a">INTERPRET_COMPILE_ERROR</span>,
-  <span class="a">INTERPRET_RUNTIME_ERROR</span>
-} <span class="t">InterpretResult</span>;
-
-</pre><pre class="insert-after">void initVM();
-void freeVM();
-</pre></div>
-<div class="source-file-narrow"><em>vm.h</em>, add after struct <em>VM</em></div>
+<p>The VM runs the chunk and then responds with a value from this enum:</p><strong>ERROR: Missing snippet interpret-result</strong>
 
 <p>We aren&rsquo;t using the result yet, but when we have a compiler that reports static
 errors and a VM that detects runtime errors, the interpreter will use this to
 know how to set the exit code of the process.</p>
-<p>We&rsquo;re inching towards some actual implementation.</p>
-<div class="codehilite"><div class="source-file"><em>vm.c</em><br>
-add after <em>freeVM</em>()</div>
-<pre><span class="t">InterpretResult</span> <span class="i">interpret</span>(<span class="t">Chunk</span>* <span class="i">chunk</span>) {
-  <span class="i">vm</span>.<span class="i">chunk</span> = <span class="i">chunk</span>;
-  <span class="i">vm</span>.<span class="i">ip</span> = <span class="i">vm</span>.<span class="i">chunk</span>-&gt;<span class="i">code</span>;
-  <span class="k">return</span> <span class="i">run</span>();
-}
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, add after <em>freeVM</em>()</div>
+<p>We&rsquo;re inching towards some actual implementation.</p><strong>ERROR: Missing snippet interpret</strong>
 
 <p>First, we store the chunk being executed in the VM. Then we call <code>run()</code>, an
 internal helper function that actually runs the bytecode instructions. Between
@@ -265,15 +172,7 @@ other functions will need to access it. Instead, we store it as a field in VM.</
 <p>If we were trying to squeeze every ounce of speed out of our bytecode
 interpreter, we would store <code>ip</code> in a local variable. It gets modified so often
 during execution that we want the C compiler to keep it in a register.</p>
-</aside>
-<div class="codehilite"><pre class="insert-before">typedef struct {
-  Chunk* chunk;
-</pre><div class="source-file"><em>vm.h</em><br>
-in struct <em>VM</em></div>
-<pre class="insert">  <span class="t">uint8_t</span>* <span class="i">ip</span>;
-</pre><pre class="insert-after">} VM;
-</pre></div>
-<div class="source-file-narrow"><em>vm.h</em>, in struct <em>VM</em></div>
+</aside><strong>ERROR: Missing snippet ip</strong>
 
 <p>Its type is a byte pointer. We use an actual real C pointer pointing right into
 the middle of the bytecode array instead of something like an integer index
@@ -290,25 +189,7 @@ it &ldquo;PC&rdquo;, for <strong>program counter</strong>.</p>
 haven&rsquo;t executed that instruction yet, so <code>ip</code> points to the instruction <em>about
 to be executed</em>. This will be true during the entire time the VM is running: the
 IP always points to the next instruction, not the one currently being handled.</p>
-<p>The real fun happens in <code>run</code>().</p>
-<div class="codehilite"><div class="source-file"><em>vm.c</em><br>
-add after <em>freeVM</em>()</div>
-<pre><span class="k">static</span> <span class="t">InterpretResult</span> <span class="i">run</span>() {
-<span class="a">#define READ_BYTE() (*vm.ip++)</span>
-
-  <span class="k">for</span> (;;) {
-    <span class="t">uint8_t</span> <span class="i">instruction</span>;
-    <span class="k">switch</span> (<span class="i">instruction</span> = <span class="a">READ_BYTE</span>()) {
-      <span class="k">case</span> <span class="a">OP_RETURN</span>: {
-        <span class="k">return</span> <span class="a">INTERPRET_OK</span>;
-      }
-    }
-  }
-
-<span class="a">#undef READ_BYTE</span>
-}
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, add after <em>freeVM</em>()</div>
+<p>The real fun happens in <code>run</code>().</p><strong>ERROR: Missing snippet run</strong>
 
 <p>This is the single most <span name="important">important</span> function in all
 of clox, by far. When the interpreter executes a user&rsquo;s program, it will spend
@@ -349,41 +230,13 @@ opcode. The body of each case implements that opcode&rsquo;s behavior.</p>
 does is exit the loop entirely. Eventually, that instruction will be used to
 return from the current Lox function, but we don&rsquo;t have functions yet, so we&rsquo;ll
 repurpose it temporarily to end the execution.</p>
-<p>Let&rsquo;s go ahead and support our one other instruction.</p>
-<div class="codehilite"><pre class="insert-before">    switch (instruction = READ_BYTE()) {
-</pre><div class="source-file"><em>vm.c</em><br>
-in <em>run</em>()</div>
-<pre class="insert">      <span class="k">case</span> <span class="a">OP_CONSTANT</span>: {
-        <span class="t">Value</span> <span class="i">constant</span> = <span class="a">READ_CONSTANT</span>();
-        <span class="i">printValue</span>(<span class="i">constant</span>);
-        <span class="i">printf</span>(<span class="s">&quot;</span><span class="e">\n</span><span class="s">&quot;</span>);
-        <span class="k">break</span>;
-      }
-</pre><pre class="insert-after">      case OP_RETURN: {
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, in <em>run</em>()</div>
+<p>Let&rsquo;s go ahead and support our one other instruction.</p><strong>ERROR: Missing snippet op-constant</strong>
 
 <p>We don&rsquo;t have enough machinery in place yet to do anything useful with a
 constant. For now, we&rsquo;ll just print it out so we interpreter hackers can see
-what&rsquo;s going on inside our VM. That call to <code>printf()</code> necessitates an include.</p>
-<div class="codehilite"><div class="source-file"><em>vm.c</em><br>
-add to top of file</div>
-<pre class="insert"><span class="a">#include &lt;stdio.h&gt;</span>
+what&rsquo;s going on inside our VM. That call to <code>printf()</code> necessitates an include.</p><strong>ERROR: Missing snippet vm-include-stdio</strong>
 
-</pre><pre class="insert-after">#include &quot;common.h&quot;
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, add to top of file</div>
-
-<p>We also have a new macro to define.</p>
-<div class="codehilite"><pre class="insert-before">#define READ_BYTE() (*vm.ip++)
-</pre><div class="source-file"><em>vm.c</em><br>
-in <em>run</em>()</div>
-<pre class="insert"><span class="a">#define READ_CONSTANT() (vm.chunk-&gt;constants.values[READ_BYTE()])</span>
-</pre><pre class="insert-after">
-
-  for (;;) {
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, in <em>run</em>()</div>
+<p>We also have a new macro to define.</p><strong>ERROR: Missing snippet read-constant</strong>
 
 <p><code>READ_CONSTANT()</code> reads the next byte from the bytecode, treats the resulting
 number as an index, and looks up the corresponding Value in the chunk&rsquo;s constant
@@ -392,14 +245,7 @@ refer to constants, so we&rsquo;re setting up this helper macro now.</p>
 <p>Like the previous <code>READ_BYTE</code> macro, <code>READ_CONSTANT</code> is only used inside
 <code>run()</code>. To make that scoping more explicit, the macro definitions themselves
 are confined to that function. We <span name="macro">define</span> them at the
-beginning and<span class="em">&mdash;</span>because we care<span class="em">&mdash;</span>undefine them at the end.</p>
-<div class="codehilite"><pre class="insert-before">#undef READ_BYTE
-</pre><div class="source-file"><em>vm.c</em><br>
-in <em>run</em>()</div>
-<pre class="insert"><span class="a">#undef READ_CONSTANT</span>
-</pre><pre class="insert-after">}
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, in <em>run</em>()</div>
+beginning and<span class="em">&mdash;</span>because we care<span class="em">&mdash;</span>undefine them at the end.</p><strong>ERROR: Missing snippet undef-read-constant</strong>
 
 <aside name="macro">
 <p>Undefining these macros explicitly might seem needlessly fastidious, but C tends
@@ -415,45 +261,18 @@ black box. That makes our lives as VM implementers harder.</p>
 <p>To help ourselves out, now is a good time to add some diagnostic logging to the
 VM like we did with chunks themselves. In fact, we&rsquo;ll even reuse the same code.
 We don&rsquo;t want this logging enabled all the time<span class="em">&mdash;</span>it&rsquo;s just for us VM hackers,
-not Lox users<span class="em">&mdash;</span>so first we create a flag to hide it behind.</p>
-<div class="codehilite"><pre class="insert-before">#include &lt;stdint.h&gt;
-</pre><div class="source-file"><em>common.h</em></div>
-<pre class="insert">
-
-<span class="a">#define DEBUG_TRACE_EXECUTION</span>
-</pre><pre class="insert-after">
-
-#endif
-</pre></div>
-<div class="source-file-narrow"><em>common.h</em></div>
+not Lox users<span class="em">&mdash;</span>so first we create a flag to hide it behind.</p><strong>ERROR: Missing snippet define-debug-trace</strong>
 
 <p>When this flag is defined, the VM disassembles and prints each instruction right
 before executing it. Where our previous disassembler walked an entire chunk
-once, statically, this disassembles instructions dynamically, on the fly.</p>
-<div class="codehilite"><pre class="insert-before">  for (;;) {
-</pre><div class="source-file"><em>vm.c</em><br>
-in <em>run</em>()</div>
-<pre class="insert"><span class="a">#ifdef DEBUG_TRACE_EXECUTION</span>
-    <span class="i">disassembleInstruction</span>(<span class="i">vm</span>.<span class="i">chunk</span>,
-                           (<span class="t">int</span>)(<span class="i">vm</span>.<span class="i">ip</span> - <span class="i">vm</span>.<span class="i">chunk</span>-&gt;<span class="i">code</span>));
-<span class="a">#endif</span>
-
-</pre><pre class="insert-after">    uint8_t instruction;
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, in <em>run</em>()</div>
+once, statically, this disassembles instructions dynamically, on the fly.</p><strong>ERROR: Missing snippet trace-execution</strong>
 
 <p>Since <code>disassembleInstruction()</code> takes an integer byte <em>offset</em> and we store the
 current instruction reference as a direct pointer, we first do a little pointer
 math to convert <code>ip</code> back to a relative offset from the beginning of the
 bytecode. Then we disassemble the instruction that begins at that byte.</p>
 <p>As ever, we need to bring in the declaration of the function before we can call
-it.</p>
-<div class="codehilite"><pre class="insert-before">#include &quot;common.h&quot;
-</pre><div class="source-file"><em>vm.c</em></div>
-<pre class="insert"><span class="a">#include &quot;debug.h&quot;</span>
-</pre><pre class="insert-after">#include &quot;vm.h&quot;
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em></div>
+it.</p><strong>ERROR: Missing snippet vm-include-debug</strong>
 
 <p>I know this code isn&rsquo;t super impressive so far<span class="em">&mdash;</span>it&rsquo;s literally a switch
 statement wrapped in a <code>for</code> loop but, believe it or not, this is one of the two
@@ -592,17 +411,7 @@ They&rsquo;re often <em>adequate</em>, but modern implementations of the JVM, th
 JavaScript all use sophisticated <a href="https://en.wikipedia.org/wiki/Just-in-time_compilation">just-in-time compilation</a> pipelines to
 generate <em>much</em> faster native code on the fly.</p>
 </aside>
-<p>Alrighty, it&rsquo;s codin&rsquo; time! Here&rsquo;s the stack:</p>
-<div class="codehilite"><pre class="insert-before">typedef struct {
-  Chunk* chunk;
-  uint8_t* ip;
-</pre><div class="source-file"><em>vm.h</em><br>
-in struct <em>VM</em></div>
-<pre class="insert">  <span class="t">Value</span> <span class="i">stack</span>[<span class="a">STACK_MAX</span>];
-  <span class="t">Value</span>* <span class="i">stackTop</span>;
-</pre><pre class="insert-after">} VM;
-</pre></div>
-<div class="source-file-narrow"><em>vm.h</em>, in struct <em>VM</em></div>
+<p>Alrighty, it&rsquo;s codin&rsquo; time! Here&rsquo;s the stack:</p><strong>ERROR: Missing snippet vm-stack</strong>
 
 <p>We implement the stack semantics ourselves on top of a raw C array. The bottom
 of the stack<span class="em">&mdash;</span>the first value pushed and the last to be popped<span class="em">&mdash;</span>is at
@@ -636,76 +445,26 @@ zero." /></p>
 'e', 'p', and 'e' in the first five elements." /></p>
 <p>I remember it like this: <code>stackTop</code> points to where the next value to be pushed
 will go. The maximum number of values we can store on the stack (for now, at
-least) is:</p>
-<div class="codehilite"><pre class="insert-before">#include &quot;chunk.h&quot;
-</pre><div class="source-file"><em>vm.h</em></div>
-<pre class="insert">
-
-<span class="a">#define STACK_MAX 256</span>
-</pre><pre class="insert-after">
-
-typedef struct {
-</pre></div>
-<div class="source-file-narrow"><em>vm.h</em></div>
+least) is:</p><strong>ERROR: Missing snippet stack-max</strong>
 
 <p>Giving our VM a fixed stack size means it&rsquo;s possible for some sequence of
 instructions to push too many values and run out of stack space<span class="em">&mdash;</span>the classic
 &ldquo;stack overflow&rdquo;. We could grow the stack dynamically as needed, but for now
-we&rsquo;ll keep it simple. Since VM uses Value, we need to include its declaration.</p>
-<div class="codehilite"><pre class="insert-before">#include &quot;chunk.h&quot;
-</pre><div class="source-file"><em>vm.h</em></div>
-<pre class="insert"><span class="a">#include &quot;value.h&quot;</span>
-</pre><pre class="insert-after">
+we&rsquo;ll keep it simple. Since VM uses Value, we need to include its declaration.</p><strong>ERROR: Missing snippet vm-include-value</strong>
 
-#define STACK_MAX 256
-</pre></div>
-<div class="source-file-narrow"><em>vm.h</em></div>
+<p>Now that VM has some interesting state, we get to initialize it.</p><strong>ERROR: Missing snippet call-reset-stack</strong>
 
-<p>Now that VM has some interesting state, we get to initialize it.</p>
-<div class="codehilite"><pre class="insert-before">void initVM() {
-</pre><div class="source-file"><em>vm.c</em><br>
-in <em>initVM</em>()</div>
-<pre class="insert">  <span class="i">resetStack</span>();
-</pre><pre class="insert-after">}
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, in <em>initVM</em>()</div>
-
-<p>That uses this helper function:</p>
-<div class="codehilite"><div class="source-file"><em>vm.c</em><br>
-add after variable <em>vm</em></div>
-<pre><span class="k">static</span> <span class="t">void</span> <span class="i">resetStack</span>() {
-  <span class="i">vm</span>.<span class="i">stackTop</span> = <span class="i">vm</span>.<span class="i">stack</span>;
-}
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, add after variable <em>vm</em></div>
+<p>That uses this helper function:</p><strong>ERROR: Missing snippet reset-stack</strong>
 
 <p>Since the stack array is declared directly inline in the VM struct, we don&rsquo;t
 need to allocate it. We don&rsquo;t even need to clear the unused cells in the
 array<span class="em">&mdash;</span>we simply won&rsquo;t access them until after values have been stored in
 them. The only initialization we need is to set <code>stackTop</code> to point to the
 beginning of the array to indicate that the stack is empty.</p>
-<p>The stack protocol supports two operations:</p>
-<div class="codehilite"><pre class="insert-before">InterpretResult interpret(Chunk* chunk);
-</pre><div class="source-file"><em>vm.h</em><br>
-add after <em>interpret</em>()</div>
-<pre class="insert"><span class="t">void</span> <span class="i">push</span>(<span class="t">Value</span> <span class="i">value</span>);
-<span class="t">Value</span> <span class="i">pop</span>();
-</pre><pre class="insert-after">
-
-#endif
-</pre></div>
-<div class="source-file-narrow"><em>vm.h</em>, add after <em>interpret</em>()</div>
+<p>The stack protocol supports two operations:</p><strong>ERROR: Missing snippet push-pop</strong>
 
 <p>You can push a new value onto the top of the stack, and you can pop the most
-recently pushed value back off. Here&rsquo;s the first function:</p>
-<div class="codehilite"><div class="source-file"><em>vm.c</em><br>
-add after <em>freeVM</em>()</div>
-<pre><span class="t">void</span> <span class="i">push</span>(<span class="t">Value</span> <span class="i">value</span>) {
-  *<span class="i">vm</span>.<span class="i">stackTop</span> = <span class="i">value</span>;
-  <span class="i">vm</span>.<span class="i">stackTop</span>++;
-}
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, add after <em>freeVM</em>()</div>
+recently pushed value back off. Here&rsquo;s the first function:</p><strong>ERROR: Missing snippet push</strong>
 
 <p>If you&rsquo;re rusty on your C pointer syntax and operations, this is a good warm-up.
 The first line stores <code>value</code> in the array element at the top of the stack.
@@ -713,15 +472,7 @@ Remember, <code>stackTop</code> points just <em>past</em> the last used element,
 available one. This stores the value in that slot. Then we increment the pointer
 itself to point to the next unused slot in the array now that the previous slot
 is occupied.</p>
-<p>Popping is the mirror image.</p>
-<div class="codehilite"><div class="source-file"><em>vm.c</em><br>
-add after <em>push</em>()</div>
-<pre><span class="t">Value</span> <span class="i">pop</span>() {
-  <span class="i">vm</span>.<span class="i">stackTop</span>--;
-  <span class="k">return</span> *<span class="i">vm</span>.<span class="i">stackTop</span>;
-}
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, add after <em>push</em>()</div>
+<p>Popping is the mirror image.</p><strong>ERROR: Missing snippet pop</strong>
 
 <p>First, we move the stack pointer <em>back</em> to get to the most recent used slot in
 the array. Then we look up the value at that index and return it. We don&rsquo;t need
@@ -733,47 +484,17 @@ implementing more complex instructions and compiling and running larger pieces
 of code, we&rsquo;ll end up with a lot of values crammed into that array. It would
 make our lives as VM hackers easier if we had some visibility into the stack.</p>
 <p>To that end, whenever we&rsquo;re tracing execution, we&rsquo;ll also show the current
-contents of the stack before we interpret each instruction.</p>
-<div class="codehilite"><pre class="insert-before">#ifdef DEBUG_TRACE_EXECUTION
-</pre><div class="source-file"><em>vm.c</em><br>
-in <em>run</em>()</div>
-<pre class="insert">    <span class="i">printf</span>(<span class="s">&quot;          &quot;</span>);
-    <span class="k">for</span> (<span class="t">Value</span>* <span class="i">slot</span> = <span class="i">vm</span>.<span class="i">stack</span>; <span class="i">slot</span> &lt; <span class="i">vm</span>.<span class="i">stackTop</span>; <span class="i">slot</span>++) {
-      <span class="i">printf</span>(<span class="s">&quot;[ &quot;</span>);
-      <span class="i">printValue</span>(*<span class="i">slot</span>);
-      <span class="i">printf</span>(<span class="s">&quot; ]&quot;</span>);
-    }
-    <span class="i">printf</span>(<span class="s">&quot;</span><span class="e">\n</span><span class="s">&quot;</span>);
-</pre><pre class="insert-after">    disassembleInstruction(vm.chunk,
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, in <em>run</em>()</div>
+contents of the stack before we interpret each instruction.</p><strong>ERROR: Missing snippet trace-stack</strong>
 
 <p>We loop, printing each value in the array, starting at the first (bottom of the
 stack) and ending when we reach the top. This lets us observe the effect of each
 instruction on the stack. The output is pretty verbose, but it&rsquo;s useful when
 we&rsquo;re surgically extracting a nasty bug from the bowels of the interpreter.</p>
-<p>Stack in hand, let&rsquo;s revisit our two instructions. First up:</p>
-<div class="codehilite"><pre class="insert-before">      case OP_CONSTANT: {
-        Value constant = READ_CONSTANT();
-</pre><div class="source-file"><em>vm.c</em><br>
-in <em>run</em>()<br>
-replace 2 lines</div>
-<pre class="insert">        <span class="i">push</span>(<span class="i">constant</span>);
-</pre><pre class="insert-after">        break;
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, in <em>run</em>(), replace 2 lines</div>
+<p>Stack in hand, let&rsquo;s revisit our two instructions. First up:</p><strong>ERROR: Missing snippet push-constant</strong>
 
 <p>In the last chapter, I was hand-wavey about how the <code>OP_CONSTANT</code> instruction
 &ldquo;loads&rdquo; a constant. Now that we have a stack you know what it means to actually
-produce a value: it gets pushed onto the stack.</p>
-<div class="codehilite"><pre class="insert-before">      case OP_RETURN: {
-</pre><div class="source-file"><em>vm.c</em><br>
-in <em>run</em>()</div>
-<pre class="insert">        <span class="i">printValue</span>(<span class="i">pop</span>());
-        <span class="i">printf</span>(<span class="s">&quot;</span><span class="e">\n</span><span class="s">&quot;</span>);
-</pre><pre class="insert-after">        return INTERPRET_OK;
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, in <em>run</em>()</div>
+produce a value: it gets pushed onto the stack.</p><strong>ERROR: Missing snippet print-return</strong>
 
 <p>Then we make <code>OP_RETURN</code> pop the stack and print the top value before exiting.
 When we add support for real functions to clox, we&rsquo;ll change this code. But, for
@@ -791,47 +512,15 @@ interpreter to do arithmetic.</p>
 </pre></div>
 <p>The prefix <code>-</code> operator takes one operand, the value to negate. It produces a
 single result. We aren&rsquo;t fussing with a parser yet, but we can add the
-bytecode instruction that the above syntax will compile to.</p>
-<div class="codehilite"><pre class="insert-before">  OP_CONSTANT,
-</pre><div class="source-file"><em>chunk.h</em><br>
-in enum <em>OpCode</em></div>
-<pre class="insert">  <span class="a">OP_NEGATE</span>,
-</pre><pre class="insert-after">  OP_RETURN,
-</pre></div>
-<div class="source-file-narrow"><em>chunk.h</em>, in enum <em>OpCode</em></div>
+bytecode instruction that the above syntax will compile to.</p><strong>ERROR: Missing snippet negate-op</strong>
 
-<p>We execute it like so:</p>
-<div class="codehilite"><pre class="insert-before">      }
-</pre><div class="source-file"><em>vm.c</em><br>
-in <em>run</em>()</div>
-<pre class="insert">      <span class="k">case</span> <span class="a">OP_NEGATE</span>:   <span class="i">push</span>(-<span class="i">pop</span>()); <span class="k">break</span>;
-</pre><pre class="insert-after">      case OP_RETURN: {
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, in <em>run</em>()</div>
+<p>We execute it like so:</p><strong>ERROR: Missing snippet op-negate</strong>
 
 <p>The instruction needs a value to operate on, which it gets by popping from the
 stack. It negates that, then pushes the result back on for later instructions to
-use. Doesn&rsquo;t get much easier than that. We can disassemble it too.</p>
-<div class="codehilite"><pre class="insert-before">    case OP_CONSTANT:
-      return constantInstruction(&quot;OP_CONSTANT&quot;, chunk, offset);
-</pre><div class="source-file"><em>debug.c</em><br>
-in <em>disassembleInstruction</em>()</div>
-<pre class="insert">    <span class="k">case</span> <span class="a">OP_NEGATE</span>:
-      <span class="k">return</span> <span class="i">simpleInstruction</span>(<span class="s">&quot;OP_NEGATE&quot;</span>, <span class="i">offset</span>);
-</pre><pre class="insert-after">    case OP_RETURN:
-</pre></div>
-<div class="source-file-narrow"><em>debug.c</em>, in <em>disassembleInstruction</em>()</div>
+use. Doesn&rsquo;t get much easier than that. We can disassemble it too.</p><strong>ERROR: Missing snippet disassemble-negate</strong>
 
-<p>And we can try it out in our test chunk.</p>
-<div class="codehilite"><pre class="insert-before">  writeChunk(&amp;chunk, constant, 123);
-</pre><div class="source-file"><em>main.c</em><br>
-in <em>main</em>()</div>
-<pre class="insert">  <span class="i">writeChunk</span>(&amp;<span class="i">chunk</span>, <span class="a">OP_NEGATE</span>, <span class="n">123</span>);
-</pre><pre class="insert-after">
-
-  writeChunk(&amp;chunk, OP_RETURN, 123);
-</pre></div>
-<div class="source-file-narrow"><em>main.c</em>, in <em>main</em>()</div>
+<p>And we can try it out in our test chunk.</p><strong>ERROR: Missing snippet main-negate</strong>
 
 <p>After loading the constant, but before returning, we execute the negate
 instruction. That replaces the constant on the stack with its negation. Then the
@@ -848,49 +537,15 @@ time.</p>
 <aside name="ops">
 <p>Lox has some other binary operators<span class="em">&mdash;</span>comparison and equality<span class="em">&mdash;</span>but those
 don&rsquo;t produce numbers as a result, so we aren&rsquo;t ready for them yet.</p>
-</aside>
-<div class="codehilite"><pre class="insert-before">  OP_CONSTANT,
-</pre><div class="source-file"><em>chunk.h</em><br>
-in enum <em>OpCode</em></div>
-<pre class="insert">  <span class="a">OP_ADD</span>,
-  <span class="a">OP_SUBTRACT</span>,
-  <span class="a">OP_MULTIPLY</span>,
-  <span class="a">OP_DIVIDE</span>,
-</pre><pre class="insert-after">  OP_NEGATE,
-</pre></div>
-<div class="source-file-narrow"><em>chunk.h</em>, in enum <em>OpCode</em></div>
+</aside><strong>ERROR: Missing snippet binary-ops</strong>
 
-<p>Back in the bytecode loop, they are executed like this:</p>
-<div class="codehilite"><pre class="insert-before">      }
-</pre><div class="source-file"><em>vm.c</em><br>
-in <em>run</em>()</div>
-<pre class="insert">      <span class="k">case</span> <span class="a">OP_ADD</span>:      <span class="a">BINARY_OP</span>(+); <span class="k">break</span>;
-      <span class="k">case</span> <span class="a">OP_SUBTRACT</span>: <span class="a">BINARY_OP</span>(-); <span class="k">break</span>;
-      <span class="k">case</span> <span class="a">OP_MULTIPLY</span>: <span class="a">BINARY_OP</span>(*); <span class="k">break</span>;
-      <span class="k">case</span> <span class="a">OP_DIVIDE</span>:   <span class="a">BINARY_OP</span>(/); <span class="k">break</span>;
-</pre><pre class="insert-after">      case OP_NEGATE:   push(-pop()); break;
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, in <em>run</em>()</div>
+<p>Back in the bytecode loop, they are executed like this:</p><strong>ERROR: Missing snippet op-binary</strong>
 
 <p>The only difference between these four instructions is which underlying C
 operator they ultimately use to combine the two operands. Surrounding that core
 arithmetic expression is some boilerplate code to pull values off the stack and
 push the result. When we later add dynamic typing, that boilerplate will grow.
-To avoid repeating that code four times, I wrapped it up in a macro.</p>
-<div class="codehilite"><pre class="insert-before">#define READ_CONSTANT() (vm.chunk-&gt;constants.values[READ_BYTE()])
-</pre><div class="source-file"><em>vm.c</em><br>
-in <em>run</em>()</div>
-<pre class="insert"><span class="a">#define BINARY_OP(op) \</span>
-<span class="a">    do { \</span>
-<span class="a">      double b = pop(); \</span>
-<span class="a">      double a = pop(); \</span>
-<span class="a">      push(a op b); \</span>
-<span class="a">    } while (false)</span>
-</pre><pre class="insert-after">
-
-  for (;;) {
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, in <em>run</em>()</div>
+To avoid repeating that code four times, I wrapped it up in a macro.</p><strong>ERROR: Missing snippet binary-op</strong>
 
 <p>I admit this is a fairly <span name="operator">adventurous</span> use of the C
 preprocessor. I hesitated to do this, but you&rsquo;ll be glad in later chapters when
@@ -943,31 +598,9 @@ like so:</p>
 with the stack for each showing how pushing and then popping values reverses
 their order." /></p>
 <p>As we did with the other macros inside <code>run()</code>, we clean up after ourselves at
-the end of the function.</p>
-<div class="codehilite"><pre class="insert-before">#undef READ_CONSTANT
-</pre><div class="source-file"><em>vm.c</em><br>
-in <em>run</em>()</div>
-<pre class="insert"><span class="a">#undef BINARY_OP</span>
-</pre><pre class="insert-after">}
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, in <em>run</em>()</div>
+the end of the function.</p><strong>ERROR: Missing snippet undef-binary-op</strong>
 
-<p>Last is disassembler support.</p>
-<div class="codehilite"><pre class="insert-before">    case OP_CONSTANT:
-      return constantInstruction(&quot;OP_CONSTANT&quot;, chunk, offset);
-</pre><div class="source-file"><em>debug.c</em><br>
-in <em>disassembleInstruction</em>()</div>
-<pre class="insert">    <span class="k">case</span> <span class="a">OP_ADD</span>:
-      <span class="k">return</span> <span class="i">simpleInstruction</span>(<span class="s">&quot;OP_ADD&quot;</span>, <span class="i">offset</span>);
-    <span class="k">case</span> <span class="a">OP_SUBTRACT</span>:
-      <span class="k">return</span> <span class="i">simpleInstruction</span>(<span class="s">&quot;OP_SUBTRACT&quot;</span>, <span class="i">offset</span>);
-    <span class="k">case</span> <span class="a">OP_MULTIPLY</span>:
-      <span class="k">return</span> <span class="i">simpleInstruction</span>(<span class="s">&quot;OP_MULTIPLY&quot;</span>, <span class="i">offset</span>);
-    <span class="k">case</span> <span class="a">OP_DIVIDE</span>:
-      <span class="k">return</span> <span class="i">simpleInstruction</span>(<span class="s">&quot;OP_DIVIDE&quot;</span>, <span class="i">offset</span>);
-</pre><pre class="insert-after">    case OP_NEGATE:
-</pre></div>
-<div class="source-file-narrow"><em>debug.c</em>, in <em>disassembleInstruction</em>()</div>
+<p>Last is disassembler support.</p><strong>ERROR: Missing snippet disassemble-binary</strong>
 
 <p>The arithmetic instruction formats are simple, like <code>OP_RETURN</code>. Even though the
 arithmetic <em>operators</em> take operands<span class="em">&mdash;</span>which are found on the stack<span class="em">&mdash;</span>the
@@ -977,30 +610,7 @@ larger expression:</p>
 <p><img src="image/a-virtual-machine/chunk.png" alt="The expression being
 evaluated: -((1.2 + 3.4) / 5.6)" /></p>
 <p>Building on our existing example chunk, here&rsquo;s the additional instructions we
-need to hand-compile that AST to bytecode.</p>
-<div class="codehilite"><pre class="insert-before">  int constant = addConstant(&amp;chunk, 1.2);
-  writeChunk(&amp;chunk, OP_CONSTANT, 123);
-  writeChunk(&amp;chunk, constant, 123);
-</pre><div class="source-file"><em>main.c</em><br>
-in <em>main</em>()</div>
-<pre class="insert">
-
-  <span class="i">constant</span> = <span class="i">addConstant</span>(&amp;<span class="i">chunk</span>, <span class="n">3.4</span>);
-  <span class="i">writeChunk</span>(&amp;<span class="i">chunk</span>, <span class="a">OP_CONSTANT</span>, <span class="n">123</span>);
-  <span class="i">writeChunk</span>(&amp;<span class="i">chunk</span>, <span class="i">constant</span>, <span class="n">123</span>);
-
-  <span class="i">writeChunk</span>(&amp;<span class="i">chunk</span>, <span class="a">OP_ADD</span>, <span class="n">123</span>);
-
-  <span class="i">constant</span> = <span class="i">addConstant</span>(&amp;<span class="i">chunk</span>, <span class="n">5.6</span>);
-  <span class="i">writeChunk</span>(&amp;<span class="i">chunk</span>, <span class="a">OP_CONSTANT</span>, <span class="n">123</span>);
-  <span class="i">writeChunk</span>(&amp;<span class="i">chunk</span>, <span class="i">constant</span>, <span class="n">123</span>);
-
-  <span class="i">writeChunk</span>(&amp;<span class="i">chunk</span>, <span class="a">OP_DIVIDE</span>, <span class="n">123</span>);
-</pre><pre class="insert-after">  writeChunk(&amp;chunk, OP_NEGATE, 123);
-
-  writeChunk(&amp;chunk, OP_RETURN, 123);
-</pre></div>
-<div class="source-file-narrow"><em>main.c</em>, in <em>main</em>()</div>
+need to hand-compile that AST to bytecode.</p><strong>ERROR: Missing snippet main-chunk</strong>
 
 <p>The addition goes first. The instruction for the left constant, 1.2, is already
 there, so we add another for 3.4. Then we add those two using <code>OP_ADD</code>, leaving

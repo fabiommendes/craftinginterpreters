@@ -161,85 +161,62 @@ other expressions, each preceded by a comma. To handle zero-argument calls, the
 incredibly common &ldquo;zero or more comma-separated things&rdquo; pattern. There are some
 sophisticated metasyntaxes that handle this better, but in our BNF and in many
 language specs I&rsquo;ve seen, it is this cumbersome.</p>
-<p>Over in our syntax tree generator, we add a <span name="call-ast">new
-node</span>.</p>
-<div class="codehilite"><pre class="insert-before">      &quot;Binary   : Expr left, Token operator, Expr right&quot;,
-</pre><div class="source-file"><em>tool/GenerateAst.java</em><br>
-in <em>main</em>()</div>
-<pre class="insert">      <span class="s">&quot;Call     : Expr callee, Token paren, List&lt;Expr&gt; arguments&quot;</span>,
-</pre><pre class="insert-after">      &quot;Grouping : Expr expression&quot;,
+<p>Over in our syntax tree generator, we add a new node.</p>
+<div class="codehilite"><pre><span class="c"># lox/ast.py</span>
+<span class="a">@dataclass</span>
+<span class="k">class</span> <span class="t">Call</span>(<span class="t">Expr</span>):
+    <span class="i">callee</span>: <span class="t">Expr</span>
+    <span class="i">paren</span>: <span class="t">Token</span>
+    <span class="i">arguments</span>: <span class="t">list</span>[<span class="t">Expr</span>]
 </pre></div>
-<div class="source-file-narrow"><em>tool/GenerateAst.java</em>, in <em>main</em>()</div>
-
-<aside name="call-ast">
-<p>The generated code for the new node is in <a href="appendix-ii.html#call-expression">Appendix II</a>.</p>
-</aside>
 <p>It stores the callee expression and a list of expressions for the arguments. It
 also stores the token for the closing parenthesis. We&rsquo;ll use that token&rsquo;s
 location when we report a runtime error caused by a function call.</p>
 <p>Crack open the parser. Where <code>unary()</code> used to jump straight to <code>primary()</code>,
 change it to call, well, <code>call()</code>.</p>
-<div class="codehilite"><pre class="insert-before">      return new Expr.Unary(operator, right);
-    }
-
-</pre><div class="source-file"><em>lox/Parser.java</em><br>
-in <em>unary</em>()<br>
-replace 1 line</div>
-<pre class="insert">    <span class="k">return</span> <span class="i">call</span>();
-</pre><pre class="insert-after">  }
+<div class="codehilite"><pre><span class="c"># lox/parser.py at Parser.unary</span>
+    ...
+    <span class="k">return</span> <span class="i">self</span>.<span class="i">call</span>()  <span class="c"># replace self.primary()</span>
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, in <em>unary</em>(), replace 1 line</div>
-
 <p>Its definition is:</p>
-<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
-add after <em>unary</em>()</div>
-<pre>  <span class="k">private</span> <span class="t">Expr</span> <span class="i">call</span>() {
-    <span class="t">Expr</span> <span class="i">expr</span> = <span class="i">primary</span>();
+<div class="codehilite"><pre><span class="c"># lox/parser.py method of Parser</span>
+<span class="k">def</span> <span class="i">call</span>(<span class="i">self</span>) -&gt; <span class="t">Expr</span>:
+    <span class="i">expr</span> = <span class="i">self</span>.<span class="i">primary</span>()
 
-    <span class="k">while</span> (<span class="k">true</span>) {<span name="while-true"> </span>
-      <span class="k">if</span> (<span class="i">match</span>(<span class="i">LEFT_PAREN</span>)) {
-        <span class="i">expr</span> = <span class="i">finishCall</span>(<span class="i">expr</span>);
-      } <span class="k">else</span> {
-        <span class="k">break</span>;
-      }
-    }
+    <span class="k">while</span> <span class="t">True</span>:
+        <span class="k">if</span> <span class="i">self</span>.<span class="i">match</span>(<span class="s">&quot;LEFT_PAREN&quot;</span>):
+            <span class="i">expr</span> = <span class="i">self</span>.<span class="i">finish_call</span>(<span class="i">expr</span>)
+        <span class="k">else</span>:
+            <span class="k">break</span>
 
-    <span class="k">return</span> <span class="i">expr</span>;
-  }
+    <span class="k">return</span> <span class="i">expr</span>
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, add after <em>unary</em>()</div>
-
 <p>The code here doesn&rsquo;t quite line up with the grammar rules. I moved a few things
 around to make the code cleaner<span class="em">&mdash;</span>one of the luxuries we have with a
 handwritten parser. But it&rsquo;s roughly similar to how we parse infix operators.
 First, we parse a primary expression, the &ldquo;left operand&rdquo; to the call. Then, each
-time we see a <code>(</code>, we call <code>finishCall()</code> to parse the call expression using the
-previously parsed expression as the callee. The returned expression becomes the
-new <code>expr</code> and we loop to see if the result is itself called.</p>
+time we see a <code>(</code>, we call <code>finish_call()</code> to parse the call expression using
+the previously parsed expression as the callee. The returned expression becomes
+the new <code>expr</code> and we loop to see if the result is itself called.</p>
 <aside name="while-true">
 <p>This code would be simpler as <code>while (match(LEFT_PAREN))</code> instead of the silly
 <code>while (true)</code> and <code>break</code>. Don&rsquo;t worry, it will make sense when we expand the
 parser later to handle properties on objects.</p>
 </aside>
 <p>The code to parse the argument list is in this helper:</p>
-<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
-add after <em>unary</em>()</div>
-<pre>  <span class="k">private</span> <span class="t">Expr</span> <span class="i">finishCall</span>(<span class="t">Expr</span> <span class="i">callee</span>) {
-    <span class="t">List</span>&lt;<span class="t">Expr</span>&gt; <span class="i">arguments</span> = <span class="k">new</span> <span class="t">ArrayList</span>&lt;&gt;();
-    <span class="k">if</span> (!<span class="i">check</span>(<span class="i">RIGHT_PAREN</span>)) {
-      <span class="k">do</span> {
-        <span class="i">arguments</span>.<span class="i">add</span>(<span class="i">expression</span>());
-      } <span class="k">while</span> (<span class="i">match</span>(<span class="i">COMMA</span>));
-    }
+<div class="codehilite"><pre><span class="c"># lox/parser.py method of Parser</span>
+<span class="k">def</span> <span class="i">finish_call</span>(<span class="i">self</span>, <span class="i">callee</span>: <span class="t">Expr</span>) -&gt; <span class="t">Expr</span>:
+    <span class="i">arguments</span> = []
+    <span class="k">if</span> <span class="k">not</span> <span class="i">self</span>.<span class="i">check</span>(<span class="s">&quot;RIGHT_PAREN&quot;</span>):
+        <span class="i">arguments</span>.<span class="i">append</span>(<span class="i">self</span>.<span class="i">expression</span>())
+        <span class="k">while</span> <span class="i">self</span>.<span class="i">match</span>(<span class="s">&quot;COMMA&quot;</span>):
+            <span class="i">arguments</span>.<span class="i">append</span>(<span class="i">self</span>.<span class="i">expression</span>())
 
-    <span class="t">Token</span> <span class="i">paren</span> = <span class="i">consume</span>(<span class="i">RIGHT_PAREN</span>,
-                          <span class="s">&quot;Expect &#39;)&#39; after arguments.&quot;</span>);
+    <span class="i">paren</span> = <span class="i">self</span>.<span class="i">consume</span>(<span class="s">&quot;RIGHT_PAREN&quot;</span>,
+                         <span class="s">&quot;Expect &#39;)&#39; after arguments.&quot;</span>)
 
-    <span class="k">return</span> <span class="k">new</span> <span class="t">Expr</span>.<span class="t">Call</span>(<span class="i">callee</span>, <span class="i">paren</span>, <span class="i">arguments</span>);
-  }
+    <span class="k">return</span> <span class="t">Call</span>(<span class="i">callee</span>, <span class="i">paren</span>, <span class="i">arguments</span>)
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, add after <em>unary</em>()</div>
-
 <p>This is more or less the <code>arguments</code> grammar rule translated to code, except
 that we also handle the zero-argument case. We check for that case first by
 seeing if the next token is <code>)</code>. If it is, we don&rsquo;t try to parse any arguments.</p>
@@ -261,20 +238,18 @@ accept <em>no more than</em> <span name="254">255</span> arguments.</p>
 <code>this</code><span class="em">&mdash;</span>the receiver of the method<span class="em">&mdash;</span>works like an argument that is
 implicitly passed to the method, so it claims one of the slots.</p>
 </aside>
-<p>Our Java interpreter for Lox doesn&rsquo;t really need a limit, but having a maximum
+<p>Our Python interpreter for Lox doesn&rsquo;t really need a limit, but having a maximum
 number of arguments will simplify our bytecode interpreter in <a href="a-bytecode-virtual-machine.html">Part III</a>. We
 want our two interpreters to be compatible with each other, even in weird corner
-cases like this, so we&rsquo;ll add the same limit to jlox.</p>
-<div class="codehilite"><pre class="insert-before">      do {
-</pre><div class="source-file"><em>lox/Parser.java</em><br>
-in <em>finishCall</em>()</div>
-<pre class="insert">        <span class="k">if</span> (<span class="i">arguments</span>.<span class="i">size</span>() &gt;= <span class="n">255</span>) {
-          <span class="i">error</span>(<span class="i">peek</span>(), <span class="s">&quot;Can&#39;t have more than 255 arguments.&quot;</span>);
-        }
-</pre><pre class="insert-after">        arguments.add(expression());
+cases like this, so we&rsquo;ll add the same limit to pylox.</p>
+<div class="codehilite"><pre><span class="c"># lox/parser.py inside Parser.finish_call()</span>
+    ...
+    <span class="c"># inside the while block</span>
+    <span class="k">if</span> <span class="i">len</span>(<span class="i">arguments</span>) &gt; <span class="n">255</span>:
+        <span class="i">self</span>.<span class="i">error</span>(<span class="i">self</span>.<span class="i">previous</span>(),
+                   <span class="s">&quot;Can&#39;t have more than 255 arguments.&quot;</span>)
+    ...
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, in <em>finishCall</em>()</div>
-
 <p>Note that the code here <em>reports</em> an error if it encounters too many arguments,
 but it doesn&rsquo;t <em>throw</em> the error. Throwing is how we kick into panic mode which
 is what we want if the parser is in a confused state and doesn&rsquo;t know where it
@@ -283,33 +258,15 @@ state<span class="em">&mdash;</span>it just found too many arguments. So it repo
 keepin&rsquo; on.</p>
 <h3><a href="#interpreting-function-calls" id="interpreting-function-calls"><small>10&#8202;.&#8202;1&#8202;.&#8202;2</small>Interpreting function calls</a></h3>
 <p>We don&rsquo;t have any functions we can call, so it seems weird to start implementing
-calls first, but we&rsquo;ll worry about that when we get there. First, our
-interpreter needs a new import.</p>
-<div class="codehilite"><div class="source-file"><em>lox/Interpreter.java</em></div>
-<pre class="insert"><span class="k">import</span> <span class="i">java.util.ArrayList</span>;
-</pre><pre class="insert-after">import java.util.List;
+calls first, but we&rsquo;ll worry about that when we get there. As always,
+interpretation starts with a new visit method for our new call expression node.</p>
+<div class="codehilite"><pre><span class="c"># lox/interpreter.py implementation of eval()</span>
+<span class="a">@eval.register</span>
+<span class="k">def</span> <span class="i">_</span>(<span class="i">expr</span>: <span class="t">Call</span>, <span class="i">env</span>: <span class="t">Env</span>) -&gt; <span class="t">Value</span>:
+    <span class="i">callee</span> = <span class="i">eval</span>(<span class="i">expr</span>.<span class="i">callee</span>, <span class="i">env</span>)
+    <span class="i">arguments</span> = [<span class="i">eval</span>(<span class="i">arg</span>, <span class="i">env</span>) <span class="k">for</span> <span class="i">arg</span> <span class="k">in</span> <span class="i">expr</span>.<span class="i">arguments</span>]
+    <span class="k">return</span> <span class="i">callee</span>.<span class="i">call</span>(<span class="i">env</span>, <span class="i">arguments</span>)
 </pre></div>
-<div class="source-file-narrow"><em>lox/Interpreter.java</em></div>
-
-<p>As always, interpretation starts with a new visit method for our new call
-expression node.</p>
-<div class="codehilite"><div class="source-file"><em>lox/Interpreter.java</em><br>
-add after <em>visitBinaryExpr</em>()</div>
-<pre>  <span class="a">@Override</span>
-  <span class="k">public</span> <span class="t">Object</span> <span class="i">visitCallExpr</span>(<span class="t">Expr</span>.<span class="t">Call</span> <span class="i">expr</span>) {
-    <span class="t">Object</span> <span class="i">callee</span> = <span class="i">evaluate</span>(<span class="i">expr</span>.<span class="i">callee</span>);
-
-    <span class="t">List</span>&lt;<span class="t">Object</span>&gt; <span class="i">arguments</span> = <span class="k">new</span> <span class="t">ArrayList</span>&lt;&gt;();
-    <span class="k">for</span> (<span class="t">Expr</span> <span class="i">argument</span> : <span class="i">expr</span>.<span class="i">arguments</span>) {<span name="in-order"> </span>
-      <span class="i">arguments</span>.<span class="i">add</span>(<span class="i">evaluate</span>(<span class="i">argument</span>));
-    }
-
-    <span class="t">LoxCallable</span> <span class="i">function</span> = (<span class="t">LoxCallable</span>)<span class="i">callee</span>;
-    <span class="k">return</span> <span class="i">function</span>.<span class="i">call</span>(<span class="k">this</span>, <span class="i">arguments</span>);
-  }
-</pre></div>
-<div class="source-file-narrow"><em>lox/Interpreter.java</em>, add after <em>visitBinaryExpr</em>()</div>
-
 <p>First, we evaluate the expression for the callee. Typically, this expression is
 just an identifier that looks up the function by its name, but it could be
 anything. Then we evaluate each of the argument expressions in order and store
@@ -324,28 +281,40 @@ unpleasantly surprised if arguments aren&rsquo;t evaluated in the order they exp
 <p>Once we&rsquo;ve got the callee and the arguments ready, all that remains is to
 perform the call. We do that by casting the callee to a <span
 name="callable">LoxCallable</span> and then invoking a <code>call()</code> method on it.
-The Java representation of any Lox object that can be called like a function
+The Python representation of any Lox object that can be called like a function
 will implement this interface. That includes user-defined functions, naturally,
 but also class objects since classes are &ldquo;called&rdquo; to construct new instances.
 We&rsquo;ll also use it for one more purpose shortly.</p>
 <aside name="callable">
-<p>I stuck &ldquo;Lox&rdquo; before the name to distinguish it from the Java standard library&rsquo;s
-own Callable interface. Alas, all the good simple names are already taken.</p>
+<p>I stuck &ldquo;Lox&rdquo; before the name to distinguish it from the Python standard
+library&rsquo;s own Callable type. Alas, all the good simple names are already taken.</p>
 </aside>
 <p>There isn&rsquo;t too much to this new interface.</p>
-<div class="codehilite"><div class="source-file"><em>lox/LoxCallable.java</em><br>
-create new file</div>
-<pre><span class="k">package</span> <span class="i">com.craftinginterpreters.lox</span>;
-
-<span class="k">import</span> <span class="i">java.util.List</span>;
-
-<span class="k">interface</span> <span class="t">LoxCallable</span> {
-  <span class="t">Object</span> <span class="i">call</span>(<span class="t">Interpreter</span> <span class="i">interpreter</span>, <span class="t">List</span>&lt;<span class="t">Object</span>&gt; <span class="i">arguments</span>);
-}
+<div class="codehilite"><pre><span class="c"># lox/runtime.py</span>
+<span class="k">class</span> <span class="t">LoxCallable</span>(<span class="i">abc</span>.<span class="i">ABC</span>):
+    <span class="a">@abc.abstractmethod</span>
+    <span class="k">def</span> <span class="i">call</span>(<span class="i">self</span>,
+             <span class="i">env</span>: <span class="t">Env</span>,
+             <span class="i">arguments</span>: <span class="t">list</span>[<span class="t">Value</span>]) -&gt; <span class="t">Value</span>:
+        ...
 </pre></div>
-<div class="source-file-narrow"><em>lox/LoxCallable.java</em>, create new file</div>
+<p>This code uses the following imports and definitions:</p>
+<div class="codehilite"><pre><span class="c"># lox/runtime.py at the top</span>
+<span class="k">from</span> <span class="i">__future__</span> <span class="k">import</span> <span class="i">annotations</span>
+<span class="k">import</span> <span class="i">abc</span>
+<span class="k">from</span> <span class="i">lox</span> <span class="k">import</span> <span class="i">env</span>, <span class="i">interpreter</span>
 
-<p>We pass in the interpreter in case the class implementing <code>call()</code> needs it. We
+<span class="k">type</span> <span class="t">Value</span> = <span class="i">interpreter</span>.<span class="t">Value</span>
+<span class="k">type</span> <span class="t">Env</span> = <span class="i">env</span>.<span class="t">Env</span>[<span class="t">Value</span>]
+</pre></div>
+<aside name="circular-imports">
+<p>Here we import the sub-modules lox.env, and lox.interpreter by name instead of
+requiring specific symbols as we usually do. This is to avoid circular import
+issues. The <code>lox.runtime</code> uses Env from <code>lox.env</code>, but it uses <code>Value</code> from
+<code>lox.interpreter</code> and later on we want <code>Value</code> to include LoxCallable and other
+objects defined in this module.</p>
+</aside>
+<p>We pass in the environment in case the class implementing <code>call()</code> needs it. We
 also give it the list of evaluated argument values. The implementer&rsquo;s job is
 then to return the value that the call expression produces.</p>
 <h3><a href="#call-type-errors" id="call-type-errors"><small>10&#8202;.&#8202;1&#8202;.&#8202;3</small>Call type errors</a></h3>
@@ -356,24 +325,22 @@ you can call? What if you try to do this:</p>
 <div class="codehilite"><pre><span class="s">&quot;totally not a function&quot;</span>();
 </pre></div>
 <p>Strings aren&rsquo;t callable in Lox. The runtime representation of a Lox string is a
-Java string, so when we cast that to LoxCallable, the JVM will throw a
-ClassCastException. We don&rsquo;t want our interpreter to vomit out some nasty Java
-stack trace and die. Instead, we need to check the type ourselves first.</p>
-<div class="codehilite"><pre class="insert-before">    }
-
-</pre><div class="source-file"><em>lox/Interpreter.java</em><br>
-in <em>visitCallExpr</em>()</div>
-<pre class="insert">    <span class="k">if</span> (!(<span class="i">callee</span> <span class="k">instanceof</span> <span class="t">LoxCallable</span>)) {
-      <span class="k">throw</span> <span class="k">new</span> <span class="t">RuntimeError</span>(<span class="i">expr</span>.<span class="i">paren</span>,
-          <span class="s">&quot;Can only call functions and classes.&quot;</span>);
-    }
-
-</pre><pre class="insert-after">    LoxCallable function = (LoxCallable)callee;
+Python string, so when we try to call its <code>call()</code> method, the Python
+interpreter will raise a AttributeError. We don&rsquo;t want our interpreter to vomit
+out some nasty Python stack trace and die. Instead, we need to check the type
+ourselves first.</p>
+<div class="codehilite"><pre><span class="c"># lox/interpreter.py before the return statement in eval(Call)</span>
+    ...
+    <span class="k">if</span> <span class="k">not</span> <span class="i">isinstance</span>(<span class="i">callee</span>, <span class="t">LoxCallable</span>):
+        <span class="i">msg</span> = <span class="s">&quot;Can only call functions and classes.&quot;</span>
+        <span class="k">raise</span> <span class="t">LoxRuntimeError</span>(<span class="i">msg</span>, <span class="i">expr</span>.<span class="i">paren</span>)
+    ...
 </pre></div>
-<div class="source-file-narrow"><em>lox/Interpreter.java</em>, in <em>visitCallExpr</em>()</div>
-
 <p>We still throw an exception, but now we&rsquo;re throwing our own exception type, one
 that the interpreter knows to catch and report gracefully.</p>
+<p>This code requires an import to work correctly:</p>
+<div class="codehilite"><pre><span class="k">from</span> <span class="i">lox</span>.<span class="i">runtime</span> <span class="k">import</span> <span class="t">LoxCallable</span>
+</pre></div>
 <h3><a href="#checking-arity" id="checking-arity"><small>10&#8202;.&#8202;1&#8202;.&#8202;4</small>Checking arity</a></h3>
 <p>The other problem relates to the function&rsquo;s <strong>arity</strong>. Arity is the fancy term
 for the number of arguments a function or operation expects. Unary operators
@@ -383,8 +350,8 @@ determined by the number of parameters it declares.</p>
   <span class="k">print</span> <span class="i">a</span> + <span class="i">b</span> + <span class="i">c</span>;
 }
 </pre></div>
-<p>This function defines three parameters, <code>a</code>, <code>b</code>, and <code>c</code>, so its arity is
-three and it expects three arguments. So what if you try to call it like this:</p>
+<p>This function defines three parameters, <code>a</code>, <code>b</code>, and <code>c</code>, so its arity is three
+and it expects three arguments. So what if you try to call it like this:</p>
 <div class="codehilite"><pre><span class="i">add</span>(<span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>, <span class="n">4</span>); <span class="c">// Too many.</span>
 <span class="i">add</span>(<span class="n">1</span>, <span class="n">2</span>);       <span class="c">// Too few.</span>
 </pre></div>
@@ -400,28 +367,21 @@ is almost always a bug, and it&rsquo;s a mistake I do make in practice. Given th
 the sooner the implementation draws my attention to it, the better. So for Lox,
 we&rsquo;ll take Python&rsquo;s approach. Before invoking the callable, we check to see if
 the argument list&rsquo;s length matches the callable&rsquo;s arity.</p>
-<div class="codehilite"><pre class="insert-before">    LoxCallable function = (LoxCallable)callee;
-</pre><div class="source-file"><em>lox/Interpreter.java</em><br>
-in <em>visitCallExpr</em>()</div>
-<pre class="insert">    <span class="k">if</span> (<span class="i">arguments</span>.<span class="i">size</span>() != <span class="i">function</span>.<span class="i">arity</span>()) {
-      <span class="k">throw</span> <span class="k">new</span> <span class="t">RuntimeError</span>(<span class="i">expr</span>.<span class="i">paren</span>, <span class="s">&quot;Expected &quot;</span> +
-          <span class="i">function</span>.<span class="i">arity</span>() + <span class="s">&quot; arguments but got &quot;</span> +
-          <span class="i">arguments</span>.<span class="i">size</span>() + <span class="s">&quot;.&quot;</span>);
-    }
-
-</pre><pre class="insert-after">    return function.call(this, arguments);
+<div class="codehilite"><pre><span class="c"># lox/interpreter.py before the return statement in eval(Call)</span>
+...
+<span class="k">if</span> <span class="i">len</span>(<span class="i">arguments</span>) != <span class="i">callee</span>.<span class="i">arity</span>:
+    <span class="i">arity</span> = <span class="i">calle</span>.<span class="i">arity</span>
+    <span class="i">n_arguments</span> = <span class="i">len</span>(<span class="i">arguments</span>)
+    <span class="i">msg</span> = <span class="i">f</span><span class="s">&quot;Expected {arity} arguments but got {n_arguments}.&quot;</span>
+    <span class="k">raise</span> <span class="t">LoxRuntimeError</span>(<span class="i">msg</span>, <span class="i">expr</span>.<span class="i">paren</span>)
+...
 </pre></div>
-<div class="source-file-narrow"><em>lox/Interpreter.java</em>, in <em>visitCallExpr</em>()</div>
-
-<p>That requires a new method on the LoxCallable interface to ask it its arity.</p>
-<div class="codehilite"><pre class="insert-before">interface LoxCallable {
-</pre><div class="source-file"><em>lox/LoxCallable.java</em><br>
-in interface <em>LoxCallable</em></div>
-<pre class="insert">  <span class="t">int</span> <span class="i">arity</span>();
-</pre><pre class="insert-after">  Object call(Interpreter interpreter, List&lt;Object&gt; arguments);
+<p>That requires a new attribute on the LoxCallable interface to ask it its arity.</p>
+<div class="codehilite"><pre><span class="c"># lox/types.py method of LoxCallable</span>
+<span class="k">class</span> <span class="t">LoxCallable</span>:
+    <span class="i">arity</span>: <span class="t">int</span>
+    ...
 </pre></div>
-<div class="source-file-narrow"><em>lox/LoxCallable.java</em>, in interface <em>LoxCallable</em></div>
-
 <p>We <em>could</em> push the arity checking into the concrete implementation of <code>call()</code>.
 But, since we&rsquo;ll have multiple classes implementing LoxCallable, that would end
 up with redundant validation spread across a few classes. Hoisting it up into
@@ -432,7 +392,7 @@ Before we get to user-defined functions, now is a good time to introduce a vital
 but often overlooked facet of language implementations<span class="em">&mdash;</span><span
 name="native"><strong>native functions</strong></span>. These are functions that the
 interpreter exposes to user code but that are implemented in the host language
-(in our case Java), not the language being implemented (Lox).</p>
+(in our case Python), not the language being implemented (Lox).</p>
 <p>Sometimes these are called <strong>primitives</strong>, <strong>external functions</strong>, or <strong>foreign
 functions</strong>. Since these functions can be called while the user&rsquo;s program is
 running, they form part of the implementation&rsquo;s runtime. A lot of programming
@@ -442,11 +402,11 @@ They&rsquo;re mostly grunt work.</p>
 <p>Curiously, two names for these functions<span class="em">&mdash;</span>&ldquo;native&rdquo; and &ldquo;foreign&rdquo;<span class="em">&mdash;</span>are
 antonyms. Maybe it depends on the perspective of the person choosing the term.
 If you think of yourself as &ldquo;living&rdquo; within the runtime&rsquo;s implementation (in our
-case, Java) then functions written in that are &ldquo;native&rdquo;. But if you have the
+case, Python) then functions written in that are &ldquo;native&rdquo;. But if you have the
 mindset of a <em>user</em> of your language, then the runtime is implemented in some
 other &ldquo;foreign&rdquo; language.</p>
 <p>Or it may be that &ldquo;native&rdquo; refers to the machine code language of the underlying
-hardware. In Java, &ldquo;native&rdquo; methods are ones implemented in C or C++ and
+hardware. In Python, &ldquo;native&rdquo; methods are ones implemented in C or C++ and
 compiled to native machine code.</p><img src="image/functions/foreign.png" class="above" alt="All a matter of perspective." />
 </aside>
 <p>But when it comes to making your language actually good at doing useful stuff,
@@ -471,8 +431,8 @@ mechanism for doing so is called a <strong>foreign function interface</strong> (
 <strong>native extension</strong>, <strong>native interface</strong>, or something along those lines.
 These are nice because they free the language implementer from providing access
 to every single capability the underlying platform supports. We won&rsquo;t define an
-FFI for jlox, but we will add one native function to give you an idea of what it
-looks like.</p>
+FFI for pylox, but we will add one native function to give you an idea of what
+it looks like.</p>
 <h3><a href="#telling-time" id="telling-time"><small>10&#8202;.&#8202;2&#8202;.&#8202;1</small>Telling time</a></h3>
 <p>When we get to <a href="a-bytecode-virtual-machine.html">Part III</a> and start working on a much more efficient
 implementation of Lox, we&rsquo;re going to care deeply about performance. Performance
@@ -493,52 +453,53 @@ that have passed since some fixed point in time. The difference between two
 successive invocations tells you how much time elapsed between the two calls.
 This function is defined in the global scope, so let&rsquo;s ensure the interpreter
 has access to that.</p>
-<div class="codehilite"><pre class="insert-before">class Interpreter implements Expr.Visitor&lt;Object&gt;,
-                             Stmt.Visitor&lt;Void&gt; {
-</pre><div class="source-file"><em>lox/Interpreter.java</em><br>
-in class <em>Interpreter</em><br>
-replace 1 line</div>
-<pre class="insert">  <span class="k">final</span> <span class="t">Environment</span> <span class="i">globals</span> = <span class="k">new</span> <span class="t">Environment</span>();
-  <span class="k">private</span> <span class="t">Environment</span> <span class="i">environment</span> = <span class="i">globals</span>;
-</pre><pre class="insert-after">
+<p>We create a new implementation of LoxCallable that handles native Python
+functions.</p>
+<div class="codehilite"><pre><span class="c"># lox/runtime.py</span>
+<span class="k">from</span> <span class="i">dataclasses</span> <span class="k">import</span> <span class="i">dataclass</span>
+<span class="k">from</span> <span class="i">typing</span> <span class="k">import</span> <span class="t">Callable</span>
 
-  void interpret(List&lt;Stmt&gt; statements) {
+<span class="a">@dataclass</span>(<span class="i">eq</span>=<span class="t">False</span>)
+<span class="k">class</span> <span class="t">NativeFunction</span>(<span class="t">LoxCallable</span>):
+    <span class="i">function</span>: <span class="t">Callable</span>[..., <span class="t">Value</span>]
+    <span class="i">arity</span>: <span class="t">int</span>
+
+    <span class="k">def</span> <span class="i">call</span>(<span class="i">self</span>,
+             <span class="i">env</span>: <span class="t">Env</span>,
+             <span class="i">arguments</span>: <span class="t">list</span>[<span class="t">Value</span>]) -&gt; <span class="t">Value</span>:
+        <span class="k">return</span> <span class="i">self</span>.<span class="i">function</span>(*<span class="i">arguments</span>)
+
+    <span class="k">def</span> <span class="i">__str__</span>(<span class="i">self</span>) -&gt; <span class="t">str</span>:
+        <span class="k">return</span> <span class="s">&quot;&lt;native fn&gt;&quot;</span>
 </pre></div>
-<div class="source-file-narrow"><em>lox/Interpreter.java</em>, in class <em>Interpreter</em>, replace 1 line</div>
-
-<p>The <code>environment</code> field in the interpreter changes as we enter and exit local
-scopes. It tracks the <em>current</em> environment. This new <code>globals</code> field holds a
-fixed reference to the outermost global environment.</p>
-<p>When we instantiate an Interpreter, we stuff the native function in that global
-scope.</p>
-<div class="codehilite"><pre class="insert-before">  private Environment environment = globals;
-
-</pre><div class="source-file"><em>lox/Interpreter.java</em><br>
-in class <em>Interpreter</em></div>
-<pre class="insert">  <span class="t">Interpreter</span>() {
-    <span class="i">globals</span>.<span class="i">define</span>(<span class="s">&quot;clock&quot;</span>, <span class="k">new</span> <span class="t">LoxCallable</span>() {
-      <span class="a">@Override</span>
-      <span class="k">public</span> <span class="t">int</span> <span class="i">arity</span>() { <span class="k">return</span> <span class="n">0</span>; }
-
-      <span class="a">@Override</span>
-      <span class="k">public</span> <span class="t">Object</span> <span class="i">call</span>(<span class="t">Interpreter</span> <span class="i">interpreter</span>,
-                         <span class="t">List</span>&lt;<span class="t">Object</span>&gt; <span class="i">arguments</span>) {
-        <span class="k">return</span> (<span class="t">double</span>)<span class="t">System</span>.<span class="i">currentTimeMillis</span>() / <span class="n">1000.0</span>;
-      }
-
-      <span class="a">@Override</span>
-      <span class="k">public</span> <span class="t">String</span> <span class="i">toString</span>() { <span class="k">return</span> <span class="s">&quot;&lt;native fn&gt;&quot;</span>; }
-    });
-  }
-
-</pre><pre class="insert-after">  void interpret(List&lt;Stmt&gt; statements) {
+<aside name="equality">
+<p>We added <code>eq=False</code> to the <code>@dataclass</code> decorator here to disable the
+auto-generated equality method. By default, dataclasses compare instances by all
+their fields. If we disable that, they use the default Python behavior of
+comparing by identity, which is what we want here.</p>
+</aside>
+<p>Now we create a new constructor in our Environment populated with Lox&rsquo;s standard
+lib with its single <code>clock</code> function.</p>
+<div class="codehilite"><pre><span class="c"># lox/env.py method of Env</span>
+<span class="a">@classmethod</span>
+<span class="k">def</span> <span class="i">globals</span>(<span class="i">cls</span>) -&gt; <span class="s">&quot;Env&quot;</span>:
+    <span class="k">return</span> <span class="i">cls</span>({<span class="s">&quot;clock&quot;</span>: <span class="t">NativeFunction</span>(<span class="i">time</span>.<span class="i">time</span>, <span class="n">0</span>)})
 </pre></div>
-<div class="source-file-narrow"><em>lox/Interpreter.java</em>, in class <em>Interpreter</em></div>
-
+<p>Remember to do the required imports:</p>
+<div class="codehilite"><pre><span class="c"># lox/env.py at the top</span>
+<span class="k">import</span> <span class="i">time</span>
+<span class="k">from</span> <span class="i">lox</span>.<span class="i">runtime</span> <span class="k">import</span> <span class="t">NativeFunction</span>
+</pre></div>
+<p>And to use it to initialize the global environment in the main interpreter:</p>
+<div class="codehilite"><pre><span class="c"># lox/__main__.py at Lox.__init__</span>
+<span class="c"># Replace Env() with Env.globals()</span>
+    ...
+    <span class="i">self</span>.<span class="i">environment</span> = <span class="t">Env</span>.<span class="i">globals</span>()
+</pre></div>
 <p>This defines a <span name="lisp-1">variable</span> named &ldquo;clock&rdquo;. Its value is a
-Java anonymous class that implements LoxCallable. The <code>clock()</code> function takes
+Python anonymous class that implements LoxCallable. The <code>clock()</code> function takes
 no arguments, so its arity is zero. The implementation of <code>call()</code> calls the
-corresponding Java function and converts the result to a double value in
+corresponding Python function and converts the result to a double value in
 seconds.</p>
 <aside name="lisp-1">
 <p>In Lox, functions and variables occupy the same namespace. In Common Lisp, the
@@ -552,10 +513,16 @@ and &ldquo;Lisp-2&rdquo; for languages like Common Lisp that partition them. Des
 totally opaque, those names have since stuck. Lox is a Lisp-1.</p>
 </aside>
 <p>If we wanted to add other native functions<span class="em">&mdash;</span>reading input from the user,
-working with files, etc.<span class="em">&mdash;</span>we could add them each as their own anonymous class
-that implements LoxCallable. But for the book, this one is really all we need.</p>
-<p>Let&rsquo;s get ourselves out of the function-defining business and let our users
-take over<span class="ellipse">&thinsp;.&thinsp;.&thinsp;.&nbsp;</span></p>
+working with files, etc.<span class="em">&mdash;</span>we could add them each as their own instance of
+NativeFunction. But for the book, this one is really all we need.</p>
+<p>Let&rsquo;s get ourselves out of the function-defining business and let our users take
+over<span class="ellipse">&thinsp;.&thinsp;.&thinsp;.&nbsp;</span></p>
+<p>It is also a good idea to redefine the <code>lox.interpreter.Value</code> type to accept
+NativeFunctions as well:</p>
+<div class="codehilite"><pre><span class="c"># lox/interpreter.py at the top</span>
+<span class="k">from</span> <span class="i">lox</span>.<span class="i">runtime</span> <span class="k">import</span> <span class="t">NativeFunction</span>
+<span class="k">type</span> <span class="t">Value</span> = <span class="t">LiteralValue</span> | <span class="t">NativeFunction</span>
+</pre></div>
 <h2><a href="#function-declarations" id="function-declarations"><small>10&#8202;.&#8202;3</small>Function Declarations</a></h2>
 <p>We finally get to add a new production to the <code>declaration</code> rule we introduced
 back when we added variables. Function declarations, like variables, bind a new
@@ -596,96 +563,78 @@ block statements use. The parameter list uses this rule:</p>
 </pre></div>
 <p>It&rsquo;s like the earlier <code>arguments</code> rule, except that each parameter is an
 identifier, not an expression. That&rsquo;s a lot of new syntax for the parser to chew
-through, but the resulting AST <span name="fun-ast">node</span> isn&rsquo;t too bad.</p>
-<div class="codehilite"><pre class="insert-before">      &quot;Expression : Expr expression&quot;,
-</pre><div class="source-file"><em>tool/GenerateAst.java</em><br>
-in <em>main</em>()</div>
-<pre class="insert">      <span class="s">&quot;Function   : Token name, List&lt;Token&gt; params,&quot;</span> +
-                  <span class="s">&quot; List&lt;Stmt&gt; body&quot;</span>,
-</pre><pre class="insert-after">      &quot;If         : Expr condition, Stmt thenBranch,&quot; +
+through, but the resulting AST node isn&rsquo;t too bad.</p>
+<div class="codehilite"><pre><span class="c"># lox/ast.py</span>
+<span class="a">@dataclass</span>
+<span class="k">class</span> <span class="t">Function</span>(<span class="t">Stmt</span>):
+    <span class="i">name</span>: <span class="t">Token</span>
+    <span class="i">params</span>: <span class="t">list</span>[<span class="t">Token</span>]
+    <span class="i">body</span>: <span class="t">list</span>[<span class="t">Stmt</span>]
 </pre></div>
-<div class="source-file-narrow"><em>tool/GenerateAst.java</em>, in <em>main</em>()</div>
-
-<aside name="fun-ast">
-<p>The generated code for the new node is in <a href="appendix-ii.html#function-statement">Appendix II</a>.</p>
-</aside>
 <p>A function node has a name, a list of parameters (their names), and then the
 body. We store the body as the list of statements contained inside the curly
 braces.</p>
 <p>Over in the parser, we weave in the new declaration.</p>
-<div class="codehilite"><pre class="insert-before">    try {
-</pre><div class="source-file"><em>lox/Parser.java</em><br>
-in <em>declaration</em>()</div>
-<pre class="insert">      <span class="k">if</span> (<span class="i">match</span>(<span class="i">FUN</span>)) <span class="k">return</span> <span class="i">function</span>(<span class="s">&quot;function&quot;</span>);
-</pre><pre class="insert-after">      if (match(VAR)) return varDeclaration();
+<div class="codehilite"><pre><span class="c"># lox/parser.py case of Parser.declaration()</span>
+    ...
+    <span class="i">case</span> <span class="s">&quot;FUN&quot;</span>:
+        <span class="i">self</span>.<span class="i">consume</span>(<span class="s">&quot;FUN&quot;</span>, <span class="i">f</span><span class="s">&quot;Expect function declaration.&quot;</span>)
+        <span class="k">return</span> <span class="i">self</span>.<span class="i">function</span>(<span class="s">&quot;function&quot;</span>)
+    ...
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, in <em>declaration</em>()</div>
-
 <p>Like other statements, a function is recognized by the leading keyword. When we
 encounter <code>fun</code>, we call <code>function</code>. That corresponds to the <code>function</code> grammar
 rule since we already matched and consumed the <code>fun</code> keyword. We&rsquo;ll build the
 method up a piece at a time, starting with this:</p>
-<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
-add after <em>expressionStatement</em>()</div>
-<pre>  <span class="k">private</span> <span class="t">Stmt</span>.<span class="t">Function</span> <span class="i">function</span>(<span class="t">String</span> <span class="i">kind</span>) {
-    <span class="t">Token</span> <span class="i">name</span> = <span class="i">consume</span>(<span class="i">IDENTIFIER</span>, <span class="s">&quot;Expect &quot;</span> + <span class="i">kind</span> + <span class="s">&quot; name.&quot;</span>);
-  }
+<div class="codehilite"><pre><span class="c"># lox/parser.py method of Parser</span>
+<span class="k">def</span> <span class="i">function</span>(<span class="i">self</span>, <span class="i">kind</span>: <span class="t">str</span>) -&gt; <span class="t">Function</span>:
+    <span class="i">name</span> = <span class="i">self</span>.<span class="i">consume</span>(<span class="s">&quot;IDENTIFIER&quot;</span>, <span class="i">f</span><span class="s">&quot;Expect {kind} name.&quot;</span>)
+    ...
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, add after <em>expressionStatement</em>()</div>
-
 <p>Right now, it only consumes the identifier token for the function&rsquo;s name. You
 might be wondering about that funny little <code>kind</code> parameter. Just like we reuse
 the grammar rule, we&rsquo;ll reuse the <code>function()</code> method later to parse methods
 inside classes. When we do that, we&rsquo;ll pass in &ldquo;method&rdquo; for <code>kind</code> so that the
 error messages are specific to the kind of declaration being parsed.</p>
 <p>Next, we parse the parameter list and the pair of parentheses wrapped around it.</p>
-<div class="codehilite"><pre class="insert-before">    Token name = consume(IDENTIFIER, &quot;Expect &quot; + kind + &quot; name.&quot;);
-</pre><div class="source-file"><em>lox/Parser.java</em><br>
-in <em>function</em>()</div>
-<pre class="insert">    <span class="i">consume</span>(<span class="i">LEFT_PAREN</span>, <span class="s">&quot;Expect &#39;(&#39; after &quot;</span> + <span class="i">kind</span> + <span class="s">&quot; name.&quot;</span>);
-    <span class="t">List</span>&lt;<span class="t">Token</span>&gt; <span class="i">parameters</span> = <span class="k">new</span> <span class="t">ArrayList</span>&lt;&gt;();
-    <span class="k">if</span> (!<span class="i">check</span>(<span class="i">RIGHT_PAREN</span>)) {
-      <span class="k">do</span> {
-        <span class="k">if</span> (<span class="i">parameters</span>.<span class="i">size</span>() &gt;= <span class="n">255</span>) {
-          <span class="i">error</span>(<span class="i">peek</span>(), <span class="s">&quot;Can&#39;t have more than 255 parameters.&quot;</span>);
-        }
-
-        <span class="i">parameters</span>.<span class="i">add</span>(
-            <span class="i">consume</span>(<span class="i">IDENTIFIER</span>, <span class="s">&quot;Expect parameter name.&quot;</span>));
-      } <span class="k">while</span> (<span class="i">match</span>(<span class="i">COMMA</span>));
-    }
-    <span class="i">consume</span>(<span class="i">RIGHT_PAREN</span>, <span class="s">&quot;Expect &#39;)&#39; after parameters.&quot;</span>);
-</pre><pre class="insert-after">  }
+<div class="codehilite"><pre><span class="c"># lox/parser.py inside Parser.function()</span>
+    ...
+    <span class="i">self</span>.<span class="i">consume</span>(<span class="s">&quot;LEFT_PAREN&quot;</span>, <span class="i">f</span><span class="s">&quot;Expect &#39;(&#39; after {kind} name.&quot;</span>)
+    <span class="i">parameters</span> = []
+    <span class="k">if</span> <span class="k">not</span> <span class="i">self</span>.<span class="i">check</span>(<span class="s">&quot;RIGHT_PAREN&quot;</span>):
+        <span class="i">argument</span> = <span class="i">self</span>.<span class="i">consume</span>(<span class="s">&quot;IDENTIFIER&quot;</span>,
+                                <span class="s">&quot;Expect parameter name.&quot;</span>)
+        <span class="i">parameters</span>.<span class="i">append</span>(<span class="i">argument</span>)
+        <span class="k">while</span> <span class="i">self</span>.<span class="i">match</span>(<span class="s">&quot;COMMA&quot;</span>):
+            <span class="i">argument</span> = <span class="i">self</span>.<span class="i">consume</span>(<span class="s">&quot;IDENTIFIER&quot;</span>,
+                                    <span class="s">&quot;Expect parameter name.&quot;</span>)
+            <span class="i">parameters</span>.<span class="i">append</span>(<span class="i">argument</span>)
+            <span class="k">if</span> <span class="i">len</span>(<span class="i">parameters</span>) &gt; <span class="n">255</span>:
+                <span class="i">self</span>.<span class="i">error</span>(<span class="i">argument</span>,
+                           <span class="s">&quot;Can&#39;t have more than 255 parameters.&quot;</span>)
+    <span class="i">self</span>.<span class="i">consume</span>(<span class="s">&quot;RIGHT_PAREN&quot;</span>,
+                 <span class="s">&quot;Expect &#39;)&#39; after parameters.&quot;</span>)
+    ...
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, in <em>function</em>()</div>
-
 <p>This is like the code for handling arguments in a call, except not split out
 into a helper method. The outer <code>if</code> statement handles the zero parameter case,
 and the inner <code>while</code> loop parses parameters as long as we find commas to
 separate them. The result is the list of tokens for each parameter&rsquo;s name.</p>
-<p>Just like we do with arguments to function calls, we validate at parse time
-that you don&rsquo;t exceed the maximum number of parameters a function is allowed to
-have.</p>
+<p>Just like we do with arguments to function calls, we validate at parse time that
+you don&rsquo;t exceed the maximum number of parameters a function is allowed to have.</p>
 <p>Finally, we parse the body and wrap it all up in a function node.</p>
-<div class="codehilite"><pre class="insert-before">    consume(RIGHT_PAREN, &quot;Expect ')' after parameters.&quot;);
-</pre><div class="source-file"><em>lox/Parser.java</em><br>
-in <em>function</em>()</div>
-<pre class="insert">
-
-    <span class="i">consume</span>(<span class="i">LEFT_BRACE</span>, <span class="s">&quot;Expect &#39;{&#39; before &quot;</span> + <span class="i">kind</span> + <span class="s">&quot; body.&quot;</span>);
-    <span class="t">List</span>&lt;<span class="t">Stmt</span>&gt; <span class="i">body</span> = <span class="i">block</span>();
-    <span class="k">return</span> <span class="k">new</span> <span class="t">Stmt</span>.<span class="t">Function</span>(<span class="i">name</span>, <span class="i">parameters</span>, <span class="i">body</span>);
-</pre><pre class="insert-after">  }
+<div class="codehilite"><pre><span class="c"># lox/parser.py inside Parser.function()</span>
+    ...
+    <span class="k">if</span> <span class="i">self</span>.<span class="i">check</span>(<span class="s">&quot;LEFT_BRACE&quot;</span>):
+        <span class="i">body</span> = <span class="i">self</span>.<span class="i">block_statement</span>()
+    <span class="k">else</span>:
+        <span class="k">raise</span> <span class="i">self</span>.<span class="i">error</span>(<span class="i">self</span>.<span class="i">peek</span>(),
+                         <span class="s">&quot;Expect &#39;{&#39; before function body.&quot;</span>)
+    <span class="k">return</span> <span class="t">Function</span>(<span class="i">name</span>, <span class="i">parameters</span>, <span class="i">body</span>.<span class="i">statements</span>)
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, in <em>function</em>()</div>
-
-<p>Note that we consume the <code>{</code> at the beginning of the body here before calling
-<code>block()</code>. That&rsquo;s because <code>block()</code> assumes the brace token has already been
-matched. Consuming it here lets us report a more precise error message if the
-<code>{</code> isn&rsquo;t found since we know it&rsquo;s in the context of a function declaration.</p>
 <h2><a href="#function-objects" id="function-objects"><small>10&#8202;.&#8202;4</small>Function Objects</a></h2>
 <p>We&rsquo;ve got some syntax parsed so usually we&rsquo;re ready to interpret, but first we
-need to think about how to represent a Lox function in Java. We need to keep
+need to think about how to represent a Lox function in Python. We need to keep
 track of the parameters so that we can bind them to argument values when the
 function is called. And, of course, we need to keep the code for the body of the
 function so that we can execute it.</p>
@@ -694,39 +643,26 @@ Almost, but not quite. We also need a class that implements LoxCallable so that
 we can call it. We don&rsquo;t want the runtime phase of the interpreter to bleed into
 the front end&rsquo;s syntax classes so we don&rsquo;t want Stmt.Function itself to
 implement that. Instead, we wrap it in a new class.</p>
-<div class="codehilite"><div class="source-file"><em>lox/LoxFunction.java</em><br>
-create new file</div>
-<pre><span class="k">package</span> <span class="i">com.craftinginterpreters.lox</span>;
+<div class="codehilite"><pre><span class="c"># lox/runtime.py</span>
+<span class="k">from</span> <span class="i">lox</span>.<span class="i">ast</span> <span class="k">import</span> <span class="t">Function</span>
 
-<span class="k">import</span> <span class="i">java.util.List</span>;
-
-<span class="k">class</span> <span class="t">LoxFunction</span> <span class="k">implements</span> <span class="t">LoxCallable</span> {
-  <span class="k">private</span> <span class="k">final</span> <span class="t">Stmt</span>.<span class="t">Function</span> <span class="i">declaration</span>;
-  <span class="t">LoxFunction</span>(<span class="t">Stmt</span>.<span class="t">Function</span> <span class="i">declaration</span>) {
-    <span class="k">this</span>.<span class="i">declaration</span> = <span class="i">declaration</span>;
-  }
-}
+<span class="a">@dataclass</span>(<span class="i">eq</span>=<span class="t">False</span>)
+<span class="k">class</span> <span class="t">LoxFunction</span>(<span class="t">LoxCallable</span>):
+    <span class="i">declaration</span>: <span class="t">Function</span>
 </pre></div>
-<div class="source-file-narrow"><em>lox/LoxFunction.java</em>, create new file</div>
-
 <p>We implement the <code>call()</code> of LoxCallable like so:</p>
-<div class="codehilite"><div class="source-file"><em>lox/LoxFunction.java</em><br>
-add after <em>LoxFunction</em>()</div>
-<pre>  <span class="a">@Override</span>
-  <span class="k">public</span> <span class="t">Object</span> <span class="i">call</span>(<span class="t">Interpreter</span> <span class="i">interpreter</span>,
-                     <span class="t">List</span>&lt;<span class="t">Object</span>&gt; <span class="i">arguments</span>) {
-    <span class="t">Environment</span> <span class="i">environment</span> = <span class="k">new</span> <span class="t">Environment</span>(<span class="i">interpreter</span>.<span class="i">globals</span>);
-    <span class="k">for</span> (<span class="t">int</span> <span class="i">i</span> = <span class="n">0</span>; <span class="i">i</span> &lt; <span class="i">declaration</span>.<span class="i">params</span>.<span class="i">size</span>(); <span class="i">i</span>++) {
-      <span class="i">environment</span>.<span class="i">define</span>(<span class="i">declaration</span>.<span class="i">params</span>.<span class="i">get</span>(<span class="i">i</span>).<span class="i">lexeme</span>,
-          <span class="i">arguments</span>.<span class="i">get</span>(<span class="i">i</span>));
-    }
+<div class="codehilite"><pre><span class="c"># lox/runtime.py LoxFunction method</span>
+<span class="k">def</span> <span class="i">call</span>(<span class="i">self</span>,
+         <span class="i">env</span>: <span class="t">Env</span>,
+         <span class="i">arguments</span>: <span class="t">list</span>[<span class="t">Value</span>]) -&gt; <span class="t">Value</span>:
+    <span class="c"># Create a new environment for the function&#39;s parameters.</span>
+    <span class="i">env</span> = <span class="i">env</span>.<span class="i">push</span>()
+    <span class="k">for</span> <span class="i">param</span>, <span class="i">arg</span> <span class="k">in</span> <span class="i">zip</span>(<span class="i">self</span>.<span class="i">declaration</span>.<span class="i">params</span>, <span class="i">arguments</span>):
+        <span class="i">env</span>[<span class="i">param</span>.<span class="i">lexeme</span>] = <span class="i">arg</span>
 
-    <span class="i">interpreter</span>.<span class="i">executeBlock</span>(<span class="i">declaration</span>.<span class="i">body</span>, <span class="i">environment</span>);
-    <span class="k">return</span> <span class="k">null</span>;
-  }
+    <span class="k">for</span> <span class="i">stmt</span> <span class="k">in</span> <span class="i">self</span>.<span class="i">declaration</span>.<span class="i">body</span>:
+         <span class="k">exec</span>(<span class="i">stmt</span>, <span class="i">env</span>)
 </pre></div>
-<div class="source-file-narrow"><em>lox/LoxFunction.java</em>, add after <em>LoxFunction</em>()</div>
-
 <p>This handful of lines of code is one of the most fundamental, powerful pieces of
 our interpreter. As we saw in <a href="statements-and-state.html">the chapter on statements and <span
 name="env">state</span></a>, managing name environments is a core part
@@ -774,8 +710,8 @@ new function-local environment. Up until now, the current environment was the
 environment where the function was being called. Now, we teleport from there
 inside the new parameter space we&rsquo;ve created for the function.</p>
 <p>This is all that&rsquo;s required to pass data into the function. By using different
-environments when we execute the body, calls to the same function with the
-same code can produce different results.</p>
+environments when we execute the body, calls to the same function with the same
+code can produce different results.</p>
 <p>Once the body of the function has finished executing, <code>executeBlock()</code> discards
 that function-local environment and restores the previous one that was active
 back at the callsite. Finally, <code>call()</code> returns <code>null</code>, which returns <code>nil</code> to
@@ -789,26 +725,17 @@ it if you&rsquo;re so inclined.</p>
 lists have the same length. This is safe because <code>visitCallExpr()</code> checks the
 arity before calling <code>call()</code>. It relies on the function reporting its arity to
 do that.</p>
-<div class="codehilite"><div class="source-file"><em>lox/LoxFunction.java</em><br>
-add after <em>LoxFunction</em>()</div>
-<pre>  <span class="a">@Override</span>
-  <span class="k">public</span> <span class="t">int</span> <span class="i">arity</span>() {
-    <span class="k">return</span> <span class="i">declaration</span>.<span class="i">params</span>.<span class="i">size</span>();
-  }
+<div class="codehilite"><pre><span class="c"># lox/function.py method of LoxFunction</span>
+<span class="a">@property</span>
+<span class="k">def</span> <span class="i">arity</span>(<span class="i">self</span>) -&gt; <span class="t">int</span>:
+    <span class="k">return</span> <span class="i">len</span>(<span class="i">self</span>.<span class="i">declaration</span>.<span class="i">params</span>)
 </pre></div>
-<div class="source-file-narrow"><em>lox/LoxFunction.java</em>, add after <em>LoxFunction</em>()</div>
-
 <p>That&rsquo;s most of our object representation. While we&rsquo;re in here, we may as well
-implement <code>toString()</code>.</p>
-<div class="codehilite"><div class="source-file"><em>lox/LoxFunction.java</em><br>
-add after <em>LoxFunction</em>()</div>
-<pre>  <span class="a">@Override</span>
-  <span class="k">public</span> <span class="t">String</span> <span class="i">toString</span>() {
-    <span class="k">return</span> <span class="s">&quot;&lt;fn &quot;</span> + <span class="i">declaration</span>.<span class="i">name</span>.<span class="i">lexeme</span> + <span class="s">&quot;&gt;&quot;</span>;
-  }
+implement <code>__str__()</code>.</p>
+<div class="codehilite"><pre><span class="c"># lox/function.py method of LoxFunction</span>
+<span class="k">def</span> <span class="i">__str__</span>(<span class="i">self</span>) -&gt; <span class="t">str</span>:
+    <span class="k">return</span> <span class="i">f</span><span class="s">&quot;&lt;fn {self.declaration.name.lexeme}&gt;&quot;</span>
 </pre></div>
-<div class="source-file-narrow"><em>lox/LoxFunction.java</em>, add after <em>LoxFunction</em>()</div>
-
 <p>This gives nicer output if a user decides to print a function value.</p>
 <div class="codehilite"><pre><span class="k">fun</span> <span class="i">add</span>(<span class="i">a</span>, <span class="i">b</span>) {
   <span class="k">print</span> <span class="i">a</span> + <span class="i">b</span>;
@@ -819,17 +746,18 @@ add after <em>LoxFunction</em>()</div>
 <h3><a href="#interpreting-function-declarations" id="interpreting-function-declarations"><small>10&#8202;.&#8202;4&#8202;.&#8202;1</small>Interpreting function declarations</a></h3>
 <p>We&rsquo;ll come back and refine LoxFunction soon, but that&rsquo;s enough to get started.
 Now we can visit a function declaration.</p>
-<div class="codehilite"><div class="source-file"><em>lox/Interpreter.java</em><br>
-add after <em>visitExpressionStmt</em>()</div>
-<pre>  <span class="a">@Override</span>
-  <span class="k">public</span> <span class="t">Void</span> <span class="i">visitFunctionStmt</span>(<span class="t">Stmt</span>.<span class="t">Function</span> <span class="i">stmt</span>) {
-    <span class="t">LoxFunction</span> <span class="i">function</span> = <span class="k">new</span> <span class="t">LoxFunction</span>(<span class="i">stmt</span>);
-    <span class="i">environment</span>.<span class="i">define</span>(<span class="i">stmt</span>.<span class="i">name</span>.<span class="i">lexeme</span>, <span class="i">function</span>);
-    <span class="k">return</span> <span class="k">null</span>;
-  }
+<div class="codehilite"><pre><span class="c"># lox/exec.py implementation of exec(Function)</span>
+<span class="a">@exec.register</span>
+<span class="k">def</span> <span class="i">_</span>(<span class="i">stmt</span>: <span class="t">Function</span>, <span class="i">env</span>: <span class="t">Env</span>):
+    <span class="i">function</span> = <span class="t">LoxFunction</span>(<span class="i">stmt</span>)
+    <span class="i">env</span>[<span class="i">stmt</span>.<span class="i">name</span>.<span class="i">lexeme</span>] = <span class="i">function</span>
 </pre></div>
-<div class="source-file-narrow"><em>lox/Interpreter.java</em>, add after <em>visitExpressionStmt</em>()</div>
+<p>And do not forget to add the import and redefine the Value type:</p>
+<div class="codehilite"><pre><span class="c"># lox/exec.py at the top</span>
+<span class="k">from</span> <span class="i">lox</span>.<span class="i">runtime</span> <span class="k">import</span> <span class="t">LoxFunction</span>
 
+<span class="k">type</span> <span class="t">Value</span> = <span class="t">LiteralValue</span> | <span class="t">LoxFunction</span> | <span class="t">NativeFunction</span>
+</pre></div>
 <p>This is similar to how we interpret other literal expressions. We take a
 function <em>syntax node</em><span class="em">&mdash;</span>a compile-time representation of the function<span class="em">&mdash;</span>and
 convert it to its runtime representation. Here, that&rsquo;s a LoxFunction that wraps
@@ -891,45 +819,32 @@ implementation of <code>call()</code> returns <code>null</code> at the end. In t
 omit the value in a <code>return</code> statement, we simply treat it as equivalent to:</p>
 <div class="codehilite"><pre><span class="k">return</span> <span class="k">nil</span>;
 </pre></div>
-<p>Over in our AST generator, we add a <span name="return-ast">new node</span>.</p>
-<div class="codehilite"><pre class="insert-before">      &quot;Print      : Expr expression&quot;,
-</pre><div class="source-file"><em>tool/GenerateAst.java</em><br>
-in <em>main</em>()</div>
-<pre class="insert">      <span class="s">&quot;Return     : Token keyword, Expr value&quot;</span>,
-</pre><pre class="insert-after">      &quot;Var        : Token name, Expr initializer&quot;,
+<p>Over in our AST generator, we add a new node.</p>
+<div class="codehilite"><pre><span class="c"># lox/ast.py</span>
+<span class="a">@dataclass</span>
+<span class="k">class</span> <span class="t">Return</span>(<span class="t">Stmt</span>):
+    <span class="i">keyword</span>: <span class="t">Token</span>
+    <span class="i">value</span>: <span class="t">Expr</span> | <span class="t">None</span>
 </pre></div>
-<div class="source-file-narrow"><em>tool/GenerateAst.java</em>, in <em>main</em>()</div>
-
-<aside name="return-ast">
-<p>The generated code for the new node is in <a href="appendix-ii.html#return-statement">Appendix II</a>.</p>
-</aside>
 <p>It keeps the <code>return</code> keyword token so we can use its location for error
 reporting, and the value being returned, if any. We parse it like other
 statements, first by recognizing the initial keyword.</p>
-<div class="codehilite"><pre class="insert-before">    if (match(PRINT)) return printStatement();
-</pre><div class="source-file"><em>lox/Parser.java</em><br>
-in <em>statement</em>()</div>
-<pre class="insert">    <span class="k">if</span> (<span class="i">match</span>(<span class="i">RETURN</span>)) <span class="k">return</span> <span class="i">returnStatement</span>();
-</pre><pre class="insert-after">    if (match(WHILE)) return whileStatement();
+<div class="codehilite"><pre><span class="c"># lox/parser.py case in Parser.statement()</span>
+    ...
+    <span class="i">case</span> <span class="s">&quot;RETURN&quot;</span>:
+        <span class="k">return</span> <span class="i">self</span>.<span class="i">return_statement</span>()
+    ...
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, in <em>statement</em>()</div>
-
 <p>That branches out to:</p>
-<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
-add after <em>printStatement</em>()</div>
-<pre>  <span class="k">private</span> <span class="t">Stmt</span> <span class="i">returnStatement</span>() {
-    <span class="t">Token</span> <span class="i">keyword</span> = <span class="i">previous</span>();
-    <span class="t">Expr</span> <span class="i">value</span> = <span class="k">null</span>;
-    <span class="k">if</span> (!<span class="i">check</span>(<span class="i">SEMICOLON</span>)) {
-      <span class="i">value</span> = <span class="i">expression</span>();
-    }
-
-    <span class="i">consume</span>(<span class="i">SEMICOLON</span>, <span class="s">&quot;Expect &#39;;&#39; after return value.&quot;</span>);
-    <span class="k">return</span> <span class="k">new</span> <span class="t">Stmt</span>.<span class="t">Return</span>(<span class="i">keyword</span>, <span class="i">value</span>);
-  }
+<div class="codehilite"><pre><span class="c"># lox/parser.py method of Parser</span>
+<span class="k">def</span> <span class="i">return_statement</span>(<span class="i">self</span>):
+    <span class="i">keyword</span> = <span class="i">self</span>.<span class="i">consume</span>(<span class="s">&quot;RETURN&quot;</span>, <span class="s">&quot;Expect &#39;return&#39; keyword.&quot;</span>)
+    <span class="i">value</span> = <span class="t">None</span>
+    <span class="k">if</span> <span class="k">not</span> <span class="i">self</span>.<span class="i">check</span>(<span class="s">&quot;SEMICOLON&quot;</span>):
+        <span class="i">value</span> = <span class="i">self</span>.<span class="i">expression</span>()
+    <span class="i">self</span>.<span class="i">consume</span>(<span class="s">&quot;SEMICOLON&quot;</span>, <span class="s">&quot;Expect &#39;;&#39; after return value.&quot;</span>)
+    <span class="k">return</span> <span class="t">Return</span>(<span class="i">keyword</span>, <span class="i">value</span>)
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, add after <em>printStatement</em>()</div>
-
 <p>After snagging the previously consumed <code>return</code> keyword, we look for a value
 expression. Since many different tokens can potentially start an expression,
 it&rsquo;s hard to tell if a return value is <em>present</em>. Instead, we check if it&rsquo;s
@@ -953,15 +868,13 @@ kind of jacked up control flow construct.</p>
 
 <span class="i">count</span>(<span class="n">1</span>);
 </pre></div>
-<p>The Java call stack currently looks roughly like this:</p>
-<div class="codehilite"><pre>Interpreter.visitReturnStmt()
-Interpreter.visitIfStmt()
-Interpreter.executeBlock()
-Interpreter.visitBlockStmt()
-Interpreter.visitWhileStmt()
-Interpreter.executeBlock()
-LoxFunction.call()
-Interpreter.visitCallExpr()
+<p>The Python call stack currently looks roughly like this:</p>
+<div class="codehilite"><pre><span class="k">exec</span>(<span class="t">Return</span>)
+<span class="k">exec</span>(<span class="t">If</span>)
+<span class="k">exec</span>(<span class="t">Block</span>)
+<span class="k">exec</span>(<span class="t">While</span>)
+<span class="t">LoxFunction</span>.<span class="i">call</span>()
+<span class="k">exec</span>(<span class="t">Call</span>)
 </pre></div>
 <p>We need to get from the top of the stack all the way back to <code>call()</code>. I don&rsquo;t
 know about you, but to me that sounds like exceptions. When we execute a
@@ -969,71 +882,54 @@ know about you, but to me that sounds like exceptions. When we execute a
 visit methods of all of the containing statements back to the code that began
 executing the body.</p>
 <p>The visit method for our new AST node looks like this:</p>
-<div class="codehilite"><div class="source-file"><em>lox/Interpreter.java</em><br>
-add after <em>visitPrintStmt</em>()</div>
-<pre>  <span class="a">@Override</span>
-  <span class="k">public</span> <span class="t">Void</span> <span class="i">visitReturnStmt</span>(<span class="t">Stmt</span>.<span class="t">Return</span> <span class="i">stmt</span>) {
-    <span class="t">Object</span> <span class="i">value</span> = <span class="k">null</span>;
-    <span class="k">if</span> (<span class="i">stmt</span>.<span class="i">value</span> != <span class="k">null</span>) <span class="i">value</span> = <span class="i">evaluate</span>(<span class="i">stmt</span>.<span class="i">value</span>);
-
-    <span class="k">throw</span> <span class="k">new</span> <span class="t">Return</span>(<span class="i">value</span>);
-  }
+<div class="codehilite"><pre><span class="c"># lox/interpreter.py after exec()</span>
+<span class="a">@exec.register</span>
+<span class="k">def</span> <span class="i">_</span>(<span class="i">stmt</span>: <span class="t">Return</span>, <span class="i">env</span>: <span class="t">Env</span>):
+    <span class="i">value</span> = <span class="t">None</span>
+    <span class="k">if</span> <span class="i">stmt</span>.<span class="i">value</span> <span class="k">is</span> <span class="k">not</span> <span class="t">None</span>:
+        <span class="i">value</span> = <span class="i">eval</span>(<span class="i">stmt</span>.<span class="i">value</span>, <span class="i">env</span>)
+    <span class="k">raise</span> <span class="t">LoxReturn</span>(<span class="i">value</span>)
 </pre></div>
-<div class="source-file-narrow"><em>lox/Interpreter.java</em>, add after <em>visitPrintStmt</em>()</div>
-
 <p>If we have a return value, we evaluate it, otherwise, we use <code>nil</code>. Then we take
 that value and wrap it in a custom exception class and throw it.</p>
-<div class="codehilite"><div class="source-file"><em>lox/Return.java</em><br>
-create new file</div>
-<pre><span class="k">package</span> <span class="i">com.craftinginterpreters.lox</span>;
-
-<span class="k">class</span> <span class="t">Return</span> <span class="k">extends</span> <span class="t">RuntimeException</span> {
-  <span class="k">final</span> <span class="t">Object</span> <span class="i">value</span>;
-
-  <span class="t">Return</span>(<span class="t">Object</span> <span class="i">value</span>) {
-    <span class="k">super</span>(<span class="k">null</span>, <span class="k">null</span>, <span class="k">false</span>, <span class="k">false</span>);
-    <span class="k">this</span>.<span class="i">value</span> = <span class="i">value</span>;
-  }
-}
+<div class="codehilite"><pre><span class="c"># lox/runtime.py at top level</span>
+<span class="k">class</span> <span class="t">LoxReturn</span>(<span class="t">Exception</span>):
+    <span class="k">def</span> <span class="i">__init__</span>(<span class="i">self</span>, <span class="i">value</span>):
+        <span class="i">super</span>().<span class="i">__init__</span>()
+        <span class="i">self</span>.<span class="i">value</span> = <span class="i">value</span>
 </pre></div>
-<div class="source-file-narrow"><em>lox/Return.java</em>, create new file</div>
-
-<p>This class wraps the return value with the accoutrements Java requires for a
-runtime exception class. The weird super constructor call with those <code>null</code> and
-<code>false</code> arguments disables some JVM machinery that we don&rsquo;t need. Since we&rsquo;re
-using our exception class for <span name="exception">control flow</span> and not
-actual error handling, we don&rsquo;t need overhead like stack traces.</p>
+<p>We need to import it in the interpreter module:</p>
+<div class="codehilite"><pre><span class="c"># lox/interpreter.py at the top</span>
+<span class="k">from</span> <span class="i">lox</span>.<span class="i">runtime</span> <span class="k">import</span> <span class="t">LoxReturn</span>
+</pre></div>
+<p>This class wraps the return value with a Python runtime exception class. The
+constructor is called to initialize the exception property. Since we&rsquo;re using
+our exception class for <span name="exception">control flow</span> and not
+actual error handling, we don&rsquo;t need the overhead of constructing strings with
+error messages.</p>
 <aside name="exception">
 <p>For the record, I&rsquo;m not generally a fan of using exceptions for control flow.
 But inside a heavily recursive tree-walk interpreter, it&rsquo;s the way to go. Since
-our own syntax tree evaluation is so heavily tied to the Java call stack, we&rsquo;re
-pressed to do some heavyweight call stack manipulation occasionally, and
+our own syntax tree evaluation is so heavily tied to the Python call stack,
+we&rsquo;re pressed to do some heavyweight call stack manipulation occasionally, and
 exceptions are a handy tool for that.</p>
 </aside>
 <p>We want this to unwind all the way to where the function call began, the
 <code>call()</code> method in LoxFunction.</p>
-<div class="codehilite"><pre class="insert-before">          arguments.get(i));
-    }
-
-</pre><div class="source-file"><em>lox/LoxFunction.java</em><br>
-in <em>call</em>()<br>
-replace 1 line</div>
-<pre class="insert">    <span class="k">try</span> {
-      <span class="i">interpreter</span>.<span class="i">executeBlock</span>(<span class="i">declaration</span>.<span class="i">body</span>, <span class="i">environment</span>);
-    } <span class="k">catch</span> (<span class="t">Return</span> <span class="i">returnValue</span>) {
-      <span class="k">return</span> <span class="i">returnValue</span>.<span class="i">value</span>;
-    }
-</pre><pre class="insert-after">    return null;
+<div class="codehilite"><pre><span class="c"># lox/function.py LoxFunction.call()</span>
+<span class="c"># Replace the for loop with this:</span>
+    <span class="k">try</span>:
+        <span class="k">for</span> <span class="i">stmt</span> <span class="k">in</span> <span class="i">self</span>.<span class="i">declaration</span>.<span class="i">body</span>:
+            <span class="i">interpreter</span>.<span class="k">exec</span>(<span class="i">stmt</span>, <span class="i">env</span>)
+    <span class="k">except</span> <span class="t">LoxReturn</span> <span class="k">as</span> <span class="i">result</span>:
+        <span class="k">return</span> <span class="i">result</span>.<span class="i">value</span>
 </pre></div>
-<div class="source-file-narrow"><em>lox/LoxFunction.java</em>, in <em>call</em>(), replace 1 line</div>
-
-<p>We wrap the call to <code>executeBlock()</code> in a try-catch block. When it catches a
-return exception, it pulls out the value and makes that the return value from
-<code>call()</code>. If it never catches one of these exceptions, it means the function
-reached the end of its body without hitting a <code>return</code> statement. In that case,
-it implicitly returns <code>nil</code>.</p>
-<p>Let&rsquo;s try it out. We finally have enough power to support this classic
-example<span class="em">&mdash;</span>a recursive function to calculate Fibonacci numbers:</p>
+<p>We wrap the call to the statements in the function body in a try-except block.
+When it catches a return exception, it pulls out the value and makes that the
+return value from <code>call()</code>. If it never catches one of these exceptions, it
+means the function reached the end of its body without hitting a <code>return</code>
+statement. In that case, it implicitly returns <code>nil</code>.</p>
+<p>Let&rsquo;s try it out. We finally have enough power to support this classic example<span class="em">&mdash;</span>a recursive function to calculate Fibonacci numbers:</p>
 <p><span name="slow"></span></p>
 <div class="codehilite"><pre><span class="k">fun</span> <span class="i">fib</span>(<span class="i">n</span>) {
   <span class="k">if</span> (<span class="i">n</span> &lt;= <span class="n">1</span>) <span class="k">return</span> <span class="i">n</span>;
@@ -1049,11 +945,27 @@ several chapters implementing<span class="em">&mdash;</span>expressions, arithme
 variables, functions, function calls, parameter binding, and returns.</p>
 <aside name="slow">
 <p>You might notice this is pretty slow. Obviously, recursion isn&rsquo;t the most
-efficient way to calculate Fibonacci numbers, but as a microbenchmark, it does
-a good job of stress testing how fast our interpreter implements function calls.</p>
+efficient way to calculate Fibonacci numbers, but as a microbenchmark, it does a
+good job of stress testing how fast our interpreter implements function calls.</p>
 <p>As you can see, the answer is &ldquo;not very fast&rdquo;. That&rsquo;s OK. Our C interpreter will
 be faster.</p>
 </aside>
+<p>Since we mentioned recursion, it is a good time to ponder what would happen if
+the Lox program enter an infinite recursion. Each function call consumes a bit
+of memory on the call stack and eventually, if the recursion goes deep enough,
+the interpreter will run out of memory.</p>
+<p>In C programs, this would result in a stack overflow error when the operating
+system crashes the misbehaving program. Python allocates its call stack on the
+heap (confusing, hmm?), but it still puts a limit on how deep the recursion can
+go on and raises a <code>RecursionError</code> exception when that limit is exceeded. We
+should capture those errors and report them as Lox runtime errors to the user:</p>
+<div class="codehilite"><pre><span class="c"># lox/function.py LoxFunction.call()</span>
+<span class="c"># Create a new except clause</span>
+    ...
+    <span class="k">except</span> <span class="t">RecursionError</span>:
+        <span class="i">msg</span> = <span class="s">&quot;Stack overflow.&quot;</span>
+        <span class="k">raise</span> <span class="t">LoxRuntimeError</span>(<span class="i">msg</span>, <span class="i">self</span>.<span class="i">declaration</span>.<span class="i">name</span>)
+</pre></div>
 <h2><a href="#local-functions-and-closures" id="local-functions-and-closures"><small>10&#8202;.&#8202;6</small>Local Functions and Closures</a></h2>
 <p>Our functions are pretty full featured, but there is one hole to patch. In fact,
 it&rsquo;s a big enough gap that we&rsquo;ll spend most of the <a href="resolving-and-binding.html">next chapter</a> sealing it
@@ -1109,7 +1021,7 @@ environment. Since the interpreter doesn&rsquo;t keep the environment surroundin
 <p>This data structure is called a <span name="closure"><strong>closure</strong></span> because
 it &ldquo;closes over&rdquo; and holds on to the surrounding variables where the function is
 declared. Closures have been around since the early Lisp days, and language
-hackers have come up with all manner of ways to implement them. For jlox, we&rsquo;ll
+hackers have come up with all manner of ways to implement them. For pylox, we&rsquo;ll
 do the simplest thing that works. In LoxFunction, we add a field to store an
 environment.</p>
 <aside name="closure">
@@ -1117,48 +1029,27 @@ environment.</p>
 along that computer scientists communicated with each other using only primitive
 grunts and pawing hand gestures.</p>
 </aside>
-<div class="codehilite"><pre class="insert-before">  private final Stmt.Function declaration;
-</pre><div class="source-file"><em>lox/LoxFunction.java</em><br>
-in class <em>LoxFunction</em></div>
-<pre class="insert">  <span class="k">private</span> <span class="k">final</span> <span class="t">Environment</span> <span class="i">closure</span>;
-
-</pre><pre class="insert-after">  LoxFunction(Stmt.Function declaration) {
+<div class="codehilite"><pre><span class="c"># lox/function.py LoxFunction parameters</span>
+    ...
+    <span class="i">closure</span>: <span class="t">Env</span>
+    ...
 </pre></div>
-<div class="source-file-narrow"><em>lox/LoxFunction.java</em>, in class <em>LoxFunction</em></div>
-
-<p>We initialize that in the constructor.</p>
-<div class="codehilite"><div class="source-file"><em>lox/LoxFunction.java</em><br>
-constructor <em>LoxFunction</em>()<br>
-replace 1 line</div>
-<pre class="insert">  <span class="t">LoxFunction</span>(<span class="t">Stmt</span>.<span class="t">Function</span> <span class="i">declaration</span>, <span class="t">Environment</span> <span class="i">closure</span>) {
-    <span class="k">this</span>.<span class="i">closure</span> = <span class="i">closure</span>;
-</pre><pre class="insert-after">    this.declaration = declaration;
-</pre></div>
-<div class="source-file-narrow"><em>lox/LoxFunction.java</em>, constructor <em>LoxFunction</em>(), replace 1 line</div>
-
 <p>When we create a LoxFunction, we capture the current environment.</p>
-<div class="codehilite"><pre class="insert-before">  public Void visitFunctionStmt(Stmt.Function stmt) {
-</pre><div class="source-file"><em>lox/Interpreter.java</em><br>
-in <em>visitFunctionStmt</em>()<br>
-replace 1 line</div>
-<pre class="insert">    <span class="t">LoxFunction</span> <span class="i">function</span> = <span class="k">new</span> <span class="t">LoxFunction</span>(<span class="i">stmt</span>, <span class="i">environment</span>);
-</pre><pre class="insert-after">    environment.define(stmt.name.lexeme, function);
+<div class="codehilite"><pre><span class="c"># lox/exec.py exec(Function)</span>
+<span class="c"># Add parameter to LoxFunction constructor</span>
+    <span class="i">function</span> = <span class="t">LoxFunction</span>(<span class="i">stmt</span>, <span class="i">env</span>)
+    ...
 </pre></div>
-<div class="source-file-narrow"><em>lox/Interpreter.java</em>, in <em>visitFunctionStmt</em>(), replace 1 line</div>
-
 <p>This is the environment that is active when the function is <em>declared</em> not when
 it&rsquo;s <em>called</em>, which is what we want. It represents the lexical scope
 surrounding the function declaration. Finally, when we call the function, we use
 that environment as the call&rsquo;s parent instead of going straight to <code>globals</code>.</p>
-<div class="codehilite"><pre class="insert-before">                     List&lt;Object&gt; arguments) {
-</pre><div class="source-file"><em>lox/LoxFunction.java</em><br>
-in <em>call</em>()<br>
-replace 1 line</div>
-<pre class="insert">    <span class="t">Environment</span> <span class="i">environment</span> = <span class="k">new</span> <span class="t">Environment</span>(<span class="i">closure</span>);
-</pre><pre class="insert-after">    for (int i = 0; i &lt; declaration.params.size(); i++) {
+<div class="codehilite"><pre><span class="c"># lox/function.py LoxFunction.call()</span>
+<span class="c"># Replace env = env.push()</span>
+    ...
+    <span class="i">env</span> = <span class="i">self</span>.<span class="i">closure</span>.<span class="i">push</span>()
+    ...
 </pre></div>
-<div class="source-file-narrow"><em>lox/LoxFunction.java</em>, in <em>call</em>(), replace 1 line</div>
-
 <p>This creates an environment chain that goes from the function&rsquo;s body out through
 the environments where the function is declared, all the way out to the global
 scope. The runtime environment chain matches the textual nesting of the source
@@ -1183,8 +1074,8 @@ implementations don&rsquo;t have that problem. Why not?</p>
 <li>
 <p>Lox&rsquo;s function declaration syntax performs two independent operations. It
 creates a function and also binds it to a name. This improves usability for
-the common case where you do want to associate a name with the function.
-But in functional-styled code, you often want to create a function to
+the common case where you do want to associate a name with the function. But
+in functional-styled code, you often want to create a function to
 immediately pass it to some other function or return it. In that case, it
 doesn&rsquo;t need a name.</p>
 <p>Languages that encourage a functional style usually support <strong>anonymous

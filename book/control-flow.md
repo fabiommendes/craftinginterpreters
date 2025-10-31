@@ -168,9 +168,8 @@ be one that ends in a semicolon.
 
 An `if` statement has an expression for the condition, then a statement to
 execute if the condition is truthy. Optionally, it may also have an `else`
-keyword and a statement to execute if the condition is falsey. The
-<span name="if-ast">syntax tree node</span> has fields for each of those three
-pieces.
+keyword and a statement to execute if the condition is falsey. The syntax tree
+node has fields for each of those three pieces.
 
 ```python
 # lox/ast.py
@@ -180,14 +179,6 @@ class If(Stmt):
     then_branch: Stmt
     else_branch: Stmt | None
 ```
-
-<aside name="if-ast">
-
-The generated code for the new node is in [Appendix II][appendix-if].
-
-[appendix-if]: appendix-ii.html#if-statement
-
-</aside>
 
 Like other statements, the parser recognizes an `if` statement by the leading
 `if` keyword.

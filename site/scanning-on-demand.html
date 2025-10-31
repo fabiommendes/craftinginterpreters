@@ -109,27 +109,7 @@ see what they are.</p>
 <h2><a href="#spinning-up-the-interpreter" id="spinning-up-the-interpreter"><small>16&#8202;.&#8202;1</small>Spinning Up the Interpreter</a></h2>
 <p>Now that we&rsquo;re building the front end, we can get clox running like a real
 interpreter. No more hand-authored chunks of bytecode. It&rsquo;s time for a REPL and
-script loading. Tear out most of the code in <code>main()</code> and replace it with:</p>
-<div class="codehilite"><pre class="insert-before">int main(int argc, const char* argv[]) {
-  initVM();
-
-</pre><div class="source-file"><em>main.c</em><br>
-in <em>main</em>()<br>
-replace 26 lines</div>
-<pre class="insert">  <span class="k">if</span> (<span class="i">argc</span> == <span class="n">1</span>) {
-    <span class="i">repl</span>();
-  } <span class="k">else</span> <span class="k">if</span> (<span class="i">argc</span> == <span class="n">2</span>) {
-    <span class="i">runFile</span>(<span class="i">argv</span>[<span class="n">1</span>]);
-  } <span class="k">else</span> {
-    <span class="i">fprintf</span>(<span class="i">stderr</span>, <span class="s">&quot;Usage: clox [path]</span><span class="e">\n</span><span class="s">&quot;</span>);
-    <span class="i">exit</span>(<span class="n">64</span>);
-  }
-
-  <span class="i">freeVM</span>();
-</pre><pre class="insert-after">  return 0;
-}
-</pre></div>
-<div class="source-file-narrow"><em>main.c</em>, in <em>main</em>(), replace 26 lines</div>
+script loading. Tear out most of the code in <code>main()</code> and replace it with:</p><strong>ERROR: Missing snippet args</strong>
 
 <p>If you pass <span name="args">no arguments</span> to the executable, you are
 dropped into the REPL. A single command line argument is understood to be the
@@ -138,55 +118,15 @@ path to a script to run.</p>
 <p>The code tests for one and two arguments, not zero and one, because the first
 argument in <code>argv</code> is always the name of the executable being run.</p>
 </aside>
-<p>We&rsquo;ll need a few system headers, so let&rsquo;s get them all out of the way.</p>
-<div class="codehilite"><div class="source-file"><em>main.c</em><br>
-add to top of file</div>
-<pre class="insert"><span class="a">#include &lt;stdio.h&gt;</span>
-<span class="a">#include &lt;stdlib.h&gt;</span>
-<span class="a">#include &lt;string.h&gt;</span>
+<p>We&rsquo;ll need a few system headers, so let&rsquo;s get them all out of the way.</p><strong>ERROR: Missing snippet main-includes</strong>
 
-</pre><pre class="insert-after">#include &quot;common.h&quot;
-</pre></div>
-<div class="source-file-narrow"><em>main.c</em>, add to top of file</div>
-
-<p>Next, we get the REPL up and REPL-ing.</p>
-<div class="codehilite"><pre class="insert-before">#include &quot;vm.h&quot;
-</pre><div class="source-file"><em>main.c</em></div>
-<pre class="insert">
-
-<span class="k">static</span> <span class="t">void</span> <span class="i">repl</span>() {
-  <span class="t">char</span> <span class="i">line</span>[<span class="n">1024</span>];
-  <span class="k">for</span> (;;) {
-    <span class="i">printf</span>(<span class="s">&quot;&gt; &quot;</span>);
-
-    <span class="k">if</span> (!<span class="i">fgets</span>(<span class="i">line</span>, <span class="k">sizeof</span>(<span class="i">line</span>), <span class="i">stdin</span>)) {
-      <span class="i">printf</span>(<span class="s">&quot;</span><span class="e">\n</span><span class="s">&quot;</span>);
-      <span class="k">break</span>;
-    }
-
-    <span class="i">interpret</span>(<span class="i">line</span>);
-  }
-}
-</pre></div>
-<div class="source-file-narrow"><em>main.c</em></div>
+<p>Next, we get the REPL up and REPL-ing.</p><strong>ERROR: Missing snippet repl</strong>
 
 <p>A quality REPL handles input that spans multiple lines gracefully and doesn&rsquo;t
 have a hardcoded line length limit. This REPL here is a little more, ahem,
 austere, but it&rsquo;s fine for our purposes.</p>
 <p>The real work happens in <code>interpret()</code>. We&rsquo;ll get to that soon, but first let&rsquo;s
-take care of loading scripts.</p>
-<div class="codehilite"><div class="source-file"><em>main.c</em><br>
-add after <em>repl</em>()</div>
-<pre><span class="k">static</span> <span class="t">void</span> <span class="i">runFile</span>(<span class="k">const</span> <span class="t">char</span>* <span class="i">path</span>) {
-  <span class="t">char</span>* <span class="i">source</span> = <span class="i">readFile</span>(<span class="i">path</span>);
-  <span class="t">InterpretResult</span> <span class="i">result</span> = <span class="i">interpret</span>(<span class="i">source</span>);
-  <span class="i">free</span>(<span class="i">source</span>);<span name="owner"> </span>
-
-  <span class="k">if</span> (<span class="i">result</span> == <span class="a">INTERPRET_COMPILE_ERROR</span>) <span class="i">exit</span>(<span class="n">65</span>);
-  <span class="k">if</span> (<span class="i">result</span> == <span class="a">INTERPRET_RUNTIME_ERROR</span>) <span class="i">exit</span>(<span class="n">70</span>);
-}
-</pre></div>
-<div class="source-file-narrow"><em>main.c</em>, add after <em>repl</em>()</div>
+take care of loading scripts.</p><strong>ERROR: Missing snippet run-file</strong>
 
 <p>We read the file and execute the resulting string of Lox source code. Then,
 based on the result of that, we set the exit code appropriately because we&rsquo;re
@@ -200,25 +140,7 @@ program. Java just does it for us. C++ gives us tools to encode the policy
 directly so that the compiler validates it for us.</p>
 <p>I like C&rsquo;s simplicity, but we pay a real price for it<span class="em">&mdash;</span>the language requires
 us to be more conscientious.</p>
-</aside>
-<div class="codehilite"><div class="source-file"><em>main.c</em><br>
-add after <em>repl</em>()</div>
-<pre><span class="k">static</span> <span class="t">char</span>* <span class="i">readFile</span>(<span class="k">const</span> <span class="t">char</span>* <span class="i">path</span>) {
-  <span class="a">FILE</span>* <span class="i">file</span> = <span class="i">fopen</span>(<span class="i">path</span>, <span class="s">&quot;rb&quot;</span>);
-
-  <span class="i">fseek</span>(<span class="i">file</span>, <span class="n">0L</span>, <span class="a">SEEK_END</span>);
-  <span class="t">size_t</span> <span class="i">fileSize</span> = <span class="i">ftell</span>(<span class="i">file</span>);
-  <span class="i">rewind</span>(<span class="i">file</span>);
-
-  <span class="t">char</span>* <span class="i">buffer</span> = (<span class="t">char</span>*)<span class="i">malloc</span>(<span class="i">fileSize</span> + <span class="n">1</span>);
-  <span class="t">size_t</span> <span class="i">bytesRead</span> = <span class="i">fread</span>(<span class="i">buffer</span>, <span class="k">sizeof</span>(<span class="t">char</span>), <span class="i">fileSize</span>, <span class="i">file</span>);
-  <span class="i">buffer</span>[<span class="i">bytesRead</span>] = <span class="s">&#39;\0&#39;</span>;
-
-  <span class="i">fclose</span>(<span class="i">file</span>);
-  <span class="k">return</span> <span class="i">buffer</span>;
-}
-</pre></div>
-<div class="source-file-narrow"><em>main.c</em>, add after <em>repl</em>()</div>
+</aside><strong>ERROR: Missing snippet read-file</strong>
 
 <p>Like a lot of C code, it takes more effort than it seems like it should,
 especially for a language expressly designed for operating systems. The
@@ -244,50 +166,16 @@ eating our vegetables or flossing.</p>
 <p>Fortunately, we don&rsquo;t need to do anything particularly clever if a failure
 occurs. If we can&rsquo;t correctly read the user&rsquo;s script, all we can really do is
 tell the user and exit the interpreter gracefully. First of all, we might fail
-to open the file.</p>
-<div class="codehilite"><pre class="insert-before">  FILE* file = fopen(path, &quot;rb&quot;);
-</pre><div class="source-file"><em>main.c</em><br>
-in <em>readFile</em>()</div>
-<pre class="insert">  <span class="k">if</span> (<span class="i">file</span> == <span class="a">NULL</span>) {
-    <span class="i">fprintf</span>(<span class="i">stderr</span>, <span class="s">&quot;Could not open file </span><span class="e">\&quot;</span><span class="s">%s</span><span class="e">\&quot;</span><span class="s">.</span><span class="e">\n</span><span class="s">&quot;</span>, <span class="i">path</span>);
-    <span class="i">exit</span>(<span class="n">74</span>);
-  }
-</pre><pre class="insert-after">
-
-  fseek(file, 0L, SEEK_END);
-</pre></div>
-<div class="source-file-narrow"><em>main.c</em>, in <em>readFile</em>()</div>
+to open the file.</p><strong>ERROR: Missing snippet no-file</strong>
 
 <p>This can happen if the file doesn&rsquo;t exist or the user doesn&rsquo;t have access to it.
 It&rsquo;s pretty common<span class="em">&mdash;</span>people mistype paths all the time.</p>
-<p>This failure is much rarer:</p>
-<div class="codehilite"><pre class="insert-before">  char* buffer = (char*)malloc(fileSize + 1);
-</pre><div class="source-file"><em>main.c</em><br>
-in <em>readFile</em>()</div>
-<pre class="insert">  <span class="k">if</span> (<span class="i">buffer</span> == <span class="a">NULL</span>) {
-    <span class="i">fprintf</span>(<span class="i">stderr</span>, <span class="s">&quot;Not enough memory to read </span><span class="e">\&quot;</span><span class="s">%s</span><span class="e">\&quot;</span><span class="s">.</span><span class="e">\n</span><span class="s">&quot;</span>, <span class="i">path</span>);
-    <span class="i">exit</span>(<span class="n">74</span>);
-  }
-
-</pre><pre class="insert-after">  size_t bytesRead = fread(buffer, sizeof(char), fileSize, file);
-</pre></div>
-<div class="source-file-narrow"><em>main.c</em>, in <em>readFile</em>()</div>
+<p>This failure is much rarer:</p><strong>ERROR: Missing snippet no-buffer</strong>
 
 <p>If we can&rsquo;t even allocate enough memory to read the Lox script, the user&rsquo;s
 probably got bigger problems to worry about, but we should do our best to at
 least let them know.</p>
-<p>Finally, the read itself may fail.</p>
-<div class="codehilite"><pre class="insert-before">  size_t bytesRead = fread(buffer, sizeof(char), fileSize, file);
-</pre><div class="source-file"><em>main.c</em><br>
-in <em>readFile</em>()</div>
-<pre class="insert">  <span class="k">if</span> (<span class="i">bytesRead</span> &lt; <span class="i">fileSize</span>) {
-    <span class="i">fprintf</span>(<span class="i">stderr</span>, <span class="s">&quot;Could not read file </span><span class="e">\&quot;</span><span class="s">%s</span><span class="e">\&quot;</span><span class="s">.</span><span class="e">\n</span><span class="s">&quot;</span>, <span class="i">path</span>);
-    <span class="i">exit</span>(<span class="n">74</span>);
-  }
-
-</pre><pre class="insert-after">  buffer[bytesRead] = '\0';
-</pre></div>
-<div class="source-file-narrow"><em>main.c</em>, in <em>readFile</em>()</div>
+<p>Finally, the read itself may fail.</p><strong>ERROR: Missing snippet no-read</strong>
 
 <p>This is also unlikely. Actually, the <span name="printf"> calls</span> to
 <code>fseek()</code>, <code>ftell()</code>, and <code>rewind()</code> could theoretically fail too, but let&rsquo;s not
@@ -300,99 +188,26 @@ error?</p>
 <p>We&rsquo;ve got ourselves a string of Lox source code, so now we&rsquo;re ready to set up a
 pipeline to scan, compile, and execute it. It&rsquo;s driven by <code>interpret()</code>. Right
 now, that function runs our old hardcoded test chunk. Let&rsquo;s change it to
-something closer to its final incarnation.</p>
-<div class="codehilite"><pre class="insert-before">void freeVM();
-</pre><div class="source-file"><em>vm.h</em><br>
-function <em>interpret</em>()<br>
-replace 1 line</div>
-<pre class="insert"><span class="t">InterpretResult</span> <span class="i">interpret</span>(<span class="k">const</span> <span class="t">char</span>* <span class="i">source</span>);
-</pre><pre class="insert-after">void push(Value value);
-</pre></div>
-<div class="source-file-narrow"><em>vm.h</em>, function <em>interpret</em>(), replace 1 line</div>
+something closer to its final incarnation.</p><strong>ERROR: Missing snippet vm-interpret-h</strong>
 
 <p>Where before we passed in a Chunk, now we pass in the string of source code.
-Here&rsquo;s the new implementation:</p>
-<div class="codehilite"><div class="source-file"><em>vm.c</em><br>
-function <em>interpret</em>()<br>
-replace 4 lines</div>
-<pre class="insert"><span class="t">InterpretResult</span> <span class="i">interpret</span>(<span class="k">const</span> <span class="t">char</span>* <span class="i">source</span>) {
-  <span class="i">compile</span>(<span class="i">source</span>);
-  <span class="k">return</span> <span class="a">INTERPRET_OK</span>;
-</pre><pre class="insert-after">}
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em>, function <em>interpret</em>(), replace 4 lines</div>
+Here&rsquo;s the new implementation:</p><strong>ERROR: Missing snippet vm-interpret-c</strong>
 
 <p>We won&rsquo;t build the actual <em>compiler</em> yet in this chapter, but we can start
-laying out its structure. It lives in a new module.</p>
-<div class="codehilite"><pre class="insert-before">#include &quot;common.h&quot;
-</pre><div class="source-file"><em>vm.c</em></div>
-<pre class="insert"><span class="a">#include &quot;compiler.h&quot;</span>
-</pre><pre class="insert-after">#include &quot;debug.h&quot;
-</pre></div>
-<div class="source-file-narrow"><em>vm.c</em></div>
+laying out its structure. It lives in a new module.</p><strong>ERROR: Missing snippet vm-include-compiler</strong>
 
-<p>For now, the one function in it is declared like so:</p>
-<div class="codehilite"><div class="source-file"><em>compiler.h</em><br>
-create new file</div>
-<pre><span class="a">#ifndef clox_compiler_h</span>
-<span class="a">#define clox_compiler_h</span>
-
-<span class="t">void</span> <span class="i">compile</span>(<span class="k">const</span> <span class="t">char</span>* <span class="i">source</span>);
-
-<span class="a">#endif</span>
-</pre></div>
-<div class="source-file-narrow"><em>compiler.h</em>, create new file</div>
+<p>For now, the one function in it is declared like so:</p><strong>ERROR: Missing snippet compiler-h</strong>
 
 <p>That signature will change, but it gets us going.</p>
 <p>The first phase of compilation is scanning<span class="em">&mdash;</span>the thing we&rsquo;re doing in this
-chapter<span class="em">&mdash;</span>so right now all the compiler does is set that up.</p>
-<div class="codehilite"><div class="source-file"><em>compiler.c</em><br>
-create new file</div>
-<pre><span class="a">#include &lt;stdio.h&gt;</span>
-
-<span class="a">#include &quot;common.h&quot;</span>
-<span class="a">#include &quot;compiler.h&quot;</span>
-<span class="a">#include &quot;scanner.h&quot;</span>
-
-<span class="t">void</span> <span class="i">compile</span>(<span class="k">const</span> <span class="t">char</span>* <span class="i">source</span>) {
-  <span class="i">initScanner</span>(<span class="i">source</span>);
-}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, create new file</div>
+chapter<span class="em">&mdash;</span>so right now all the compiler does is set that up.</p><strong>ERROR: Missing snippet compiler-c</strong>
 
 <p>This will also grow in later chapters, naturally.</p>
 <h3><a href="#the-scanner-scans" id="the-scanner-scans"><small>16&#8202;.&#8202;1&#8202;.&#8202;2</small>The scanner scans</a></h3>
 <p>There are still a few more feet of scaffolding to stand up before we can start
-writing useful code. First, a new header:</p>
-<div class="codehilite"><div class="source-file"><em>scanner.h</em><br>
-create new file</div>
-<pre><span class="a">#ifndef clox_scanner_h</span>
-<span class="a">#define clox_scanner_h</span>
+writing useful code. First, a new header:</p><strong>ERROR: Missing snippet scanner-h</strong>
 
-<span class="t">void</span> <span class="i">initScanner</span>(<span class="k">const</span> <span class="t">char</span>* <span class="i">source</span>);
-
-<span class="a">#endif</span>
-</pre></div>
-<div class="source-file-narrow"><em>scanner.h</em>, create new file</div>
-
-<p>And its corresponding implementation:</p>
-<div class="codehilite"><div class="source-file"><em>scanner.c</em><br>
-create new file</div>
-<pre><span class="a">#include &lt;stdio.h&gt;</span>
-<span class="a">#include &lt;string.h&gt;</span>
-
-<span class="a">#include &quot;common.h&quot;</span>
-<span class="a">#include &quot;scanner.h&quot;</span>
-
-<span class="k">typedef</span> <span class="k">struct</span> {
-  <span class="k">const</span> <span class="t">char</span>* <span class="i">start</span>;
-  <span class="k">const</span> <span class="t">char</span>* <span class="i">current</span>;
-  <span class="t">int</span> <span class="i">line</span>;
-} <span class="t">Scanner</span>;
-
-<span class="t">Scanner</span> <span class="i">scanner</span>;
-</pre></div>
-<div class="source-file-narrow"><em>scanner.c</em>, create new file</div>
+<p>And its corresponding implementation:</p><strong>ERROR: Missing snippet scanner-c</strong>
 
 <p>As our scanner chews through the user&rsquo;s source code, it tracks how far it&rsquo;s
 gone. Like we did with the VM, we wrap that state in a struct and then create a
@@ -410,16 +225,7 @@ character is <code>o</code> and the character we most recently consumed is <code
 reporting. That&rsquo;s it! We don&rsquo;t even keep a pointer to the beginning of the
 source code string. The scanner works its way through the code once and is done
 after that.</p>
-<p>Since we have some state, we should initialize it.</p>
-<div class="codehilite"><div class="source-file"><em>scanner.c</em><br>
-add after variable <em>scanner</em></div>
-<pre><span class="t">void</span> <span class="i">initScanner</span>(<span class="k">const</span> <span class="t">char</span>* <span class="i">source</span>) {
-  <span class="i">scanner</span>.<span class="i">start</span> = <span class="i">source</span>;
-  <span class="i">scanner</span>.<span class="i">current</span> = <span class="i">source</span>;
-  <span class="i">scanner</span>.<span class="i">line</span> = <span class="n">1</span>;
-}
-</pre></div>
-<div class="source-file-narrow"><em>scanner.c</em>, add after variable <em>scanner</em></div>
+<p>Since we have some state, we should initialize it.</p><strong>ERROR: Missing snippet init-scanner</strong>
 
 <p>We start at the very first character on the very first line, like a runner
 crouched at the starting line.</p>
@@ -436,26 +242,7 @@ scan a token until the compiler needs one. When the scanner provides one, it
 returns the token by value. It doesn&rsquo;t need to dynamically allocate anything<span class="em">&mdash;</span>it can just pass tokens around on the C stack.</p>
 <p>Unfortunately, we don&rsquo;t have a compiler yet that can ask the scanner for tokens,
 so the scanner will just sit there doing nothing. To kick it into action, we&rsquo;ll
-write some temporary code to drive it.</p>
-<div class="codehilite"><pre class="insert-before">  initScanner(source);
-</pre><div class="source-file"><em>compiler.c</em><br>
-in <em>compile</em>()</div>
-<pre class="insert">  <span class="t">int</span> <span class="i">line</span> = -<span class="n">1</span>;
-  <span class="k">for</span> (;;) {
-    <span class="t">Token</span> <span class="i">token</span> = <span class="i">scanToken</span>();
-    <span class="k">if</span> (<span class="i">token</span>.<span class="i">line</span> != <span class="i">line</span>) {
-      <span class="i">printf</span>(<span class="s">&quot;%4d &quot;</span>, <span class="i">token</span>.<span class="i">line</span>);
-      <span class="i">line</span> = <span class="i">token</span>.<span class="i">line</span>;
-    } <span class="k">else</span> {
-      <span class="i">printf</span>(<span class="s">&quot;   | &quot;</span>);
-    }
-    <span class="i">printf</span>(<span class="s">&quot;%2d &#39;%.*s&#39;</span><span class="e">\n</span><span class="s">&quot;</span>, <span class="i">token</span>.<span class="i">type</span>, <span class="i">token</span>.<span class="i">length</span>, <span class="i">token</span>.<span class="i">start</span>);<span name="format"> </span>
-
-    <span class="k">if</span> (<span class="i">token</span>.<span class="i">type</span> == <span class="a">TOKEN_EOF</span>) <span class="k">break</span>;
-  }
-</pre><pre class="insert-after">}
-</pre></div>
-<div class="source-file-narrow"><em>compiler.c</em>, in <em>compile</em>()</div>
+write some temporary code to drive it.</p><strong>ERROR: Missing snippet dump-tokens</strong>
 
 <aside name="format">
 <p>That <code>%.*s</code> in the format string is a neat feature. Usually, you set the output
@@ -486,69 +273,14 @@ empty lexeme on line 2 is the EOF token.</p>
 C gives us.</p>
 </aside>
 <p>The goal for the rest of the chapter is to make that blob of code work by
-implementing this key function:</p>
-<div class="codehilite"><pre class="insert-before">void initScanner(const char* source);
-</pre><div class="source-file"><em>scanner.h</em><br>
-add after <em>initScanner</em>()</div>
-<pre class="insert"><span class="t">Token</span> <span class="i">scanToken</span>();
-</pre><pre class="insert-after">
-
-#endif
-</pre></div>
-<div class="source-file-narrow"><em>scanner.h</em>, add after <em>initScanner</em>()</div>
+implementing this key function:</p><strong>ERROR: Missing snippet scan-token-h</strong>
 
 <p>Each call scans and returns the next token in the source code. A token looks
-like this:</p>
-<div class="codehilite"><pre class="insert-before">#define clox_scanner_h
-</pre><div class="source-file"><em>scanner.h</em></div>
-<pre class="insert">
-
-<span class="k">typedef</span> <span class="k">struct</span> {
-  <span class="t">TokenType</span> <span class="i">type</span>;
-  <span class="k">const</span> <span class="t">char</span>* <span class="i">start</span>;
-  <span class="t">int</span> <span class="i">length</span>;
-  <span class="t">int</span> <span class="i">line</span>;
-} <span class="t">Token</span>;
-</pre><pre class="insert-after">
-
-void initScanner(const char* source);
-</pre></div>
-<div class="source-file-narrow"><em>scanner.h</em></div>
+like this:</p><strong>ERROR: Missing snippet token-struct</strong>
 
 <p>It&rsquo;s pretty similar to jlox&rsquo;s Token class. We have an enum identifying what type
 of token it is<span class="em">&mdash;</span>number, identifier, <code>+</code> operator, etc. The enum is virtually
-identical to the one in jlox, so let&rsquo;s just hammer out the whole thing.</p>
-<div class="codehilite"><pre class="insert-before">#ifndef clox_scanner_h
-#define clox_scanner_h
-</pre><div class="source-file"><em>scanner.h</em></div>
-<pre class="insert">
-
-<span class="k">typedef</span> <span class="k">enum</span> {
-  <span class="c">// Single-character tokens.</span>
-  <span class="a">TOKEN_LEFT_PAREN</span>, <span class="a">TOKEN_RIGHT_PAREN</span>,
-  <span class="a">TOKEN_LEFT_BRACE</span>, <span class="a">TOKEN_RIGHT_BRACE</span>,
-  <span class="a">TOKEN_COMMA</span>, <span class="a">TOKEN_DOT</span>, <span class="a">TOKEN_MINUS</span>, <span class="a">TOKEN_PLUS</span>,
-  <span class="a">TOKEN_SEMICOLON</span>, <span class="a">TOKEN_SLASH</span>, <span class="a">TOKEN_STAR</span>,
-  <span class="c">// One or two character tokens.</span>
-  <span class="a">TOKEN_BANG</span>, <span class="a">TOKEN_BANG_EQUAL</span>,
-  <span class="a">TOKEN_EQUAL</span>, <span class="a">TOKEN_EQUAL_EQUAL</span>,
-  <span class="a">TOKEN_GREATER</span>, <span class="a">TOKEN_GREATER_EQUAL</span>,
-  <span class="a">TOKEN_LESS</span>, <span class="a">TOKEN_LESS_EQUAL</span>,
-  <span class="c">// Literals.</span>
-  <span class="a">TOKEN_IDENTIFIER</span>, <span class="a">TOKEN_STRING</span>, <span class="a">TOKEN_NUMBER</span>,
-  <span class="c">// Keywords.</span>
-  <span class="a">TOKEN_AND</span>, <span class="a">TOKEN_CLASS</span>, <span class="a">TOKEN_ELSE</span>, <span class="a">TOKEN_FALSE</span>,
-  <span class="a">TOKEN_FOR</span>, <span class="a">TOKEN_FUN</span>, <span class="a">TOKEN_IF</span>, <span class="a">TOKEN_NIL</span>, <span class="a">TOKEN_OR</span>,
-  <span class="a">TOKEN_PRINT</span>, <span class="a">TOKEN_RETURN</span>, <span class="a">TOKEN_SUPER</span>, <span class="a">TOKEN_THIS</span>,
-  <span class="a">TOKEN_TRUE</span>, <span class="a">TOKEN_VAR</span>, <span class="a">TOKEN_WHILE</span>,
-
-  <span class="a">TOKEN_ERROR</span>, <span class="a">TOKEN_EOF</span>
-} <span class="t">TokenType</span>;
-</pre><pre class="insert-after">
-
-typedef struct {
-</pre></div>
-<div class="source-file-narrow"><em>scanner.h</em></div>
+identical to the one in jlox, so let&rsquo;s just hammer out the whole thing.</p><strong>ERROR: Missing snippet token-type</strong>
 
 <p>Aside from prefixing all the names with <code>TOKEN_</code> (since C tosses enum names in
 the top-level namespace) the only difference is that extra <code>TOKEN_ERROR</code> type.
@@ -575,18 +307,7 @@ long enough lifetime. That&rsquo;s why <code>runFile()</code> doesn&rsquo;t free
 </aside>
 <h3><a href="#scanning-tokens" id="scanning-tokens"><small>16&#8202;.&#8202;2&#8202;.&#8202;1</small>Scanning tokens</a></h3>
 <p>We&rsquo;re ready to scan some tokens. We&rsquo;ll work our way up to the complete
-implementation, starting with this:</p>
-<div class="codehilite"><div class="source-file"><em>scanner.c</em><br>
-add after <em>initScanner</em>()</div>
-<pre><span class="t">Token</span> <span class="i">scanToken</span>() {
-  <span class="i">scanner</span>.<span class="i">start</span> = <span class="i">scanner</span>.<span class="i">current</span>;
-
-  <span class="k">if</span> (<span class="i">isAtEnd</span>()) <span class="k">return</span> <span class="i">makeToken</span>(<span class="a">TOKEN_EOF</span>);
-
-  <span class="k">return</span> <span class="i">errorToken</span>(<span class="s">&quot;Unexpected character.&quot;</span>);
-}
-</pre></div>
-<div class="source-file-narrow"><em>scanner.c</em>, add after <em>initScanner</em>()</div>
+implementation, starting with this:</p><strong>ERROR: Missing snippet scan-token</strong>
 
 <p>Since each call to this function scans a complete token, we know we are at the
 beginning of a new token when we enter the function. Thus, we set
@@ -601,46 +322,15 @@ successfully scan and return a token, then we reach the end of the function.
 That must mean we&rsquo;re at a character that the scanner can&rsquo;t recognize, so we
 return an error token for that.</p>
 <p>This function relies on a couple of helpers, most of which are familiar from
-jlox. First up:</p>
-<div class="codehilite"><div class="source-file"><em>scanner.c</em><br>
-add after <em>initScanner</em>()</div>
-<pre><span class="k">static</span> <span class="t">bool</span> <span class="i">isAtEnd</span>() {
-  <span class="k">return</span> *<span class="i">scanner</span>.<span class="i">current</span> == <span class="s">&#39;\0&#39;</span>;
-}
-</pre></div>
-<div class="source-file-narrow"><em>scanner.c</em>, add after <em>initScanner</em>()</div>
+jlox. First up:</p><strong>ERROR: Missing snippet is-at-end</strong>
 
 <p>We require the source string to be a good null-terminated C string. If the
 current character is the null byte, then we&rsquo;ve reached the end.</p>
-<p>To create a token, we have this constructor-like function:</p>
-<div class="codehilite"><div class="source-file"><em>scanner.c</em><br>
-add after <em>isAtEnd</em>()</div>
-<pre><span class="k">static</span> <span class="t">Token</span> <span class="i">makeToken</span>(<span class="t">TokenType</span> <span class="i">type</span>) {
-  <span class="t">Token</span> <span class="i">token</span>;
-  <span class="i">token</span>.<span class="i">type</span> = <span class="i">type</span>;
-  <span class="i">token</span>.<span class="i">start</span> = <span class="i">scanner</span>.<span class="i">start</span>;
-  <span class="i">token</span>.<span class="i">length</span> = (<span class="t">int</span>)(<span class="i">scanner</span>.<span class="i">current</span> - <span class="i">scanner</span>.<span class="i">start</span>);
-  <span class="i">token</span>.<span class="i">line</span> = <span class="i">scanner</span>.<span class="i">line</span>;
-  <span class="k">return</span> <span class="i">token</span>;
-}
-</pre></div>
-<div class="source-file-narrow"><em>scanner.c</em>, add after <em>isAtEnd</em>()</div>
+<p>To create a token, we have this constructor-like function:</p><strong>ERROR: Missing snippet make-token</strong>
 
 <p>It uses the scanner&rsquo;s <code>start</code> and <code>current</code> pointers to capture the token&rsquo;s
 lexeme. It sets a couple of other obvious fields then returns the token. It has
-a sister function for returning error tokens.</p>
-<div class="codehilite"><div class="source-file"><em>scanner.c</em><br>
-add after <em>makeToken</em>()</div>
-<pre><span class="k">static</span> <span class="t">Token</span> <span class="i">errorToken</span>(<span class="k">const</span> <span class="t">char</span>* <span class="i">message</span>) {
-  <span class="t">Token</span> <span class="i">token</span>;
-  <span class="i">token</span>.<span class="i">type</span> = <span class="a">TOKEN_ERROR</span>;
-  <span class="i">token</span>.<span class="i">start</span> = <span class="i">message</span>;
-  <span class="i">token</span>.<span class="i">length</span> = (<span class="t">int</span>)<span class="i">strlen</span>(<span class="i">message</span>);
-  <span class="i">token</span>.<span class="i">line</span> = <span class="i">scanner</span>.<span class="i">line</span>;
-  <span class="k">return</span> <span class="i">token</span>;
-}
-</pre></div>
-<div class="source-file-narrow"><em>scanner.c</em>, add after <em>makeToken</em>()</div>
+a sister function for returning error tokens.</p><strong>ERROR: Missing snippet error-token</strong>
 
 <p><span name="axolotl"></span></p>
 <aside name="axolotl">
@@ -656,84 +346,23 @@ lexical grammar. Since the grammar has no productions, every character is an
 error. That&rsquo;s not exactly a fun language to program in, so let&rsquo;s fill in the
 rules.</p>
 <h2><a href="#a-lexical-grammar-for-lox" id="a-lexical-grammar-for-lox"><small>16&#8202;.&#8202;3</small>A Lexical Grammar for Lox</a></h2>
-<p>The simplest tokens are only a single character. We recognize those like so:</p>
-<div class="codehilite"><pre class="insert-before">  if (isAtEnd()) return makeToken(TOKEN_EOF);
-</pre><div class="source-file"><em>scanner.c</em><br>
-in <em>scanToken</em>()</div>
-<pre class="insert">
-
-  <span class="t">char</span> <span class="i">c</span> = <span class="i">advance</span>();
-
-  <span class="k">switch</span> (<span class="i">c</span>) {
-    <span class="k">case</span> <span class="s">&#39;(&#39;</span>: <span class="k">return</span> <span class="i">makeToken</span>(<span class="a">TOKEN_LEFT_PAREN</span>);
-    <span class="k">case</span> <span class="s">&#39;)&#39;</span>: <span class="k">return</span> <span class="i">makeToken</span>(<span class="a">TOKEN_RIGHT_PAREN</span>);
-    <span class="k">case</span> <span class="s">&#39;{&#39;</span>: <span class="k">return</span> <span class="i">makeToken</span>(<span class="a">TOKEN_LEFT_BRACE</span>);
-    <span class="k">case</span> <span class="s">&#39;}&#39;</span>: <span class="k">return</span> <span class="i">makeToken</span>(<span class="a">TOKEN_RIGHT_BRACE</span>);
-    <span class="k">case</span> <span class="s">&#39;;&#39;</span>: <span class="k">return</span> <span class="i">makeToken</span>(<span class="a">TOKEN_SEMICOLON</span>);
-    <span class="k">case</span> <span class="s">&#39;,&#39;</span>: <span class="k">return</span> <span class="i">makeToken</span>(<span class="a">TOKEN_COMMA</span>);
-    <span class="k">case</span> <span class="s">&#39;.&#39;</span>: <span class="k">return</span> <span class="i">makeToken</span>(<span class="a">TOKEN_DOT</span>);
-    <span class="k">case</span> <span class="s">&#39;-&#39;</span>: <span class="k">return</span> <span class="i">makeToken</span>(<span class="a">TOKEN_MINUS</span>);
-    <span class="k">case</span> <span class="s">&#39;+&#39;</span>: <span class="k">return</span> <span class="i">makeToken</span>(<span class="a">TOKEN_PLUS</span>);
-    <span class="k">case</span> <span class="s">&#39;/&#39;</span>: <span class="k">return</span> <span class="i">makeToken</span>(<span class="a">TOKEN_SLASH</span>);
-    <span class="k">case</span> <span class="s">&#39;*&#39;</span>: <span class="k">return</span> <span class="i">makeToken</span>(<span class="a">TOKEN_STAR</span>);
-  }
-</pre><pre class="insert-after">
-
-  return errorToken(&quot;Unexpected character.&quot;);
-</pre></div>
-<div class="source-file-narrow"><em>scanner.c</em>, in <em>scanToken</em>()</div>
+<p>The simplest tokens are only a single character. We recognize those like so:</p><strong>ERROR: Missing snippet scan-char</strong>
 
 <p>We read the next character from the source code, and then do a straightforward
 switch to see if it matches any of Lox&rsquo;s one-character lexemes. To read the next
 character, we use a new helper which consumes the current character and returns
-it.</p>
-<div class="codehilite"><div class="source-file"><em>scanner.c</em><br>
-add after <em>isAtEnd</em>()</div>
-<pre><span class="k">static</span> <span class="t">char</span> <span class="i">advance</span>() {
-  <span class="i">scanner</span>.<span class="i">current</span>++;
-  <span class="k">return</span> <span class="i">scanner</span>.<span class="i">current</span>[-<span class="n">1</span>];
-}
-</pre></div>
-<div class="source-file-narrow"><em>scanner.c</em>, add after <em>isAtEnd</em>()</div>
+it.</p><strong>ERROR: Missing snippet advance</strong>
 
 <p>Next up are the two-character punctuation tokens like <code>!=</code> and <code>&gt;=</code>. Each of
 these also has a corresponding single-character token. That means that when we
 see a character like <code>!</code>, we don&rsquo;t know if we&rsquo;re in a <code>!</code> token or a <code>!=</code> until
-we look at the next character too. We handle those like so:</p>
-<div class="codehilite"><pre class="insert-before">    case '*': return makeToken(TOKEN_STAR);
-</pre><div class="source-file"><em>scanner.c</em><br>
-in <em>scanToken</em>()</div>
-<pre class="insert">    <span class="k">case</span> <span class="s">&#39;!&#39;</span>:
-      <span class="k">return</span> <span class="i">makeToken</span>(
-          <span class="i">match</span>(<span class="s">&#39;=&#39;</span>) ? <span class="a">TOKEN_BANG_EQUAL</span> : <span class="a">TOKEN_BANG</span>);
-    <span class="k">case</span> <span class="s">&#39;=&#39;</span>:
-      <span class="k">return</span> <span class="i">makeToken</span>(
-          <span class="i">match</span>(<span class="s">&#39;=&#39;</span>) ? <span class="a">TOKEN_EQUAL_EQUAL</span> : <span class="a">TOKEN_EQUAL</span>);
-    <span class="k">case</span> <span class="s">&#39;&lt;&#39;</span>:
-      <span class="k">return</span> <span class="i">makeToken</span>(
-          <span class="i">match</span>(<span class="s">&#39;=&#39;</span>) ? <span class="a">TOKEN_LESS_EQUAL</span> : <span class="a">TOKEN_LESS</span>);
-    <span class="k">case</span> <span class="s">&#39;&gt;&#39;</span>:
-      <span class="k">return</span> <span class="i">makeToken</span>(
-          <span class="i">match</span>(<span class="s">&#39;=&#39;</span>) ? <span class="a">TOKEN_GREATER_EQUAL</span> : <span class="a">TOKEN_GREATER</span>);
-</pre><pre class="insert-after">  }
-</pre></div>
-<div class="source-file-narrow"><em>scanner.c</em>, in <em>scanToken</em>()</div>
+we look at the next character too. We handle those like so:</p><strong>ERROR: Missing snippet two-char</strong>
 
 <p>After consuming the first character, we look for an <code>=</code>. If found, we consume it
 and return the corresponding two-character token. Otherwise, we leave the
 current character alone (so it can be part of the <em>next</em> token) and return the
 appropriate one-character token.</p>
-<p>That logic for conditionally consuming the second character lives here:</p>
-<div class="codehilite"><div class="source-file"><em>scanner.c</em><br>
-add after <em>advance</em>()</div>
-<pre><span class="k">static</span> <span class="t">bool</span> <span class="i">match</span>(<span class="t">char</span> <span class="i">expected</span>) {
-  <span class="k">if</span> (<span class="i">isAtEnd</span>()) <span class="k">return</span> <span class="k">false</span>;
-  <span class="k">if</span> (*<span class="i">scanner</span>.<span class="i">current</span> != <span class="i">expected</span>) <span class="k">return</span> <span class="k">false</span>;
-  <span class="i">scanner</span>.<span class="i">current</span>++;
-  <span class="k">return</span> <span class="k">true</span>;
-}
-</pre></div>
-<div class="source-file-narrow"><em>scanner.c</em>, add after <em>advance</em>()</div>
+<p>That logic for conditionally consuming the second character lives here:</p><strong>ERROR: Missing snippet match</strong>
 
 <p>If the current character is the desired one, we advance and return <code>true</code>.
 Otherwise, we return <code>false</code> to indicate it wasn&rsquo;t matched.</p>
@@ -747,96 +376,30 @@ main character switch in <code>scanToken()</code> but it gets a little tricky to
 that the function still correctly finds the next token <em>after</em> the whitespace
 when you call it. We&rsquo;d have to wrap the whole body of the function in a loop or
 something.</p>
-<p>Instead, before starting the token, we shunt off to a separate function.</p>
-<div class="codehilite"><pre class="insert-before">Token scanToken() {
-</pre><div class="source-file"><em>scanner.c</em><br>
-in <em>scanToken</em>()</div>
-<pre class="insert">  <span class="i">skipWhitespace</span>();
-</pre><pre class="insert-after">  scanner.start = scanner.current;
-</pre></div>
-<div class="source-file-narrow"><em>scanner.c</em>, in <em>scanToken</em>()</div>
+<p>Instead, before starting the token, we shunt off to a separate function.</p><strong>ERROR: Missing snippet call-skip-whitespace</strong>
 
 <p>This advances the scanner past any leading whitespace. After this call returns,
 we know the very next character is a meaningful one (or we&rsquo;re at the end of the
-source code).</p>
-<div class="codehilite"><div class="source-file"><em>scanner.c</em><br>
-add after <em>errorToken</em>()</div>
-<pre><span class="k">static</span> <span class="t">void</span> <span class="i">skipWhitespace</span>() {
-  <span class="k">for</span> (;;) {
-    <span class="t">char</span> <span class="i">c</span> = <span class="i">peek</span>();
-    <span class="k">switch</span> (<span class="i">c</span>) {
-      <span class="k">case</span> <span class="s">&#39; &#39;</span>:
-      <span class="k">case</span> <span class="s">&#39;\r&#39;</span>:
-      <span class="k">case</span> <span class="s">&#39;\t&#39;</span>:
-        <span class="i">advance</span>();
-        <span class="k">break</span>;
-      <span class="k">default</span>:
-        <span class="k">return</span>;
-    }
-  }
-}
-</pre></div>
-<div class="source-file-narrow"><em>scanner.c</em>, add after <em>errorToken</em>()</div>
+source code).</p><strong>ERROR: Missing snippet skip-whitespace</strong>
 
 <p>It&rsquo;s sort of a separate mini-scanner. It loops, consuming every whitespace
 character it encounters. We need to be careful that it does <em>not</em> consume any
-<em>non</em>-whitespace characters. To support that, we use this:</p>
-<div class="codehilite"><div class="source-file"><em>scanner.c</em><br>
-add after <em>advance</em>()</div>
-<pre><span class="k">static</span> <span class="t">char</span> <span class="i">peek</span>() {
-  <span class="k">return</span> *<span class="i">scanner</span>.<span class="i">current</span>;
-}
-</pre></div>
-<div class="source-file-narrow"><em>scanner.c</em>, add after <em>advance</em>()</div>
+<em>non</em>-whitespace characters. To support that, we use this:</p><strong>ERROR: Missing snippet peek</strong>
 
 <p>This simply returns the current character, but doesn&rsquo;t consume it. The previous
-code handles all the whitespace characters except for newlines.</p>
-<div class="codehilite"><pre class="insert-before">        break;
-</pre><div class="source-file"><em>scanner.c</em><br>
-in <em>skipWhitespace</em>()</div>
-<pre class="insert">      <span class="k">case</span> <span class="s">&#39;\n&#39;</span>:
-        <span class="i">scanner</span>.<span class="i">line</span>++;
-        <span class="i">advance</span>();
-        <span class="k">break</span>;
-</pre><pre class="insert-after">      default:
-        return;
-</pre></div>
-<div class="source-file-narrow"><em>scanner.c</em>, in <em>skipWhitespace</em>()</div>
+code handles all the whitespace characters except for newlines.</p><strong>ERROR: Missing snippet newline</strong>
 
 <p>When we consume one of those, we also bump the current line number.</p>
 <h3><a href="#comments" id="comments"><small>16&#8202;.&#8202;3&#8202;.&#8202;2</small>Comments</a></h3>
 <p>Comments aren&rsquo;t technically &ldquo;whitespace&rdquo;, if you want to get all precise with
 your terminology, but as far as Lox is concerned, they may as well be, so we
-skip those too.</p>
-<div class="codehilite"><pre class="insert-before">        break;
-</pre><div class="source-file"><em>scanner.c</em><br>
-in <em>skipWhitespace</em>()</div>
-<pre class="insert">      <span class="k">case</span> <span class="s">&#39;/&#39;</span>:
-        <span class="k">if</span> (<span class="i">peekNext</span>() == <span class="s">&#39;/&#39;</span>) {
-          <span class="c">// A comment goes until the end of the line.</span>
-          <span class="k">while</span> (<span class="i">peek</span>() != <span class="s">&#39;\n&#39;</span> &amp;&amp; !<span class="i">isAtEnd</span>()) <span class="i">advance</span>();
-        } <span class="k">else</span> {
-          <span class="k">return</span>;
-        }
-        <span class="k">break</span>;
-</pre><pre class="insert-after">      default:
-        return;
-</pre></div>
-<div class="source-file-narrow"><em>scanner.c</em>, in <em>skipWhitespace</em>()</div>
+skip those too.</p><strong>ERROR: Missing snippet comment</strong>
 
 <p>Comments start with <code>//</code> in Lox, so as with <code>!=</code> and friends, we need a second
 character of lookahead. However, with <code>!=</code>, we still wanted to consume the <code>!</code>
 even if the <code>=</code> wasn&rsquo;t found. Comments are different. If we don&rsquo;t find a second
 <code>/</code>, then <code>skipWhitespace()</code> needs to not consume the <em>first</em> slash either.</p>
-<p>To handle that, we add:</p>
-<div class="codehilite"><div class="source-file"><em>scanner.c</em><br>
-add after <em>peek</em>()</div>
-<pre><span class="k">static</span> <span class="t">char</span> <span class="i">peekNext</span>() {
-  <span class="k">if</span> (<span class="i">isAtEnd</span>()) <span class="k">return</span> <span class="s">&#39;\0&#39;</span>;
-  <span class="k">return</span> <span class="i">scanner</span>.<span class="i">current</span>[<span class="n">1</span>];
-}
-</pre></div>
-<div class="source-file-narrow"><em>scanner.c</em>, add after <em>peek</em>()</div>
+<p>To handle that, we add:</p><strong>ERROR: Missing snippet peek-next</strong>
 
 <p>This is like <code>peek()</code> but for one character past the current one. If the current
 character and the next one are both <code>/</code>, we consume them and then any other
@@ -847,32 +410,9 @@ newline will be the current character on the next turn of the outer loop in
 <h3><a href="#literal-tokens" id="literal-tokens"><small>16&#8202;.&#8202;3&#8202;.&#8202;3</small>Literal tokens</a></h3>
 <p>Number and string tokens are special because they have a runtime value
 associated with them. We&rsquo;ll start with strings because they are easy to
-recognize<span class="em">&mdash;</span>they always begin with a double quote.</p>
-<div class="codehilite"><pre class="insert-before">          match('=') ? TOKEN_GREATER_EQUAL : TOKEN_GREATER);
-</pre><div class="source-file"><em>scanner.c</em><br>
-in <em>scanToken</em>()</div>
-<pre class="insert">    <span class="k">case</span> <span class="s">&#39;&quot;&#39;</span>: <span class="k">return</span> <span class="i">string</span>();
-</pre><pre class="insert-after">  }
-</pre></div>
-<div class="source-file-narrow"><em>scanner.c</em>, in <em>scanToken</em>()</div>
+recognize<span class="em">&mdash;</span>they always begin with a double quote.</p><strong>ERROR: Missing snippet scan-string</strong>
 
-<p>That calls a new function.</p>
-<div class="codehilite"><div class="source-file"><em>scanner.c</em><br>
-add after <em>skipWhitespace</em>()</div>
-<pre><span class="k">static</span> <span class="t">Token</span> <span class="i">string</span>() {
-  <span class="k">while</span> (<span class="i">peek</span>() != <span class="s">&#39;&quot;&#39;</span> &amp;&amp; !<span class="i">isAtEnd</span>()) {
-    <span class="k">if</span> (<span class="i">peek</span>() == <span class="s">&#39;\n&#39;</span>) <span class="i">scanner</span>.<span class="i">line</span>++;
-    <span class="i">advance</span>();
-  }
-
-  <span class="k">if</span> (<span class="i">isAtEnd</span>()) <span class="k">return</span> <span class="i">errorToken</span>(<span class="s">&quot;Unterminated string.&quot;</span>);
-
-  <span class="c">// The closing quote.</span>
-  <span class="i">advance</span>();
-  <span class="k">return</span> <span class="i">makeToken</span>(<span class="a">TOKEN_STRING</span>);
-}
-</pre></div>
-<div class="source-file-narrow"><em>scanner.c</em>, add after <em>skipWhitespace</em>()</div>
+<p>That calls a new function.</p><strong>ERROR: Missing snippet string</strong>
 
 <p>Similar to jlox, we consume characters until we reach the closing quote. We also
 track newlines inside the string literal. (Lox supports multi-line strings.)
@@ -899,44 +439,11 @@ isn&rsquo;t <em>that</em> much redundancy, it isn&rsquo;t in anything performanc
 keeps our scanner simpler.</p>
 </aside>
 <p>Next up, numbers. Instead of adding a switch case for each of the ten digits
-that can start a number, we handle them here:</p>
-<div class="codehilite"><pre class="insert-before">  char c = advance();
-</pre><div class="source-file"><em>scanner.c</em><br>
-in <em>scanToken</em>()</div>
-<pre class="insert">  <span class="k">if</span> (<span class="i">isDigit</span>(<span class="i">c</span>)) <span class="k">return</span> <span class="i">number</span>();
-</pre><pre class="insert-after">
+that can start a number, we handle them here:</p><strong>ERROR: Missing snippet scan-number</strong>
 
-  switch (c) {
-</pre></div>
-<div class="source-file-narrow"><em>scanner.c</em>, in <em>scanToken</em>()</div>
+<p>That uses this obvious utility function:</p><strong>ERROR: Missing snippet is-digit</strong>
 
-<p>That uses this obvious utility function:</p>
-<div class="codehilite"><div class="source-file"><em>scanner.c</em><br>
-add after <em>initScanner</em>()</div>
-<pre><span class="k">static</span> <span class="t">bool</span> <span class="i">isDigit</span>(<span class="t">char</span> <span class="i">c</span>) {
-  <span class="k">return</span> <span class="i">c</span> &gt;= <span class="s">&#39;0&#39;</span> &amp;&amp; <span class="i">c</span> &lt;= <span class="s">&#39;9&#39;</span>;
-}
-</pre></div>
-<div class="source-file-narrow"><em>scanner.c</em>, add after <em>initScanner</em>()</div>
-
-<p>We finish scanning the number using this:</p>
-<div class="codehilite"><div class="source-file"><em>scanner.c</em><br>
-add after <em>skipWhitespace</em>()</div>
-<pre><span class="k">static</span> <span class="t">Token</span> <span class="i">number</span>() {
-  <span class="k">while</span> (<span class="i">isDigit</span>(<span class="i">peek</span>())) <span class="i">advance</span>();
-
-  <span class="c">// Look for a fractional part.</span>
-  <span class="k">if</span> (<span class="i">peek</span>() == <span class="s">&#39;.&#39;</span> &amp;&amp; <span class="i">isDigit</span>(<span class="i">peekNext</span>())) {
-    <span class="c">// Consume the &quot;.&quot;.</span>
-    <span class="i">advance</span>();
-
-    <span class="k">while</span> (<span class="i">isDigit</span>(<span class="i">peek</span>())) <span class="i">advance</span>();
-  }
-
-  <span class="k">return</span> <span class="i">makeToken</span>(<span class="a">TOKEN_NUMBER</span>);
-}
-</pre></div>
-<div class="source-file-narrow"><em>scanner.c</em>, add after <em>skipWhitespace</em>()</div>
+<p>We finish scanning the number using this:</p><strong>ERROR: Missing snippet number</strong>
 
 <p>It&rsquo;s virtually identical to jlox&rsquo;s version except, again, we don&rsquo;t convert the
 lexeme to a double yet.</p>
@@ -946,46 +453,15 @@ section should be fun<span class="em">&mdash;</span>the way we recognize keyword
 different from how we did it in jlox, and touches on some important data
 structures.</p>
 <p>First, though, we have to scan the lexeme. Names start with a letter or
-underscore.</p>
-<div class="codehilite"><pre class="insert-before">  char c = advance();
-</pre><div class="source-file"><em>scanner.c</em><br>
-in <em>scanToken</em>()</div>
-<pre class="insert">  <span class="k">if</span> (<span class="i">isAlpha</span>(<span class="i">c</span>)) <span class="k">return</span> <span class="i">identifier</span>();
-</pre><pre class="insert-after">  if (isDigit(c)) return number();
-</pre></div>
-<div class="source-file-narrow"><em>scanner.c</em>, in <em>scanToken</em>()</div>
+underscore.</p><strong>ERROR: Missing snippet scan-identifier</strong>
 
-<p>We recognize those using this:</p>
-<div class="codehilite"><div class="source-file"><em>scanner.c</em><br>
-add after <em>initScanner</em>()</div>
-<pre><span class="k">static</span> <span class="t">bool</span> <span class="i">isAlpha</span>(<span class="t">char</span> <span class="i">c</span>) {
-  <span class="k">return</span> (<span class="i">c</span> &gt;= <span class="s">&#39;a&#39;</span> &amp;&amp; <span class="i">c</span> &lt;= <span class="s">&#39;z&#39;</span>) ||
-         (<span class="i">c</span> &gt;= <span class="s">&#39;A&#39;</span> &amp;&amp; <span class="i">c</span> &lt;= <span class="s">&#39;Z&#39;</span>) ||
-          <span class="i">c</span> == <span class="s">&#39;_&#39;</span>;
-}
-</pre></div>
-<div class="source-file-narrow"><em>scanner.c</em>, add after <em>initScanner</em>()</div>
+<p>We recognize those using this:</p><strong>ERROR: Missing snippet is-alpha</strong>
 
-<p>Once we&rsquo;ve found an identifier, we scan the rest of it here:</p>
-<div class="codehilite"><div class="source-file"><em>scanner.c</em><br>
-add after <em>skipWhitespace</em>()</div>
-<pre><span class="k">static</span> <span class="t">Token</span> <span class="i">identifier</span>() {
-  <span class="k">while</span> (<span class="i">isAlpha</span>(<span class="i">peek</span>()) || <span class="i">isDigit</span>(<span class="i">peek</span>())) <span class="i">advance</span>();
-  <span class="k">return</span> <span class="i">makeToken</span>(<span class="i">identifierType</span>());
-}
-</pre></div>
-<div class="source-file-narrow"><em>scanner.c</em>, add after <em>skipWhitespace</em>()</div>
+<p>Once we&rsquo;ve found an identifier, we scan the rest of it here:</p><strong>ERROR: Missing snippet identifier</strong>
 
 <p>After the first letter, we allow digits too, and we keep consuming alphanumerics
 until we run out of them. Then we produce a token with the proper type.
-Determining that &ldquo;proper&rdquo; type is the unique part of this chapter.</p>
-<div class="codehilite"><div class="source-file"><em>scanner.c</em><br>
-add after <em>skipWhitespace</em>()</div>
-<pre><span class="k">static</span> <span class="t">TokenType</span> <span class="i">identifierType</span>() {
-  <span class="k">return</span> <span class="a">TOKEN_IDENTIFIER</span>;
-}
-</pre></div>
-<div class="source-file-narrow"><em>scanner.c</em>, add after <em>skipWhitespace</em>()</div>
+Determining that &ldquo;proper&rdquo; type is the unique part of this chapter.</p><strong>ERROR: Missing snippet identifier-type</strong>
 
 <p>Okay, I guess that&rsquo;s not very exciting yet. That&rsquo;s what it looks like if we
 have no reserved words at all. How should we go about recognizing keywords? In
@@ -1093,47 +569,14 @@ node and handle the easy keywords.</p>
 <p>Simple doesn&rsquo;t mean dumb. The same approach is <a href="https://github.com/v8/v8/blob/e77eebfe3b747fb315bd3baad09bec0953e53e68/src/parsing/scanner.cc#L1643">essentially what V8 does</a>,
 and that&rsquo;s currently one of the world&rsquo;s most sophisticated, fastest language
 implementations.</p>
-</aside>
-<div class="codehilite"><pre class="insert-before">static TokenType identifierType() {
-</pre><div class="source-file"><em>scanner.c</em><br>
-in <em>identifierType</em>()</div>
-<pre class="insert">  <span class="k">switch</span> (<span class="i">scanner</span>.<span class="i">start</span>[<span class="n">0</span>]) {
-    <span class="k">case</span> <span class="s">&#39;a&#39;</span>: <span class="k">return</span> <span class="i">checkKeyword</span>(<span class="n">1</span>, <span class="n">2</span>, <span class="s">&quot;nd&quot;</span>, <span class="a">TOKEN_AND</span>);
-    <span class="k">case</span> <span class="s">&#39;c&#39;</span>: <span class="k">return</span> <span class="i">checkKeyword</span>(<span class="n">1</span>, <span class="n">4</span>, <span class="s">&quot;lass&quot;</span>, <span class="a">TOKEN_CLASS</span>);
-    <span class="k">case</span> <span class="s">&#39;e&#39;</span>: <span class="k">return</span> <span class="i">checkKeyword</span>(<span class="n">1</span>, <span class="n">3</span>, <span class="s">&quot;lse&quot;</span>, <span class="a">TOKEN_ELSE</span>);
-    <span class="k">case</span> <span class="s">&#39;i&#39;</span>: <span class="k">return</span> <span class="i">checkKeyword</span>(<span class="n">1</span>, <span class="n">1</span>, <span class="s">&quot;f&quot;</span>, <span class="a">TOKEN_IF</span>);
-    <span class="k">case</span> <span class="s">&#39;n&#39;</span>: <span class="k">return</span> <span class="i">checkKeyword</span>(<span class="n">1</span>, <span class="n">2</span>, <span class="s">&quot;il&quot;</span>, <span class="a">TOKEN_NIL</span>);
-    <span class="k">case</span> <span class="s">&#39;o&#39;</span>: <span class="k">return</span> <span class="i">checkKeyword</span>(<span class="n">1</span>, <span class="n">1</span>, <span class="s">&quot;r&quot;</span>, <span class="a">TOKEN_OR</span>);
-    <span class="k">case</span> <span class="s">&#39;p&#39;</span>: <span class="k">return</span> <span class="i">checkKeyword</span>(<span class="n">1</span>, <span class="n">4</span>, <span class="s">&quot;rint&quot;</span>, <span class="a">TOKEN_PRINT</span>);
-    <span class="k">case</span> <span class="s">&#39;r&#39;</span>: <span class="k">return</span> <span class="i">checkKeyword</span>(<span class="n">1</span>, <span class="n">5</span>, <span class="s">&quot;eturn&quot;</span>, <span class="a">TOKEN_RETURN</span>);
-    <span class="k">case</span> <span class="s">&#39;s&#39;</span>: <span class="k">return</span> <span class="i">checkKeyword</span>(<span class="n">1</span>, <span class="n">4</span>, <span class="s">&quot;uper&quot;</span>, <span class="a">TOKEN_SUPER</span>);
-    <span class="k">case</span> <span class="s">&#39;v&#39;</span>: <span class="k">return</span> <span class="i">checkKeyword</span>(<span class="n">1</span>, <span class="n">2</span>, <span class="s">&quot;ar&quot;</span>, <span class="a">TOKEN_VAR</span>);
-    <span class="k">case</span> <span class="s">&#39;w&#39;</span>: <span class="k">return</span> <span class="i">checkKeyword</span>(<span class="n">1</span>, <span class="n">4</span>, <span class="s">&quot;hile&quot;</span>, <span class="a">TOKEN_WHILE</span>);
-  }
-
-</pre><pre class="insert-after">  return TOKEN_IDENTIFIER;
-</pre></div>
-<div class="source-file-narrow"><em>scanner.c</em>, in <em>identifierType</em>()</div>
+</aside><strong>ERROR: Missing snippet keywords</strong>
 
 <p>These are the initial letters that correspond to a single keyword. If we see an
 &ldquo;s&rdquo;, the only keyword the identifier could possibly be is <code>super</code>. It might not
 be, though, so we still need to check the rest of the letters too. In the tree
 diagram, this is basically that straight path hanging off the &ldquo;s&rdquo;.</p>
 <p>We won&rsquo;t roll a switch for each of those nodes. Instead, we have a utility
-function that tests the rest of a potential keyword&rsquo;s lexeme.</p>
-<div class="codehilite"><div class="source-file"><em>scanner.c</em><br>
-add after <em>skipWhitespace</em>()</div>
-<pre><span class="k">static</span> <span class="t">TokenType</span> <span class="i">checkKeyword</span>(<span class="t">int</span> <span class="i">start</span>, <span class="t">int</span> <span class="i">length</span>,
-    <span class="k">const</span> <span class="t">char</span>* <span class="i">rest</span>, <span class="t">TokenType</span> <span class="i">type</span>) {
-  <span class="k">if</span> (<span class="i">scanner</span>.<span class="i">current</span> - <span class="i">scanner</span>.<span class="i">start</span> == <span class="i">start</span> + <span class="i">length</span> &amp;&amp;
-      <span class="i">memcmp</span>(<span class="i">scanner</span>.<span class="i">start</span> + <span class="i">start</span>, <span class="i">rest</span>, <span class="i">length</span>) == <span class="n">0</span>) {
-    <span class="k">return</span> <span class="i">type</span>;
-  }
-
-  <span class="k">return</span> <span class="a">TOKEN_IDENTIFIER</span>;
-}
-</pre></div>
-<div class="source-file-narrow"><em>scanner.c</em>, add after <em>skipWhitespace</em>()</div>
+function that tests the rest of a potential keyword&rsquo;s lexeme.</p><strong>ERROR: Missing snippet check-keyword</strong>
 
 <p>We use this for all of the unbranching paths in the tree. Once we&rsquo;ve found a
 prefix that could only be one possible reserved word, we need to verify two
@@ -1145,40 +588,11 @@ it&rsquo;s a keyword, and we return the associated token type. Otherwise, it mus
 normal identifier.</p>
 <p>We have a couple of keywords where the tree branches again after the first
 letter. If the lexeme starts with &ldquo;f&rdquo;, it could be <code>false</code>, <code>for</code>, or <code>fun</code>. So
-we add another switch for the branches coming off the &ldquo;f&rdquo; node.</p>
-<div class="codehilite"><pre class="insert-before">    case 'e': return checkKeyword(1, 3, &quot;lse&quot;, TOKEN_ELSE);
-</pre><div class="source-file"><em>scanner.c</em><br>
-in <em>identifierType</em>()</div>
-<pre class="insert">    <span class="k">case</span> <span class="s">&#39;f&#39;</span>:
-      <span class="k">if</span> (<span class="i">scanner</span>.<span class="i">current</span> - <span class="i">scanner</span>.<span class="i">start</span> &gt; <span class="n">1</span>) {
-        <span class="k">switch</span> (<span class="i">scanner</span>.<span class="i">start</span>[<span class="n">1</span>]) {
-          <span class="k">case</span> <span class="s">&#39;a&#39;</span>: <span class="k">return</span> <span class="i">checkKeyword</span>(<span class="n">2</span>, <span class="n">3</span>, <span class="s">&quot;lse&quot;</span>, <span class="a">TOKEN_FALSE</span>);
-          <span class="k">case</span> <span class="s">&#39;o&#39;</span>: <span class="k">return</span> <span class="i">checkKeyword</span>(<span class="n">2</span>, <span class="n">1</span>, <span class="s">&quot;r&quot;</span>, <span class="a">TOKEN_FOR</span>);
-          <span class="k">case</span> <span class="s">&#39;u&#39;</span>: <span class="k">return</span> <span class="i">checkKeyword</span>(<span class="n">2</span>, <span class="n">1</span>, <span class="s">&quot;n&quot;</span>, <span class="a">TOKEN_FUN</span>);
-        }
-      }
-      <span class="k">break</span>;
-</pre><pre class="insert-after">    case 'i': return checkKeyword(1, 1, &quot;f&quot;, TOKEN_IF);
-</pre></div>
-<div class="source-file-narrow"><em>scanner.c</em>, in <em>identifierType</em>()</div>
+we add another switch for the branches coming off the &ldquo;f&rdquo; node.</p><strong>ERROR: Missing snippet keyword-f</strong>
 
 <p>Before we switch, we need to check that there even <em>is</em> a second letter. &ldquo;f&rdquo; by
 itself is a valid identifier too, after all. The other letter that branches is
-&ldquo;t&rdquo;.</p>
-<div class="codehilite"><pre class="insert-before">    case 's': return checkKeyword(1, 4, &quot;uper&quot;, TOKEN_SUPER);
-</pre><div class="source-file"><em>scanner.c</em><br>
-in <em>identifierType</em>()</div>
-<pre class="insert">    <span class="k">case</span> <span class="s">&#39;t&#39;</span>:
-      <span class="k">if</span> (<span class="i">scanner</span>.<span class="i">current</span> - <span class="i">scanner</span>.<span class="i">start</span> &gt; <span class="n">1</span>) {
-        <span class="k">switch</span> (<span class="i">scanner</span>.<span class="i">start</span>[<span class="n">1</span>]) {
-          <span class="k">case</span> <span class="s">&#39;h&#39;</span>: <span class="k">return</span> <span class="i">checkKeyword</span>(<span class="n">2</span>, <span class="n">2</span>, <span class="s">&quot;is&quot;</span>, <span class="a">TOKEN_THIS</span>);
-          <span class="k">case</span> <span class="s">&#39;r&#39;</span>: <span class="k">return</span> <span class="i">checkKeyword</span>(<span class="n">2</span>, <span class="n">2</span>, <span class="s">&quot;ue&quot;</span>, <span class="a">TOKEN_TRUE</span>);
-        }
-      }
-      <span class="k">break</span>;
-</pre><pre class="insert-after">    case 'v': return checkKeyword(1, 2, &quot;ar&quot;, TOKEN_VAR);
-</pre></div>
-<div class="source-file-narrow"><em>scanner.c</em>, in <em>identifierType</em>()</div>
+&ldquo;t&rdquo;.</p><strong>ERROR: Missing snippet keyword-t</strong>
 
 <p>That&rsquo;s it. A couple of nested <code>switch</code> statements. Not only is this code <span
 name="short">short</span>, but it&rsquo;s very, very fast. It does the minimum amount

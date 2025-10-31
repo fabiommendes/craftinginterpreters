@@ -2,24 +2,24 @@ This text is not used. All of the content is in the index.md
 
 ## Frontmatter
 
-- [dedication.md] ✅
-- [acknowledgements.md] ✅
+- [dedication.md]
+- [acknowledgements.md]
 
-## [welcome.md] ✅
+## [welcome.md]
 
-- [introduction.md] ✅
-- [a-map-of-the-territory.md] ✅
-- [the-lox-language.md] ✅
+- [introduction.md]
+- [a-map-of-the-territory.md]
+- [the-lox-language.md]
 
-## [a-tree-walk-interpreter.md] ✅
+## [a-tree-walk-interpreter.md]
 
-- [scanning.md] ✅
-- [representing-code.md] ✅
-- [parsing-expressions.md] ✅
-- [evaluating-expressions.md] ✅
-- [statements-and-state.md] ✅
-- [control-flow.md] ✅
-- [functions.md] ✅
+- [scanning.md]
+- [representing-code.md]
+- [parsing-expressions.md]
+- [evaluating-expressions.md]
+- [statements-and-state.md]
+- [control-flow.md]
+- [functions.md]
 - [resolving-and-binding.md]
 - [classes.md]
 - [inheritance.md]
@@ -47,4 +47,3 @@ This text is not used. All of the content is in the index.md
 ## [backmatter.md]
 
 - [appendix-i.md]
-- [appendix-ii.md]

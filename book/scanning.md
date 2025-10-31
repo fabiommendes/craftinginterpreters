@@ -573,8 +573,6 @@ character long. All you would need to do is consume the next character and pick
 a token type for it. Several lexemes _are_ only a single character in Lox, so
 let's start with those.
 
-^code scan-token
-
 <aside name="slash">
 
 Wondering why `/` isn't in here? Don't worry, we'll get to it.

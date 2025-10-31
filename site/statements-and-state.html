@@ -133,7 +133,7 @@ from expressions. We start with the two simplest kinds:</p>
 <p>An <strong>expression statement</strong> lets you place an expression where a statement
 is expected. They exist to evaluate expressions that have side effects. You
 may not notice them, but you use them all the time in <span
-name="expr-stmt">C</span>, Python, Java, and other languages. Any time you
+name="expr-stmt">C</span>, Python, Python, and other languages. Any time you
 see a function or method call followed by a <code>;</code>, you&rsquo;re looking at an
 expression statement.</p>
 <aside name="expr-stmt">
@@ -188,74 +188,53 @@ expects an expression (granted you configured your IDE to catch such things).</p
 <p>That means a new base class for statements. As our elders did before us, we will
 use the cryptic name &ldquo;Stmt&rdquo;. Just as before, we will define them using
 dataclasses.</p>
-<div class="codehilite"><pre class="insert-before">      &quot;Unary    : Token operator, Expr right&quot;
-    ));
-</pre><div class="source-file"><em>tool/GenerateAst.java</em><br>
-in <em>main</em>()</div>
-<pre class="insert">
+<div class="codehilite"><pre><span class="c"># lox/ast.py after Expr</span>
 
-    <span class="i">defineAst</span>(<span class="i">outputDir</span>, <span class="s">&quot;Stmt&quot;</span>, <span class="t">Arrays</span>.<span class="i">asList</span>(
-      <span class="s">&quot;Expression : Expr expression&quot;</span>,
-      <span class="s">&quot;Print      : Expr expression&quot;</span>
-    ));
-</pre><pre class="insert-after">  }
+<span class="k">class</span> <span class="t">Stmt</span>:
+    <span class="s">&quot;&quot;</span><span class="s">&quot;Abstract Base Class for statements&quot;</span><span class="s">&quot;&quot;</span>
+
+<span class="a">@dataclass</span>
+<span class="k">class</span> <span class="t">Expression</span>(<span class="t">Stmt</span>):
+    <span class="i">expression</span>: <span class="t">Expr</span>
+
+<span class="a">@dataclass</span>
+<span class="k">class</span> <span class="t">Print</span>(<span class="t">Stmt</span>):
+    <span class="i">expression</span>: <span class="t">Expr</span>
 </pre></div>
-<div class="source-file-narrow"><em>tool/GenerateAst.java</em>, in <em>main</em>()</div>
-
-<aside name="stmt-ast">
-<p>The generated code for the new nodes is in <a href="appendix-ii.html">Appendix II</a>:
-<a href="appendix-ii.html#expression-statement">Expression statement</a>, <a href="appendix-ii.html#print-statement">Print statement</a>.</p>
-</aside>
-<p>Run the AST generator script and behold the resulting &ldquo;Stmt.java&rdquo; file with the
-syntax tree classes we need for expression and <code>print</code> statements. Don&rsquo;t forget
-to add the file to your IDE project or makefile or whatever.</p>
+<p>We will also create a special Stmt node that represents whole programs:</p>
+<div class="codehilite"><pre><span class="c"># lox/ast.py after Stmt</span>
+<span class="a">@dataclass</span>
+<span class="k">class</span> <span class="t">Program</span>(<span class="t">Stmt</span>):
+    <span class="i">statements</span>: <span class="t">list</span>[<span class="t">Stmt</span>]
+</pre></div>
 <h3><a href="#parsing-statements" id="parsing-statements"><small>8&#8202;.&#8202;1&#8202;.&#8202;2</small>Parsing statements</a></h3>
-<p>The parser&rsquo;s <code>parse()</code> method that parses and returns a single expression was a
-temporary hack to get the last chapter up and running. Now that our grammar has
-the correct starting rule, <code>program</code>, we can turn <code>parse()</code> into the real deal.</p>
-<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
-method <em>parse</em>()<br>
-replace 7 lines</div>
-<pre>  <span class="t">List</span>&lt;<span class="t">Stmt</span>&gt; <span class="i">parse</span>() {
-    <span class="t">List</span>&lt;<span class="t">Stmt</span>&gt; <span class="i">statements</span> = <span class="k">new</span> <span class="t">ArrayList</span>&lt;&gt;();
-    <span class="k">while</span> (!<span class="i">isAtEnd</span>()) {
-      <span class="i">statements</span>.<span class="i">add</span>(<span class="i">statement</span>());
-    }
+<p>The parser&rsquo;s <code>parse()</code> function that parses and returns a single expression was
+a temporary hack to get the last chapter up and running. Now that our grammar
+has the correct starting rule, <code>program</code>, we can turn <code>parse()</code> into the real
+deal.</p>
+<div class="codehilite"><pre><span class="c"># lox/parser.py replace the parse() function</span>
+<span class="k">from</span> <span class="i">lox</span>.<span class="i">stmt</span> <span class="k">import</span> <span class="t">Stmt</span>
 
-    <span class="k">return</span> <span class="i">statements</span>;<span name="parse-error-handling"> </span>
-  }
+<span class="k">def</span> <span class="i">parse</span>(<span class="i">tokens</span>: <span class="t">list</span>[<span class="t">Token</span>]) -&gt; <span class="t">Stmt</span>:
+    <span class="i">parser</span> = <span class="t">Parser</span>(<span class="i">tokens</span>)
+    <span class="i">statements</span> = []
+    <span class="k">while</span> <span class="k">not</span> <span class="i">parser</span>.<span class="i">is_at_end</span>():
+        <span class="i">statements</span>.<span class="i">append</span>(<span class="i">parser</span>.<span class="i">statement</span>())
+    <span class="k">return</span> <span class="t">Program</span>(<span class="i">statements</span>)
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, method <em>parse</em>(), replace 7 lines</div>
-
-<aside name="parse-error-handling">
-<p>What about the code we had in here for catching <code>ParseError</code> exceptions? We&rsquo;ll
-put better parse error handling in place soon when we add support for additional
-statement types.</p>
-</aside>
 <p>This parses a series of statements, as many as it can find until it hits the end
 of the input. This is a pretty direct translation of the <code>program</code> rule into
-recursive descent style. We must also chant a minor prayer to the Java verbosity
-gods since we are using ArrayList now.</p>
-<div class="codehilite"><pre class="insert-before">package com.craftinginterpreters.lox;
-
-</pre><div class="source-file"><em>lox/Parser.java</em></div>
-<pre class="insert"><span class="k">import</span> <span class="i">java.util.ArrayList</span>;
-</pre><pre class="insert-after">import java.util.List;
-</pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em></div>
-
+recursive descent style.</p>
 <p>A program is a list of statements, and we parse one of those statements using
 this method:</p>
-<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
-add after <em>expression</em>()</div>
-<pre>  <span class="k">private</span> <span class="t">Stmt</span> <span class="i">statement</span>() {
-    <span class="k">if</span> (<span class="i">match</span>(<span class="i">PRINT</span>)) <span class="k">return</span> <span class="i">printStatement</span>();
-
-    <span class="k">return</span> <span class="i">expressionStatement</span>();
-  }
+<div class="codehilite"><pre><span class="c"># lox/parser.py Parser method</span>
+<span class="k">def</span> <span class="i">statement</span>(<span class="i">self</span>) -&gt; <span class="t">Stmt</span>:
+    <span class="i">match</span> <span class="i">self</span>.<span class="i">peek</span>().<span class="k">type</span>:
+        <span class="i">case</span> <span class="s">&quot;PRINT&quot;</span>:
+            <span class="k">return</span> <span class="i">self</span>.<span class="i">print_statement</span>()
+        <span class="i">case</span> <span class="i">_</span>:
+            <span class="k">return</span> <span class="i">self</span>.<span class="i">expression_statement</span>()
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, add after <em>expression</em>()</div>
-
 <p>A little bare bones, but we&rsquo;ll fill it in with more statement types later. We
 determine which specific statement rule is matched by looking at the current
 token. A <code>print</code> token means it&rsquo;s obviously a <code>print</code> statement.</p>
@@ -264,154 +243,91 @@ must be an expression statement. That&rsquo;s the typical final fallthrough case
 parsing a statement, since it&rsquo;s hard to proactively recognize an expression from
 its first token.</p>
 <p>Each statement kind gets its own method. First <code>print</code>:</p>
-<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
-add after <em>statement</em>()</div>
-<pre>  <span class="k">private</span> <span class="t">Stmt</span> <span class="i">printStatement</span>() {
-    <span class="t">Expr</span> <span class="i">value</span> = <span class="i">expression</span>();
-    <span class="i">consume</span>(<span class="i">SEMICOLON</span>, <span class="s">&quot;Expect &#39;;&#39; after value.&quot;</span>);
-    <span class="k">return</span> <span class="k">new</span> <span class="t">Stmt</span>.<span class="t">Print</span>(<span class="i">value</span>);
-  }
+<div class="codehilite"><pre><span class="c"># lox/parser.py Parser method</span>
+<span class="k">def</span> <span class="i">print_statement</span>(<span class="i">self</span>) -&gt; <span class="t">Print</span>:
+    <span class="i">self</span>.<span class="i">consume</span>(<span class="s">&quot;PRINT&quot;</span>, <span class="s">&quot;Expect &#39;print&#39; keyword.&quot;</span>)
+    <span class="i">value</span> = <span class="i">self</span>.<span class="i">expression</span>()
+    <span class="i">self</span>.<span class="i">consume</span>(<span class="s">&quot;SEMICOLON&quot;</span>, <span class="s">&quot;Expect &#39;;&#39; after value.&quot;</span>)
+    <span class="k">return</span> <span class="t">Print</span>(<span class="i">value</span>)
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, add after <em>statement</em>()</div>
-
-<p>Since we already matched and consumed the <code>print</code> token itself, we don&rsquo;t need to
-do that here. We parse the subsequent expression, consume the terminating
-semicolon, and emit the syntax tree.</p>
+<p>Since we usually call <code>print_statement()</code> from a within <code>statement()</code>, we could
+simply consume the first token knowning that it would be a <code>print</code>. Parsing the
+whole statement without such assumptions, makes things easier to isolate for
+testing and reuse, albeit with at a very small cost in performance. We parse the
+subsequent expression, consume the terminating semicolon, and emit the syntax
+tree.</p>
 <p>If we didn&rsquo;t match a <code>print</code> statement, we must have one of these:</p>
-<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
-add after <em>printStatement</em>()</div>
-<pre>  <span class="k">private</span> <span class="t">Stmt</span> <span class="i">expressionStatement</span>() {
-    <span class="t">Expr</span> <span class="i">expr</span> = <span class="i">expression</span>();
-    <span class="i">consume</span>(<span class="i">SEMICOLON</span>, <span class="s">&quot;Expect &#39;;&#39; after expression.&quot;</span>);
-    <span class="k">return</span> <span class="k">new</span> <span class="t">Stmt</span>.<span class="t">Expression</span>(<span class="i">expr</span>);
-  }
+<div class="codehilite"><pre><span class="c"># lox/parser.py Parser method</span>
+<span class="k">def</span> <span class="i">expression_statement</span>(<span class="i">self</span>) -&gt; <span class="t">Expression</span>:
+    <span class="i">expr</span> = <span class="i">self</span>.<span class="i">expression</span>()
+    <span class="i">self</span>.<span class="i">consume</span>(<span class="s">&quot;SEMICOLON&quot;</span>, <span class="s">&quot;Expect &#39;;&#39; after expression.&quot;</span>)
+    <span class="k">return</span> <span class="t">Expression</span>(<span class="i">expr</span>)
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, add after <em>printStatement</em>()</div>
-
 <p>Similar to the previous method, we parse an expression followed by a semicolon.
 We wrap that Expr in a Stmt of the right type and return it.</p>
 <h3><a href="#executing-statements" id="executing-statements"><small>8&#8202;.&#8202;1&#8202;.&#8202;3</small>Executing statements</a></h3>
 <p>We&rsquo;re running through the previous couple of chapters in microcosm, working our
 way through the front end. Our parser can now produce statement syntax trees, so
-the next and final step is to interpret them. As in expressions, we use the
-Visitor pattern, but we have a new visitor interface, Stmt.Visitor, to implement
-since statements have their own base class.</p>
-<p>We add that to the list of interfaces Interpreter implements.</p>
-<div class="codehilite"><div class="source-file"><em>lox/Interpreter.java</em><br>
-replace 1 line</div>
-<pre class="insert"><span class="k">class</span> <span class="t">Interpreter</span> <span class="k">implements</span> <span class="t">Expr</span>.<span class="t">Visitor</span>&lt;<span class="t">Object</span>&gt;,
-                             <span class="t">Stmt</span>.<span class="t">Visitor</span>&lt;<span class="t">Void</span>&gt; {
-</pre><pre class="insert-after">  void interpret(Expr expression) {<span name="void"> </span>
+the next and final step is to interpret them. As in expressions, we use
+singledistpatch, but now we have a slightly different interface: statements do
+not produce returning values, so we need to adapt our <code>eval</code>-like function to
+account for this.</p>
+<p>Rather than patching <code>eval</code> to handle <code>Stmt</code> arguments, we will create an
+entirely different funtion called <code>exec</code>. This is consistent with Python&rsquo;s own
+nomeclature in which the builtin <code>eval</code> handles Python code that represents
+expressions and <code>exec</code> handles Python code that represent whole programs and
+statements.</p>
+<div class="codehilite"><pre><span class="c"># lox/interpreter.py</span>
+<span class="a">@singledispatch</span>
+<span class="k">def</span> <span class="k">exec</span>(<span class="i">stmt</span>: <span class="t">Stmt</span>, <span class="i">env</span>: <span class="t">Env</span>) -&gt; <span class="t">None</span>:
+    <span class="i">msg</span> = <span class="i">f</span><span class="s">&quot;exec not implemented for {type(stmt)}&quot;</span>
+    <span class="k">raise</span> <span class="t">TypeError</span>(<span class="i">msg</span>)
 </pre></div>
-<div class="source-file-narrow"><em>lox/Interpreter.java</em>, replace 1 line</div>
-
-<aside name="void">
-<p>Java doesn&rsquo;t let you use lowercase &ldquo;void&rdquo; as a generic type argument for obscure
-reasons having to do with type erasure and the stack. Instead, there is a
-separate &ldquo;Void&rdquo; type specifically for this use. Sort of a &ldquo;boxed void&rdquo;, like
-&ldquo;Integer&rdquo; is for &ldquo;int&rdquo;.</p>
-</aside>
-<p>Unlike expressions, statements produce no values, so the return type of the
-visit methods is Void, not Object. We have two statement types, and we need a
-visit method for each. The easiest is expression statements.</p>
-<div class="codehilite"><div class="source-file"><em>lox/Interpreter.java</em><br>
-add after <em>evaluate</em>()</div>
-<pre>  <span class="a">@Override</span>
-  <span class="k">public</span> <span class="t">Void</span> <span class="i">visitExpressionStmt</span>(<span class="t">Stmt</span>.<span class="t">Expression</span> <span class="i">stmt</span>) {
-    <span class="i">evaluate</span>(<span class="i">stmt</span>.<span class="i">expression</span>);
-    <span class="k">return</span> <span class="k">null</span>;
-  }
+<p>We have two statement types, and we need an implementation method for each. The
+easiest is expression statements.</p>
+<div class="codehilite"><pre><span class="c"># lox/interpreter.py after exec()</span>
+<span class="a">@exec.register</span>
+<span class="k">def</span> <span class="i">_</span>(<span class="i">stmt</span>: <span class="t">Expression</span>, <span class="i">env</span>: <span class="t">Env</span>) -&gt; <span class="t">None</span>:
+    <span class="i">eval</span>(<span class="i">stmt</span>.<span class="i">expression</span>, <span class="i">env</span>)
 </pre></div>
-<div class="source-file-narrow"><em>lox/Interpreter.java</em>, add after <em>evaluate</em>()</div>
-
-<p>We evaluate the inner expression using our existing <code>evaluate()</code> method and
-<span name="discard">discard</span> the value. Then we return <code>null</code>. Java
-requires that to satisfy the special capitalized Void return type. Weird, but
-what can you do?</p>
+<p>We evaluate the inner expression using our existing <code>eval()</code> method and
+<span name="discard">discard</span> the value.</p>
 <aside name="discard">
 <p>Appropriately enough, we discard the value returned by <code>evaluate()</code> by placing
-that call inside a <em>Java</em> expression statement.</p>
+that call inside a <em>Python</em> expression statement.</p>
 </aside>
 <p>The <code>print</code> statement&rsquo;s visit method isn&rsquo;t much different.</p>
-<div class="codehilite"><div class="source-file"><em>lox/Interpreter.java</em><br>
-add after <em>visitExpressionStmt</em>()</div>
-<pre>  <span class="a">@Override</span>
-  <span class="k">public</span> <span class="t">Void</span> <span class="i">visitPrintStmt</span>(<span class="t">Stmt</span>.<span class="t">Print</span> <span class="i">stmt</span>) {
-    <span class="t">Object</span> <span class="i">value</span> = <span class="i">evaluate</span>(<span class="i">stmt</span>.<span class="i">expression</span>);
-    <span class="t">System</span>.<span class="i">out</span>.<span class="i">println</span>(<span class="i">stringify</span>(<span class="i">value</span>));
-    <span class="k">return</span> <span class="k">null</span>;
-  }
+<div class="codehilite"><pre><span class="c"># lox/interpreter.py after exec()</span>
+<span class="a">@exec.register</span>
+<span class="k">def</span> <span class="i">_</span>(<span class="i">stmt</span>: <span class="t">Print</span>, <span class="i">env</span>: <span class="t">Env</span>) -&gt; <span class="t">None</span>:
+    <span class="i">value</span> = <span class="i">eval</span>(<span class="i">stmt</span>.<span class="i">expression</span>, <span class="i">env</span>)
+    <span class="k">print</span>(<span class="i">stringify</span>(<span class="i">value</span>))
 </pre></div>
-<div class="source-file-narrow"><em>lox/Interpreter.java</em>, add after <em>visitExpressionStmt</em>()</div>
-
 <p>Before discarding the expression&rsquo;s value, we convert it to a string using the
-<code>stringify()</code> method we introduced in the last chapter and then dump it to
+<code>stringify()</code> function we introduced in the last chapter and then dump it to
 stdout.</p>
-<p>Our interpreter is able to visit statements now, but we have some work to do to
-feed them to it. First, modify the old <code>interpret()</code> method in the Interpreter
-class to accept a list of statements<span class="em">&mdash;</span>in other words, a program.</p>
-<div class="codehilite"><div class="source-file"><em>lox/Interpreter.java</em><br>
-method <em>interpret</em>()<br>
-replace 8 lines</div>
-<pre>  <span class="t">void</span> <span class="i">interpret</span>(<span class="t">List</span>&lt;<span class="t">Stmt</span>&gt; <span class="i">statements</span>) {
-    <span class="k">try</span> {
-      <span class="k">for</span> (<span class="t">Stmt</span> <span class="i">statement</span> : <span class="i">statements</span>) {
-        <span class="i">execute</span>(<span class="i">statement</span>);
-      }
-    } <span class="k">catch</span> (<span class="t">RuntimeError</span> <span class="i">error</span>) {
-      <span class="t">Lox</span>.<span class="i">runtimeError</span>(<span class="i">error</span>);
-    }
-  }
+<p>We must provide the implementation of <code>exec(Program)</code> to allow our interpreter
+to handle whole programs.</p>
+<div class="codehilite"><pre><span class="c"># lox/interpreter.py after exec()</span>
+<span class="a">@exec.register</span>
+<span class="k">def</span> <span class="i">_</span>(<span class="i">stmt</span>: <span class="t">Program</span>, <span class="i">env</span>: <span class="t">Env</span>) -&gt; <span class="t">None</span>:
+    <span class="k">for</span> <span class="i">child</span> <span class="k">in</span> <span class="i">stmt</span>.<span class="i">statements</span>:
+        <span class="k">exec</span>(<span class="i">child</span>, <span class="i">env</span>)
 </pre></div>
-<div class="source-file-narrow"><em>lox/Interpreter.java</em>, method <em>interpret</em>(), replace 8 lines</div>
-
-<p>This replaces the old code which took a single expression. The new code relies
-on this tiny helper method:</p>
-<div class="codehilite"><div class="source-file"><em>lox/Interpreter.java</em><br>
-add after <em>evaluate</em>()</div>
-<pre>  <span class="k">private</span> <span class="t">void</span> <span class="i">execute</span>(<span class="t">Stmt</span> <span class="i">stmt</span>) {
-    <span class="i">stmt</span>.<span class="i">accept</span>(<span class="k">this</span>);
-  }
+<p>We also need to adjust the Lox.interpret() method to call <code>exec()</code> instead of
+<code>eval()</code>.</p>
+<div class="codehilite"><pre><span class="c"># lox/__main__.py Lox method</span>
+<span class="c"># Replace the implementation</span>
+<span class="k">def</span> <span class="i">interpret</span>(<span class="i">self</span>, <span class="i">statement</span>: <span class="t">Stmt</span>):
+    <span class="k">try</span>:
+        <span class="k">exec</span>(<span class="i">statement</span>, <span class="i">self</span>.<span class="i">environment</span>)
+    <span class="k">except</span> <span class="t">LoxRuntimeError</span> <span class="k">as</span> <span class="i">error</span>:
+        <span class="i">self</span>.<span class="i">report_error</span>(<span class="i">error</span>, <span class="i">code</span>=<span class="n">70</span>)
 </pre></div>
-<div class="source-file-narrow"><em>lox/Interpreter.java</em>, add after <em>evaluate</em>()</div>
-
-<p>That&rsquo;s the statement analogue to the <code>evaluate()</code> method we have for
-expressions. Since we&rsquo;re working with lists now, we need to let Java know.</p>
-<div class="codehilite"><pre class="insert-before">package com.craftinginterpreters.lox;
-</pre><div class="source-file"><em>lox/Interpreter.java</em></div>
-<pre class="insert">
-
-<span class="k">import</span> <span class="i">java.util.List</span>;
-</pre><pre class="insert-after">
-
-class Interpreter implements Expr.Visitor&lt;Object&gt;,
+<p>This require a slight change to the imports:</p>
+<div class="codehilite"><pre><span class="c"># lox/__main__.py replace lox.interpreter import</span>
+<span class="k">from</span> <span class="i">lox</span>.<span class="i">interpreter</span> <span class="k">import</span> <span class="i">eval</span>, <span class="k">exec</span>, <span class="i">stringify</span>
 </pre></div>
-<div class="source-file-narrow"><em>lox/Interpreter.java</em></div>
-
-<p>The main Lox class is still trying to parse a single expression and pass it to
-the interpreter. We fix the parsing line like so:</p>
-<div class="codehilite"><pre class="insert-before">    Parser parser = new Parser(tokens);
-</pre><div class="source-file"><em>lox/Lox.java</em><br>
-in <em>run</em>()<br>
-replace 1 line</div>
-<pre class="insert">    <span class="t">List</span>&lt;<span class="t">Stmt</span>&gt; <span class="i">statements</span> = <span class="i">parser</span>.<span class="i">parse</span>();
-</pre><pre class="insert-after">
-
-    // Stop if there was a syntax error.
-</pre></div>
-<div class="source-file-narrow"><em>lox/Lox.java</em>, in <em>run</em>(), replace 1 line</div>
-
-<p>And then replace the call to the interpreter with this:</p>
-<div class="codehilite"><pre class="insert-before">    if (hadError) return;
-
-</pre><div class="source-file"><em>lox/Lox.java</em><br>
-in <em>run</em>()<br>
-replace 1 line</div>
-<pre class="insert">    <span class="i">interpreter</span>.<span class="i">interpret</span>(<span class="i">statements</span>);
-</pre><pre class="insert-after">  }
-</pre></div>
-<div class="source-file-narrow"><em>lox/Lox.java</em>, in <em>run</em>(), replace 1 line</div>
-
 <p>Basically just plumbing the new syntax through. OK, fire up the interpreter and
 give it a try. At this point, it&rsquo;s worth sketching out a little Lox program in a
 text file to run as a script. Something like:</p>
@@ -471,7 +387,7 @@ statement is not allowed to be one that declares a name. This is OK:</p>
 <code>beverage</code> variable? Does it persist after the <code>if</code> statement? If so, what is
 its value on days other than Monday? Does the variable exist at all on those
 days?</p>
-<p>Code like this is weird, so C, Java, and friends all disallow it. It&rsquo;s as if
+<p>Code like this is weird, so C, Python, and friends all disallow it. It&rsquo;s as if
 there are two levels of <span name="brace">&ldquo;precedence&rdquo;</span> for statements.
 Some places where a statement is allowed<span class="em">&mdash;</span>like inside a block or at the top
 level<span class="em">&mdash;</span>allow any kind of statement, including declarations. Others allow only
@@ -515,132 +431,101 @@ semicolon.</p>
 <p>That <code>IDENTIFIER</code> clause matches a single identifier token, which is understood
 to be the name of the variable being accessed.</p>
 <p>These new grammar rules get their corresponding syntax trees. Over in the AST
-generator, we add a <span name="var-stmt-ast">new statement</span> node for a
-variable declaration.</p>
-<div class="codehilite"><pre class="insert-before">      &quot;Expression : Expr expression&quot;,
-</pre><pre class="insert-before">      <span class="s">&quot;Print      : Expr expression&quot;</span><span class="insert-comma">,</span>
-</pre><div class="source-file"><em>tool/GenerateAst.java</em><br>
-in <em>main</em>()<br>
-add <em>&ldquo;,&rdquo;</em> to previous line</div>
-<pre class="insert">      <span class="s">&quot;Var        : Token name, Expr initializer&quot;</span>
-</pre><pre class="insert-after">    ));
+generator, we add a new statement node for a variable declaration.</p>
+<div class="codehilite"><pre><span class="c"># lox/ast.py</span>
+<span class="a">@dataclass</span>
+<span class="k">class</span> <span class="t">Var</span>(<span class="t">Stmt</span>):
+    <span class="i">name</span>: <span class="t">Token</span>
+    <span class="i">initializer</span>: <span class="t">Expr</span>
 </pre></div>
-<div class="source-file-narrow"><em>tool/GenerateAst.java</em>, in <em>main</em>(), add <em>&ldquo;,&rdquo;</em> to previous line</div>
-
-<aside name="var-stmt-ast">
-<p>The generated code for the new node is in <a href="appendix-ii.html#variable-statement">Appendix II</a>.</p>
-</aside>
 <p>It stores the name token so we know what it&rsquo;s declaring, along with the
 initializer expression. (If there isn&rsquo;t an initializer, that field is <code>null</code>.)</p>
 <p>Then we add an expression node for accessing a variable.</p>
-<div class="codehilite"><pre class="insert-before">      &quot;Literal  : Object value&quot;,
-</pre><pre class="insert-before">      <span class="s">&quot;Unary    : Token operator, Expr right&quot;</span><span class="insert-comma">,</span>
-</pre><div class="source-file"><em>tool/GenerateAst.java</em><br>
-in <em>main</em>()<br>
-add <em>&ldquo;,&rdquo;</em> to previous line</div>
-<pre class="insert">      <span class="s">&quot;Variable : Token name&quot;</span>
-</pre><pre class="insert-after">    ));
+<div class="codehilite"><pre><span class="c"># lox/ast.py</span>
+<span class="a">@dataclass</span>
+<span class="k">class</span> <span class="t">Variable</span>(<span class="t">Expr</span>):
+    <span class="i">name</span>: <span class="t">Token</span>
 </pre></div>
-<div class="source-file-narrow"><em>tool/GenerateAst.java</em>, in <em>main</em>(), add <em>&ldquo;,&rdquo;</em> to previous line</div>
-
-<p><span name="var-expr-ast">It&rsquo;s</span> simply a wrapper around the token for the
-variable name. That&rsquo;s it. As always, don&rsquo;t forget to run the AST generator
-script so that you get updated &ldquo;Expr.java&rdquo; and &ldquo;Stmt.java&rdquo; files.</p>
-<aside name="var-expr-ast">
-<p>The generated code for the new node is in <a href="appendix-ii.html#variable-expression">Appendix II</a>.</p>
-</aside>
+<p>It&rsquo;s simply a wrapper around the token for the variable name. That&rsquo;s it.</p>
 <h3><a href="#parsing-variables" id="parsing-variables"><small>8&#8202;.&#8202;2&#8202;.&#8202;2</small>Parsing variables</a></h3>
 <p>Before we parse variable statements, we need to shift around some code to make
 room for the new <code>declaration</code> rule in the grammar. The top level of a program
 is now a list of declarations, so the entrypoint method to the parser changes.</p>
-<div class="codehilite"><pre class="insert-before">  List&lt;Stmt&gt; parse() {
-    List&lt;Stmt&gt; statements = new ArrayList&lt;&gt;();
-    while (!isAtEnd()) {
-</pre><div class="source-file"><em>lox/Parser.java</em><br>
-in <em>parse</em>()<br>
-replace 1 line</div>
-<pre class="insert">      <span class="i">statements</span>.<span class="i">add</span>(<span class="i">declaration</span>());
-</pre><pre class="insert-after">    }
-
-    return statements;<span name="parse-error-handling"> </span>
-  }
-</pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, in <em>parse</em>(), replace 1 line</div>
-
-<p>That calls this new method:</p>
-<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
-add after <em>expression</em>()</div>
-<pre>  <span class="k">private</span> <span class="t">Stmt</span> <span class="i">declaration</span>() {
-    <span class="k">try</span> {
-      <span class="k">if</span> (<span class="i">match</span>(<span class="i">VAR</span>)) <span class="k">return</span> <span class="i">varDeclaration</span>();
-
-      <span class="k">return</span> <span class="i">statement</span>();
-    } <span class="k">catch</span> (<span class="t">ParseError</span> <span class="i">error</span>) {
-      <span class="i">synchronize</span>();
-      <span class="k">return</span> <span class="k">null</span>;
-    }
-  }
-</pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, add after <em>expression</em>()</div>
-
 <p>Hey, do you remember way back in that <a href="parsing-expressions.html">earlier chapter</a> when we put the
 infrastructure in place to do error recovery? We are finally ready to hook that
-up.</p>
+up. We replace the entry point to the parser with this:</p>
+<div class="codehilite"><pre><span class="c"># lox/parser.py the while loop in the parse()</span>
+    ...
+    <span class="k">while</span> <span class="k">not</span> <span class="i">parser</span>.<span class="i">is_at_end</span>():
+        <span class="k">try</span>:
+            <span class="i">statements</span>.<span class="i">append</span>(<span class="i">parser</span>.<span class="i">declaration</span>())
+        <span class="k">except</span> <span class="t">LoxSyntaxError</span>:
+            <span class="i">parser</span>.<span class="i">synchronize</span>()
+    ...
+</pre></div>
 <p>This <code>declaration()</code> method is the method we call repeatedly when parsing a
 series of statements in a block or a script, so it&rsquo;s the right place to
-synchronize when the parser goes into panic mode. The whole body of this method
-is wrapped in a try block to catch the exception thrown when the parser begins
-error recovery. This gets it back to trying to parse the beginning of the next
-statement or declaration.</p>
-<p>The real parsing happens inside the try block. First, it looks to see if we&rsquo;re
-at a variable declaration by looking for the leading <code>var</code> keyword. If not, it
-falls through to the existing <code>statement()</code> method that parses <code>print</code> and
-expression statements.</p>
+synchronize when the parser goes into panic mode. We capture any LoxSyntaxError
+exceptions and initialize the error recovery. The try/except is used to keep
+parsing even when we hit an error, and if an error occurs, this gets it back to
+trying to parse the beginning of the next statement or declaration.</p>
+<p>After the parsing is done, we need to announce all errors, if any, to the user.
+We do this by checking the <code>self.errors</code> list and raising an <code>LoxStaticError</code>
+when appropriate. This requires an import:</p>
+<div class="codehilite"><pre><span class="c"># lox/parser.py at the top</span>
+<span class="k">from</span> <span class="i">lox</span>.<span class="i">errors</span> <span class="k">import</span> <span class="t">LoxStaticError</span>
+</pre></div>
+<p>And a small verification just before returning:</p>
+<div class="codehilite"><pre><span class="c"># lox/parser.py parse() before the return</span>
+    ...
+    <span class="k">if</span> <span class="i">parser</span>.<span class="i">errors</span>:
+        <span class="k">raise</span> <span class="t">LoxStaticError</span>(<span class="i">parser</span>.<span class="i">errors</span>)
+    ...
+</pre></div>
+<p>The real parsing happens inside the <code>declaration()</code> method. First, it looks to
+see if we&rsquo;re at a variable declaration by looking for the leading <code>var</code> keyword.
+If not, it falls through to the existing <code>statement()</code> method that parses
+<code>print</code> and expression statements.</p>
+<div class="codehilite"><pre><span class="c"># lox/parser.py Parser method</span>
+<span class="k">def</span> <span class="i">declaration</span>(<span class="i">self</span>) -&gt; <span class="t">Stmt</span>:
+    <span class="i">match</span> <span class="i">self</span>.<span class="i">peek</span>().<span class="k">type</span>:
+        <span class="i">case</span> <span class="s">&quot;VAR&quot;</span>:
+            <span class="k">return</span> <span class="i">self</span>.<span class="i">var_declaration</span>()
+        <span class="i">case</span> <span class="i">_</span>:
+            <span class="k">return</span> <span class="i">self</span>.<span class="i">statement</span>()
+</pre></div>
 <p>Remember how <code>statement()</code> tries to parse an expression statement if no other
 statement matches? And <code>expression()</code> reports a syntax error if it can&rsquo;t parse
 an expression at the current token? That chain of calls ensures we report an
 error if a valid declaration or statement isn&rsquo;t parsed.</p>
 <p>When the parser matches a <code>var</code> token, it branches to:</p>
-<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
-add after <em>printStatement</em>()</div>
-<pre>  <span class="k">private</span> <span class="t">Stmt</span> <span class="i">varDeclaration</span>() {
-    <span class="t">Token</span> <span class="i">name</span> = <span class="i">consume</span>(<span class="i">IDENTIFIER</span>, <span class="s">&quot;Expect variable name.&quot;</span>);
+<div class="codehilite"><pre><span class="c"># lox/parser.py Parser method</span>
+<span class="k">def</span> <span class="i">var_declaration</span>(<span class="i">self</span>) -&gt; <span class="t">Var</span>:
+    <span class="i">self</span>.<span class="i">consume</span>(<span class="s">&quot;VAR&quot;</span>, <span class="s">&quot;Expect &#39;var&#39; keyword.&quot;</span>)
+    <span class="i">name</span> = <span class="i">self</span>.<span class="i">consume</span>(<span class="s">&quot;IDENTIFIER&quot;</span>, <span class="s">&quot;Expect variable name.&quot;</span>)
 
-    <span class="t">Expr</span> <span class="i">initializer</span> = <span class="k">null</span>;
-    <span class="k">if</span> (<span class="i">match</span>(<span class="i">EQUAL</span>)) {
-      <span class="i">initializer</span> = <span class="i">expression</span>();
-    }
+    <span class="k">if</span> <span class="i">self</span>.<span class="i">match</span>(<span class="s">&quot;EQUAL&quot;</span>):
+        <span class="i">initializer</span> = <span class="i">self</span>.<span class="i">expression</span>()
+    <span class="k">else</span>:
+        <span class="i">initializer</span> = <span class="t">Literal</span>(<span class="t">None</span>)
 
-    <span class="i">consume</span>(<span class="i">SEMICOLON</span>, <span class="s">&quot;Expect &#39;;&#39; after variable declaration.&quot;</span>);
-    <span class="k">return</span> <span class="k">new</span> <span class="t">Stmt</span>.<span class="t">Var</span>(<span class="i">name</span>, <span class="i">initializer</span>);
-  }
+    <span class="i">self</span>.<span class="i">consume</span>(<span class="s">&quot;SEMICOLON&quot;</span>,
+                 <span class="s">&quot;Expect &#39;;&#39; after variable declaration.&quot;</span>)
+    <span class="k">return</span> <span class="t">Var</span>(<span class="i">name</span>, <span class="i">initializer</span>)
+
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, add after <em>printStatement</em>()</div>
-
-<p>As always, the recursive descent code follows the grammar rule. The parser has
-already matched the <code>var</code> token, so next it requires and consumes an identifier
-token for the variable name.</p>
+<p>As always, the recursive descent code follows the grammar rule. It first
+consumes the <code>var</code> keyword and then the identifier token for the variable name.</p>
 <p>Then, if it sees an <code>=</code> token, it knows there is an initializer expression and
-parses it. Otherwise, it leaves the initializer <code>null</code>. Finally, it consumes the
-required semicolon at the end of the statement. All this gets wrapped in a
-Stmt.Var syntax tree node and we&rsquo;re groovy.</p>
+parses it. Otherwise, it creates an initializer that represents <code>null</code>. Finally,
+it consumes the required semicolon at the end of the statement. All this gets
+wrapped in a Var syntax tree node and we&rsquo;re groovy.</p>
 <p>Parsing a variable expression is even easier. In <code>primary()</code>, we look for an
 identifier token.</p>
-<div class="codehilite"><pre class="insert-before">      return new Expr.Literal(previous().literal);
-    }
-</pre><div class="source-file"><em>lox/Parser.java</em><br>
-in <em>primary</em>()</div>
-<pre class="insert">
-
-    <span class="k">if</span> (<span class="i">match</span>(<span class="i">IDENTIFIER</span>)) {
-      <span class="k">return</span> <span class="k">new</span> <span class="t">Expr</span>.<span class="t">Variable</span>(<span class="i">previous</span>());
-    }
-</pre><pre class="insert-after">
-
-    if (match(LEFT_PAREN)) {
+<div class="codehilite"><pre><span class="c"># lox/parser.py Parser.primary if chain</span>
+    <span class="k">if</span> <span class="i">self</span>.<span class="i">match</span>(<span class="s">&quot;IDENTIFIER&quot;</span>):
+        <span class="k">return</span> <span class="t">Variable</span>(<span class="i">self</span>.<span class="i">previous</span>())
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, in <em>primary</em>()</div>
-
 <p>That gives us a working front end for declaring and using variables. All that&rsquo;s
 left is to feed it into the interpreter. Before we get to that, we need to talk
 about where variables live in memory.</p>
@@ -654,44 +539,63 @@ variables and values frolic.</p>
 </aside>
 <p>You can think of it like a <span name="map">map</span> where the keys are
 variable names and the values are the variable&rsquo;s, uh, values. In fact, that&rsquo;s
-how we&rsquo;ll implement it in Java. We could stuff that map and the code to manage
+how we&rsquo;ll implement it in Python. We could stuff that map and the code to manage
 it right into Interpreter, but since it forms a nicely delineated concept, we&rsquo;ll
 pull it out into its own class.</p>
 <p>Start a new file and add:</p>
 <aside name="map">
-<p>Java calls them <strong>maps</strong> or <strong>hashmaps</strong>. Other languages call them <strong>hash
-tables</strong>, <strong>dictionaries</strong> (Python and C#), <strong>hashes</strong> (Ruby and Perl),
-<strong>tables</strong> (Lua), or <strong>associative arrays</strong> (PHP). Way back when, they were
-known as <strong>scatter tables</strong>.</p>
+<p>Python calls them <strong>dictionaries</strong> or <strong>dicts</strong>. Other languages call them
+<strong>hash tables</strong>, <strong>maps</strong>, <strong>hashmaps</strong>, <strong>hashes</strong> (Ruby and Perl), <strong>tables</strong>
+(Lua), or <strong>associative arrays</strong> (PHP). Way back when, they were known as
+<strong>scatter tables</strong>.</p>
 </aside>
-<div class="codehilite"><div class="source-file"><em>lox/Environment.java</em><br>
-create new file</div>
-<pre><span class="k">package</span> <span class="i">com.craftinginterpreters.lox</span>;
+<div class="codehilite"><pre><span class="c"># lox/env.py</span>
+<span class="c"># Replace the Env declaration</span>
+<span class="k">from</span> <span class="i">dataclasses</span> <span class="k">import</span> <span class="i">dataclass</span>, <span class="i">field</span>
 
-<span class="k">import</span> <span class="i">java.util.HashMap</span>;
-<span class="k">import</span> <span class="i">java.util.Map</span>;
-
-<span class="k">class</span> <span class="t">Environment</span> {
-  <span class="k">private</span> <span class="k">final</span> <span class="t">Map</span>&lt;<span class="t">String</span>, <span class="t">Object</span>&gt; <span class="i">values</span> = <span class="k">new</span> <span class="t">HashMap</span>&lt;&gt;();
-}
+<span class="a">@dataclass</span>
+<span class="k">class</span> <span class="t">Env</span>[<span class="t">T</span>]:
+    <span class="i">values</span>: <span class="t">dict</span>[<span class="t">str</span>, <span class="t">T</span>] = <span class="i">field</span>(<span class="i">default_factory</span>=<span class="t">dict</span>)
 </pre></div>
-<div class="source-file-narrow"><em>lox/Environment.java</em>, create new file</div>
+<aside name="field">
+<p>The <code>field()</code> function is how you specify non-default behavior for dataclass
+fields. Here, we use it to specify that the default value for <code>values</code> is a new,
+empty dictionary, created by calling <code>dict()</code>. If we just wrote</p>
+<div class="codehilite"><pre><span class="i">values</span>: <span class="t">dict</span>[<span class="t">str</span>, <span class="t">Value</span>] = {}
+</pre></div>
+<p>Python would share that single dictionary instance across all instances of
+<code>Env</code>. In fact, newer versions of Python will even stop us from doing that and
+raise an error during initialization.</p></span>
+<p>There’s a Python dict in there to store the bindings. It uses bare strings for
+the keys, not tokens. A token represents a unit of code at a specific place in
+the source text, but when it comes to looking up variables, all identifier
+tokens with the same name should refer to the same variable (ignoring scope for
+now). Using the raw string ensures all of those tokens refer to the same map
+key.</p>
+<p>We also need to hook up the <code>Env</code> class to the interpreter. Since we declared
+<code>Env</code> here as generic, we will create a subclass that specializes to a mapping
+from strings to Lox values.</p>
+<div class="codehilite"><pre><span class="c"># lox/interpreter.py replace Env declaration</span>
+<span class="k">from</span> <span class="i">lox</span> <span class="k">import</span> <span class="i">env</span>
 
-<p>There&rsquo;s a Java Map in there to store the bindings. It uses bare strings for the
-keys, not tokens. A token represents a unit of code at a specific place in the
-source text, but when it comes to looking up variables, all identifier tokens
-with the same name should refer to the same variable (ignoring scope for now).
-Using the raw string ensures all of those tokens refer to the same map key.</p>
+<span class="k">class</span> <span class="t">Env</span>(<span class="i">env</span>.<span class="t">Env</span>[<span class="t">Value</span>]):
+    <span class="k">pass</span>
+</pre></div>
 <p>There are two operations we need to support. First, a variable definition binds
-a new name to a value.</p>
-<div class="codehilite"><div class="source-file"><em>lox/Environment.java</em><br>
-in class <em>Environment</em></div>
-<pre>  <span class="t">void</span> <span class="i">define</span>(<span class="t">String</span> <span class="i">name</span>, <span class="t">Object</span> <span class="i">value</span>) {
-    <span class="i">values</span>.<span class="i">put</span>(<span class="i">name</span>, <span class="i">value</span>);
-  }
+a new name to a value. We want our <code>Env</code> to behave similarly to Python&rsquo;s
+dictionaries:</p>
+<div class="codehilite"><pre><span class="c"># lox/env.py Env method</span>
+<span class="k">def</span> <span class="i">__setitem__</span>(<span class="i">self</span>, <span class="i">name</span>: <span class="t">str</span>, <span class="i">value</span>: <span class="t">Value</span>) -&gt; <span class="t">None</span>:
+    <span class="i">self</span>.<span class="i">values</span>[<span class="i">name</span>] = <span class="i">value</span>
 </pre></div>
-<div class="source-file-narrow"><em>lox/Environment.java</em>, in class <em>Environment</em></div>
-
+<aside name="setitem">
+<p>The <code>__setitem__</code> method is a special Python method that makes it possible to
+use the square bracket notation to set values in the environment. With this
+method in place, we can write:</p>
+<div class="codehilite"><pre><span class="i">env</span>[<span class="s">&quot;a&quot;</span>] = <span class="n">42</span>
+</pre></div>
+<p>instead of having to call a separate method like <code>env.set("a", 42)</code>.</p>
+</aside>
 <p>Not exactly brain surgery, but we have made one interesting semantic choice.
 When we add the key to the map, we don&rsquo;t check to see if it&rsquo;s already present.
 That means that this program works:</p>
@@ -720,25 +624,16 @@ footsteps.</p>
 </aside>
 <p>So, to keep the two modes consistent, we&rsquo;ll allow it<span class="em">&mdash;</span>at least for global
 variables. Once a variable exists, we need a way to look it up.</p>
-<div class="codehilite"><pre class="insert-before">class Environment {
-  private final Map&lt;String, Object&gt; values = new HashMap&lt;&gt;();
-</pre><div class="source-file"><em>lox/Environment.java</em><br>
-in class <em>Environment</em></div>
-<pre class="insert">
-
-  <span class="t">Object</span> <span class="i">get</span>(<span class="t">Token</span> <span class="i">name</span>) {
-    <span class="k">if</span> (<span class="i">values</span>.<span class="i">containsKey</span>(<span class="i">name</span>.<span class="i">lexeme</span>)) {
-      <span class="k">return</span> <span class="i">values</span>.<span class="i">get</span>(<span class="i">name</span>.<span class="i">lexeme</span>);
-    }
-
-    <span class="k">throw</span> <span class="k">new</span> <span class="t">RuntimeError</span>(<span class="i">name</span>,
-        <span class="s">&quot;Undefined variable &#39;&quot;</span> + <span class="i">name</span>.<span class="i">lexeme</span> + <span class="s">&quot;&#39;.&quot;</span>);
-  }
-
-</pre><pre class="insert-after">  void define(String name, Object value) {
+<div class="codehilite"><pre><span class="c"># lox/types.py Env method</span>
+<span class="k">def</span> <span class="i">__getitem__</span>(<span class="i">self</span>, <span class="i">name</span>: <span class="t">str</span>) -&gt; <span class="t">Value</span>:
+    <span class="k">if</span> <span class="i">name</span> <span class="k">in</span> <span class="i">self</span>.<span class="i">values</span>:
+        <span class="k">return</span> <span class="i">self</span>.<span class="i">values</span>[<span class="i">name</span>]
+    <span class="k">raise</span> <span class="t">NameError</span>(<span class="i">name</span>)
 </pre></div>
-<div class="source-file-narrow"><em>lox/Environment.java</em>, in class <em>Environment</em></div>
-
+<aside name="getitem">
+<p><code>__getitem__</code> is the getter brother of <code>__setitem__</code> we saw before. It is used
+to <em>retrieve</em> items from a collection using the bracket notation.</p>
+</aside>
 <p>This is a little more semantically interesting. If the variable is found, it
 simply returns the value bound to it. But what if it&rsquo;s not? Again, we have a
 choice:</p>
@@ -786,7 +681,7 @@ are looking at the body of <code>isOdd()</code> where it&rsquo;s called. If we s
 the two functions, then <code>isOdd()</code> isn&rsquo;t defined when we&rsquo;re looking at
 <code>isEven()</code>&rsquo;s body.</p>
 <aside name="declare">
-<p>Some statically typed languages like Java and C# solve this by specifying that
+<p>Some statically typed languages like Python and C# solve this by specifying that
 the top level of a program isn&rsquo;t a sequence of imperative statements. Instead, a
 program is a set of declarations which all come into being simultaneously. The
 implementation declares <em>all</em> of the names before looking at the bodies of <em>any</em>
@@ -809,36 +704,14 @@ even and odd numbers work, but you&rsquo;d get a runtime error in:</p>
 by throwing an exception. The exception contains the variable&rsquo;s token so we can
 tell the user where in their code they messed up.</p>
 <h3><a href="#interpreting-global-variables" id="interpreting-global-variables"><small>8&#8202;.&#8202;3&#8202;.&#8202;1</small>Interpreting global variables</a></h3>
-<p>The Interpreter class gets an instance of the new Environment class.</p>
-<div class="codehilite"><pre class="insert-before">class Interpreter implements Expr.Visitor&lt;Object&gt;,
-                             Stmt.Visitor&lt;Void&gt; {
-</pre><div class="source-file"><em>lox/Interpreter.java</em><br>
-in class <em>Interpreter</em></div>
-<pre class="insert">  <span class="k">private</span> <span class="t">Environment</span> <span class="i">environment</span> = <span class="k">new</span> <span class="t">Environment</span>();
-
-</pre><pre class="insert-after">  void interpret(List&lt;Stmt&gt; statements) {
+<p>We have two new syntax trees, so that&rsquo;s two new <code>exec</code> method implementations.
+The first is for declaration statements.</p>
+<div class="codehilite"><pre><span class="c"># lox/interpreter.py after exec()</span>
+<span class="a">@exec.register</span>
+<span class="k">def</span> <span class="i">_</span>(<span class="i">stmt</span>: <span class="t">Var</span>, <span class="i">env</span>: <span class="t">Env</span>) -&gt; <span class="t">None</span>:
+    <span class="i">value</span> = <span class="i">eval</span>(<span class="i">stmt</span>.<span class="i">initializer</span>, <span class="i">env</span>)
+    <span class="i">env</span>[<span class="i">stmt</span>.<span class="i">name</span>.<span class="i">lexeme</span>] = <span class="i">value</span>
 </pre></div>
-<div class="source-file-narrow"><em>lox/Interpreter.java</em>, in class <em>Interpreter</em></div>
-
-<p>We store it as a field directly in Interpreter so that the variables stay in
-memory as long as the interpreter is still running.</p>
-<p>We have two new syntax trees, so that&rsquo;s two new visit methods. The first is for
-declaration statements.</p>
-<div class="codehilite"><div class="source-file"><em>lox/Interpreter.java</em><br>
-add after <em>visitPrintStmt</em>()</div>
-<pre>  <span class="a">@Override</span>
-  <span class="k">public</span> <span class="t">Void</span> <span class="i">visitVarStmt</span>(<span class="t">Stmt</span>.<span class="t">Var</span> <span class="i">stmt</span>) {
-    <span class="t">Object</span> <span class="i">value</span> = <span class="k">null</span>;
-    <span class="k">if</span> (<span class="i">stmt</span>.<span class="i">initializer</span> != <span class="k">null</span>) {
-      <span class="i">value</span> = <span class="i">evaluate</span>(<span class="i">stmt</span>.<span class="i">initializer</span>);
-    }
-
-    <span class="i">environment</span>.<span class="i">define</span>(<span class="i">stmt</span>.<span class="i">name</span>.<span class="i">lexeme</span>, <span class="i">value</span>);
-    <span class="k">return</span> <span class="k">null</span>;
-  }
-</pre></div>
-<div class="source-file-narrow"><em>lox/Interpreter.java</em>, add after <em>visitPrintStmt</em>()</div>
-
 <p>If the variable has an initializer, we evaluate it. If not, we have another
 choice to make. We could have made this a syntax error in the parser by
 <em>requiring</em> an initializer. Most languages don&rsquo;t, though, so it feels a little
@@ -851,19 +724,19 @@ explicitly initialized.</p>
 <div class="codehilite"><pre><span class="k">var</span> <span class="i">a</span>;
 <span class="k">print</span> <span class="i">a</span>; <span class="c">// &quot;nil&quot;.</span>
 </pre></div>
-<p>Thus, if there isn&rsquo;t an initializer, we set the value to <code>null</code>, which is the
-Java representation of Lox&rsquo;s <code>nil</code> value. Then we tell the environment to bind
+<p>Thus, if there isn&rsquo;t an initializer, we set the value to <code>None</code>, which is the
+Python representation of Lox&rsquo;s <code>nil</code> value. Then we tell the environment to bind
 the variable to that value.</p>
 <p>Next, we evaluate a variable expression.</p>
-<div class="codehilite"><div class="source-file"><em>lox/Interpreter.java</em><br>
-add after <em>visitUnaryExpr</em>()</div>
-<pre>  <span class="a">@Override</span>
-  <span class="k">public</span> <span class="t">Object</span> <span class="i">visitVariableExpr</span>(<span class="t">Expr</span>.<span class="t">Variable</span> <span class="i">expr</span>) {
-    <span class="k">return</span> <span class="i">environment</span>.<span class="i">get</span>(<span class="i">expr</span>.<span class="i">name</span>);
-  }
+<div class="codehilite"><pre><span class="c"># lox/interpreter.py</span>
+<span class="a">@eval.register</span>
+<span class="k">def</span> <span class="i">_</span>(<span class="i">expr</span>: <span class="t">Variable</span>, <span class="i">env</span>: <span class="t">Env</span>) -&gt; <span class="t">Value</span>:
+    <span class="k">try</span>:
+        <span class="k">return</span> <span class="i">env</span>[<span class="i">expr</span>.<span class="i">name</span>.<span class="i">lexeme</span>]
+    <span class="k">except</span> <span class="t">NameError</span> <span class="k">as</span> <span class="i">error</span>:
+        <span class="i">msg</span> = <span class="i">f</span><span class="s">&quot;Undefined variable &#39;{expr.name.lexeme}&#39;.&quot;</span>
+        <span class="k">raise</span> <span class="t">LoxRuntimeError</span>(<span class="i">msg</span>, <span class="i">expr</span>.<span class="i">name</span>)
 </pre></div>
-<div class="source-file-narrow"><em>lox/Interpreter.java</em>, add after <em>visitUnaryExpr</em>()</div>
-
 <p>This simply forwards to the environment which does the heavy lifting to make
 sure the variable is defined. With that, we&rsquo;ve got rudimentary variables
 working. Try this out:</p>
@@ -912,31 +785,21 @@ Later, <code>assignment</code> will get more complex when we add property setter
 objects, like:</p>
 <div class="codehilite"><pre><span class="i">instance</span>.<span class="i">field</span> = <span class="s">&quot;value&quot;</span>;
 </pre></div>
-<p>The easy part is adding the <span name="assign-ast">new syntax tree node</span>.</p>
-<div class="codehilite"><pre class="insert-before">    defineAst(outputDir, &quot;Expr&quot;, Arrays.asList(
-</pre><div class="source-file"><em>tool/GenerateAst.java</em><br>
-in <em>main</em>()</div>
-<pre class="insert">      <span class="s">&quot;Assign   : Token name, Expr value&quot;</span>,
-</pre><pre class="insert-after">      &quot;Binary   : Expr left, Token operator, Expr right&quot;,
+<p>The easy part is adding the new syntax tree node.</p>
+<div class="codehilite"><pre><span class="c"># lox/ast.py</span>
+<span class="a">@dataclass</span>
+<span class="k">class</span> <span class="t">Assign</span>(<span class="t">Expr</span>):
+    <span class="i">name</span>: <span class="t">Token</span>
+    <span class="i">value</span>: <span class="t">Expr</span>
 </pre></div>
-<div class="source-file-narrow"><em>tool/GenerateAst.java</em>, in <em>main</em>()</div>
-
-<aside name="assign-ast">
-<p>The generated code for the new node is in <a href="appendix-ii.html#assign-expression">Appendix II</a>.</p>
-</aside>
 <p>It has a token for the variable being assigned to, and an expression for the new
 value. After you run the AstGenerator to get the new Expr.Assign class, swap out
 the body of the parser&rsquo;s existing <code>expression()</code> method to match the updated
 rule.</p>
-<div class="codehilite"><pre class="insert-before">  private Expr expression() {
-</pre><div class="source-file"><em>lox/Parser.java</em><br>
-in <em>expression</em>()<br>
-replace 1 line</div>
-<pre class="insert">    <span class="k">return</span> <span class="i">assignment</span>();
-</pre><pre class="insert-after">  }
+<div class="codehilite"><pre><span class="c"># lox/parser.py replace Parser.expression()</span>
+<span class="k">def</span> <span class="i">expression</span>(<span class="i">self</span>) -&gt; <span class="t">Expr</span>:
+    <span class="k">return</span> <span class="i">self</span>.<span class="i">assignment</span>()
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, in <em>expression</em>(), replace 1 line</div>
-
 <p>Here is where it gets tricky. A single token lookahead recursive descent parser
 can&rsquo;t see far enough to tell that it&rsquo;s parsing an assignment until <em>after</em> it
 has gone through the left-hand side and stumbled onto the <code>=</code>. You might wonder
@@ -972,28 +835,21 @@ tokens of lookahead to find the <code>=</code>.</p>
 </aside>
 <p>We have only a single token of lookahead, so what do we do? We use a little
 trick, and it looks like this:</p>
-<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
-add after <em>expressionStatement</em>()</div>
-<pre>  <span class="k">private</span> <span class="t">Expr</span> <span class="i">assignment</span>() {
-    <span class="t">Expr</span> <span class="i">expr</span> = <span class="i">equality</span>();
+<div class="codehilite"><pre><span class="c"># lox/parser.py Parser method</span>
+<span class="k">def</span> <span class="i">assignment</span>(<span class="i">self</span>) -&gt; <span class="t">Expr</span>:
+    <span class="i">expr</span> = <span class="i">self</span>.<span class="i">equality</span>()
 
-    <span class="k">if</span> (<span class="i">match</span>(<span class="i">EQUAL</span>)) {
-      <span class="t">Token</span> <span class="i">equals</span> = <span class="i">previous</span>();
-      <span class="t">Expr</span> <span class="i">value</span> = <span class="i">assignment</span>();
+    <span class="k">if</span> <span class="i">self</span>.<span class="i">match</span>(<span class="s">&quot;EQUAL&quot;</span>):
+        <span class="i">equals</span> = <span class="i">self</span>.<span class="i">previous</span>()
+        <span class="i">value</span> = <span class="i">self</span>.<span class="i">assignment</span>()
 
-      <span class="k">if</span> (<span class="i">expr</span> <span class="k">instanceof</span> <span class="t">Expr</span>.<span class="t">Variable</span>) {
-        <span class="t">Token</span> <span class="i">name</span> = ((<span class="t">Expr</span>.<span class="t">Variable</span>)<span class="i">expr</span>).<span class="i">name</span>;
-        <span class="k">return</span> <span class="k">new</span> <span class="t">Expr</span>.<span class="t">Assign</span>(<span class="i">name</span>, <span class="i">value</span>);
-      }
+        <span class="k">if</span> <span class="i">isinstance</span>(<span class="i">expr</span>, <span class="t">Variable</span>):
+            <span class="i">name</span> = <span class="i">expr</span>.<span class="i">name</span>
+            <span class="k">return</span> <span class="t">Assign</span>(<span class="i">name</span>, <span class="i">value</span>)
 
-      <span class="i">error</span>(<span class="i">equals</span>, <span class="s">&quot;Invalid assignment target.&quot;</span>);<span name="no-throw"> </span>
-    }
-
-    <span class="k">return</span> <span class="i">expr</span>;
-  }
+        <span class="i">self</span>.<span class="i">error</span>(<span class="i">equals</span>, <span class="s">&quot;Invalid assignment target.&quot;</span>)
+    <span class="k">return</span> <span class="i">expr</span>
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, add after <em>expressionStatement</em>()</div>
-
 <p>Most of the code for parsing an assignment expression looks similar to that of
 the other binary operators like <code>+</code>. We parse the left-hand side, which can be
 any expression of higher precedence. If we find an <code>=</code>, we parse the right-hand
@@ -1046,35 +902,29 @@ fields later. The end result of this trick is an assignment expression tree node
 that knows what it is assigning to and has an expression subtree for the value
 being assigned. All with only a single token of lookahead and no backtracking.</p>
 <h3><a href="#assignment-semantics" id="assignment-semantics"><small>8&#8202;.&#8202;4&#8202;.&#8202;2</small>Assignment semantics</a></h3>
-<p>We have a new syntax tree node, so our interpreter gets a new visit method.</p>
-<div class="codehilite"><div class="source-file"><em>lox/Interpreter.java</em><br>
-add after <em>visitVarStmt</em>()</div>
-<pre>  <span class="a">@Override</span>
-  <span class="k">public</span> <span class="t">Object</span> <span class="i">visitAssignExpr</span>(<span class="t">Expr</span>.<span class="t">Assign</span> <span class="i">expr</span>) {
-    <span class="t">Object</span> <span class="i">value</span> = <span class="i">evaluate</span>(<span class="i">expr</span>.<span class="i">value</span>);
-    <span class="i">environment</span>.<span class="i">assign</span>(<span class="i">expr</span>.<span class="i">name</span>, <span class="i">value</span>);
-    <span class="k">return</span> <span class="i">value</span>;
-  }
+<p>We have a new syntax tree node, so our interpreter gets a new method
+implementation.</p>
+<div class="codehilite"><pre><span class="c"># lox/interpreter.py</span>
+<span class="a">@eval.register</span>
+<span class="k">def</span> <span class="i">_</span>(<span class="i">expr</span>: <span class="t">Assign</span>, <span class="i">env</span>: <span class="t">Env</span>) -&gt; <span class="t">Value</span>:
+    <span class="i">value</span> = <span class="i">eval</span>(<span class="i">expr</span>.<span class="i">value</span>, <span class="i">env</span>)
+    <span class="k">try</span>:
+        <span class="i">env</span>.<span class="i">assign</span>(<span class="i">expr</span>.<span class="i">name</span>.<span class="i">lexeme</span>, <span class="i">value</span>)
+    <span class="k">except</span> <span class="t">NameError</span> <span class="k">as</span> <span class="i">error</span>:
+        <span class="i">msg</span> = <span class="i">f</span><span class="s">&quot;Undefined variable &#39;{error}&#39;.&quot;</span>
+        <span class="k">raise</span> <span class="t">LoxRuntimeError</span>(<span class="i">msg</span>, <span class="i">expr</span>.<span class="i">name</span>)
+    <span class="k">return</span> <span class="i">value</span>
 </pre></div>
-<div class="source-file-narrow"><em>lox/Interpreter.java</em>, add after <em>visitVarStmt</em>()</div>
-
 <p>For obvious reasons, it&rsquo;s similar to variable declaration. It evaluates the
 right-hand side to get the value, then stores it in the named variable. Instead
-of using <code>define()</code> on Environment, it calls this new method:</p>
-<div class="codehilite"><div class="source-file"><em>lox/Environment.java</em><br>
-add after <em>get</em>()</div>
-<pre>  <span class="t">void</span> <span class="i">assign</span>(<span class="t">Token</span> <span class="i">name</span>, <span class="t">Object</span> <span class="i">value</span>) {
-    <span class="k">if</span> (<span class="i">values</span>.<span class="i">containsKey</span>(<span class="i">name</span>.<span class="i">lexeme</span>)) {
-      <span class="i">values</span>.<span class="i">put</span>(<span class="i">name</span>.<span class="i">lexeme</span>, <span class="i">value</span>);
-      <span class="k">return</span>;
-    }
-
-    <span class="k">throw</span> <span class="k">new</span> <span class="t">RuntimeError</span>(<span class="i">name</span>,
-        <span class="s">&quot;Undefined variable &#39;&quot;</span> + <span class="i">name</span>.<span class="i">lexeme</span> + <span class="s">&quot;&#39;.&quot;</span>);
-  }
+of using <code>__setitem__()</code> on Env, it calls this new method:</p>
+<div class="codehilite"><pre><span class="c"># lox/env.py Env method</span>
+<span class="k">def</span> <span class="i">assign</span>(<span class="i">self</span>, <span class="i">name</span>: <span class="t">str</span>, <span class="i">value</span>: <span class="t">Value</span>) -&gt; <span class="t">None</span>:
+    <span class="k">if</span> <span class="i">name</span> <span class="k">in</span> <span class="i">self</span>.<span class="i">values</span>:
+        <span class="i">self</span>.<span class="i">values</span>[<span class="i">name</span>] = <span class="i">value</span>
+    <span class="k">else</span>:
+        <span class="k">raise</span> <span class="t">NameError</span>(<span class="i">name</span>)
 </pre></div>
-<div class="source-file-narrow"><em>lox/Environment.java</em>, add after <em>get</em>()</div>
-
 <p>The key difference between assignment and definition is that assignment is not
 <span name="new">allowed</span> to create a <em>new</em> variable. In terms of our
 implementation, that means it&rsquo;s a runtime error if the key doesn&rsquo;t already exist
@@ -1239,48 +1089,39 @@ much prefer the evocative <strong>cactus stack</strong>.</p><img class="above" s
 <p>Before we add block syntax to the grammar, we&rsquo;ll beef up our Environment class
 with support for this nesting. First, we give each environment a reference to
 its enclosing one.</p>
-<div class="codehilite"><pre class="insert-before">class Environment {
-</pre><div class="source-file"><em>lox/Environment.java</em><br>
-in class <em>Environment</em></div>
-<pre class="insert">  <span class="k">final</span> <span class="t">Environment</span> <span class="i">enclosing</span>;
-</pre><pre class="insert-after">  private final Map&lt;String, Object&gt; values = new HashMap&lt;&gt;();
+<div class="codehilite"><pre><span class="c"># lox/types.py replace Env fields</span>
+    ...
+    <span class="i">values</span>: <span class="t">dict</span>[<span class="t">str</span>, <span class="t">Value</span>] = <span class="i">field</span>(<span class="i">default_factory</span>=<span class="t">dict</span>)
+    <span class="i">enclosing</span>: <span class="t">Env</span> | <span class="t">None</span> = <span class="t">None</span>
+    ...
 </pre></div>
-<div class="source-file-narrow"><em>lox/Environment.java</em>, in class <em>Environment</em></div>
-
-<p>This field needs to be initialized, so we add a couple of constructors.</p>
-<div class="codehilite"><div class="source-file"><em>lox/Environment.java</em><br>
-in class <em>Environment</em></div>
-<pre>  <span class="t">Environment</span>() {
-    <span class="i">enclosing</span> = <span class="k">null</span>;
-  }
-
-  <span class="t">Environment</span>(<span class="t">Environment</span> <span class="i">enclosing</span>) {
-    <span class="k">this</span>.<span class="i">enclosing</span> = <span class="i">enclosing</span>;
-  }
+<p>Depending on your Python version, you may need to add a <span
+name="future">future</span> import:</p>
+<div class="codehilite"><pre><span class="k">from</span> <span class="i">__future__</span> <span class="k">import</span> <span class="i">annotations</span>
 </pre></div>
-<div class="source-file-narrow"><em>lox/Environment.java</em>, in class <em>Environment</em></div>
-
-<p>The no-argument constructor is for the global scope&rsquo;s environment, which ends
-the chain. The other constructor creates a new local scope nested inside the
-given outer one.</p>
+<aside name="future">
+<p>Imports <code>from __future__</code> is Python quirk way to enable features that will be
+standard in future versions of the language. Here, we use it to allow type
+annotations to refer to <code>Env</code> while it is still being defined. As the
+publication of this book, only the very latest version of Python support this
+behavior without the future import. We leave it by default because I can&rsquo;t
+assume everyone is living on the bleeding edge.</p>
+</aside>
+<div class="codehilite"><pre><span class="c"># lox/types.py Env method</span>
+<span class="k">def</span> <span class="i">push</span>(<span class="i">self</span>) -&gt; <span class="t">Env</span>:
+    <span class="k">return</span> <span class="t">Env</span>(<span class="i">enclosing</span>=<span class="i">self</span>)
+</pre></div>
 <p>We don&rsquo;t have to touch the <code>define()</code> method<span class="em">&mdash;</span>a new variable is always
 declared in the current innermost scope. But variable lookup and assignment work
 with existing variables and they need to walk the chain to find them. First,
 lookup:</p>
-<div class="codehilite"><pre class="insert-before">      return values.get(name.lexeme);
-    }
-</pre><div class="source-file"><em>lox/Environment.java</em><br>
-in <em>get</em>()</div>
-<pre class="insert">
-
-    <span class="k">if</span> (<span class="i">enclosing</span> != <span class="k">null</span>) <span class="k">return</span> <span class="i">enclosing</span>.<span class="i">get</span>(<span class="i">name</span>);
-</pre><pre class="insert-after">
-
-    throw new RuntimeError(name,
-        &quot;Undefined variable '&quot; + name.lexeme + &quot;'.&quot;);
+<div class="codehilite"><pre><span class="c"># lox/types.py Env.__getitem__</span>
+<span class="c"># Before raising</span>
+    ...
+    <span class="k">if</span> <span class="i">self</span>.<span class="i">enclosing</span> <span class="k">is</span> <span class="k">not</span> <span class="t">None</span>:
+        <span class="k">return</span> <span class="i">self</span>.<span class="i">enclosing</span>[<span class="i">name</span>]
+    ...
 </pre></div>
-<div class="source-file-narrow"><em>lox/Environment.java</em>, in <em>get</em>()</div>
-
 <p>If the variable isn&rsquo;t found in this environment, we simply try the enclosing
 one. That in turn does the same thing <span name="recurse">recursively</span>,
 so this will ultimately walk the entire chain. If we reach an environment with
@@ -1291,21 +1132,13 @@ an error as before.</p>
 <p>It&rsquo;s likely faster to iteratively walk the chain, but I think the recursive
 solution is prettier. We&rsquo;ll do something <em>much</em> faster in clox.</p>
 </aside>
-<div class="codehilite"><pre class="insert-before">      values.put(name.lexeme, value);
-      return;
-    }
-
-</pre><div class="source-file"><em>lox/Environment.java</em><br>
-in <em>assign</em>()</div>
-<pre class="insert">    <span class="k">if</span> (<span class="i">enclosing</span> != <span class="k">null</span>) {
-      <span class="i">enclosing</span>.<span class="i">assign</span>(<span class="i">name</span>, <span class="i">value</span>);
-      <span class="k">return</span>;
-    }
-
-</pre><pre class="insert-after">    throw new RuntimeError(name,
+<div class="codehilite"><pre><span class="c"># lox/env.py Env.assign()</span>
+<span class="c"># Before else</span>
+    ...
+    <span class="k">elif</span> <span class="i">self</span>.<span class="i">enclosing</span> <span class="k">is</span> <span class="k">not</span> <span class="t">None</span>:
+        <span class="i">self</span>.<span class="i">enclosing</span>.<span class="i">assign</span>(<span class="i">name</span>, <span class="i">value</span>)
+    ...
 </pre></div>
-<div class="source-file-narrow"><em>lox/Environment.java</em>, in <em>assign</em>()</div>
-
 <p>Again, if the variable isn&rsquo;t in this environment, it checks the outer one,
 recursively.</p>
 <h3><a href="#block-syntax-and-semantics" id="block-syntax-and-semantics"><small>8&#8202;.&#8202;5&#8202;.&#8202;2</small>Block syntax and semantics</a></h3>
@@ -1319,114 +1152,52 @@ the grammar:</p>
 </pre></div>
 <p>A block is a (possibly empty) series of statements or declarations surrounded by
 curly braces. A block is itself a statement and can appear anywhere a statement
-is allowed. The <span name="block-ast">syntax tree</span> node looks like this:</p>
-<div class="codehilite"><pre class="insert-before">    defineAst(outputDir, &quot;Stmt&quot;, Arrays.asList(
-</pre><div class="source-file"><em>tool/GenerateAst.java</em><br>
-in <em>main</em>()</div>
-<pre class="insert">      <span class="s">&quot;Block      : List&lt;Stmt&gt; statements&quot;</span>,
-</pre><pre class="insert-after">      &quot;Expression : Expr expression&quot;,
+is allowed. The syntax tree node looks like this:</p>
+<div class="codehilite"><pre><span class="c"># lox/ast.py</span>
+<span class="a">@dataclass</span>
+<span class="k">class</span> <span class="t">Block</span>(<span class="t">Stmt</span>):
+    <span class="i">statements</span>: <span class="t">list</span>[<span class="t">Stmt</span>]
 </pre></div>
-<div class="source-file-narrow"><em>tool/GenerateAst.java</em>, in <em>main</em>()</div>
-
-<aside name="block-ast">
-<p>The generated code for the new node is in <a href="appendix-ii.html#block-statement">Appendix II</a>.</p>
-</aside>
-<p><span name="generate">It</span> contains the list of statements that are inside
-the block. Parsing is straightforward. Like other statements, we detect the
-beginning of a block by its leading token<span class="em">&mdash;</span>in this case the <code>{</code>. In the
-<code>statement()</code> method, we add:</p>
-<aside name="generate">
-<p>As always, don&rsquo;t forget to run &ldquo;GenerateAst.java&rdquo;.</p>
-</aside>
-<div class="codehilite"><pre class="insert-before">    if (match(PRINT)) return printStatement();
-</pre><div class="source-file"><em>lox/Parser.java</em><br>
-in <em>statement</em>()</div>
-<pre class="insert">    <span class="k">if</span> (<span class="i">match</span>(<span class="i">LEFT_BRACE</span>)) <span class="k">return</span> <span class="k">new</span> <span class="t">Stmt</span>.<span class="t">Block</span>(<span class="i">block</span>());
-</pre><pre class="insert-after">
-
-    return expressionStatement();
+<p>It contains the list of statements that are inside the block. Parsing is
+straightforward. Like other statements, we detect the beginning of a block by
+its leading token<span class="em">&mdash;</span>in this case the <code>{</code>. In the <code>statement()</code> method, we add:</p>
+<div class="codehilite"><pre><span class="c"># lox/parser.py Parser.statement() match/case</span>
+    ...
+    <span class="i">case</span> <span class="s">&quot;LEFT_BRACE&quot;</span>:
+        <span class="k">return</span> <span class="i">self</span>.<span class="i">block_statement</span>()
+    ...
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, in <em>statement</em>()</div>
-
 <p>All the real work happens here:</p>
-<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
-add after <em>expressionStatement</em>()</div>
-<pre>  <span class="k">private</span> <span class="t">List</span>&lt;<span class="t">Stmt</span>&gt; <span class="i">block</span>() {
-    <span class="t">List</span>&lt;<span class="t">Stmt</span>&gt; <span class="i">statements</span> = <span class="k">new</span> <span class="t">ArrayList</span>&lt;&gt;();
-
-    <span class="k">while</span> (!<span class="i">check</span>(<span class="i">RIGHT_BRACE</span>) &amp;&amp; !<span class="i">isAtEnd</span>()) {
-      <span class="i">statements</span>.<span class="i">add</span>(<span class="i">declaration</span>());
-    }
-
-    <span class="i">consume</span>(<span class="i">RIGHT_BRACE</span>, <span class="s">&quot;Expect &#39;}&#39; after block.&quot;</span>);
-    <span class="k">return</span> <span class="i">statements</span>;
-  }
+<div class="codehilite"><pre><span class="c"># lox/parser.py Parser method</span>
+<span class="k">def</span> <span class="i">block_statement</span>(<span class="i">self</span>) -&gt; <span class="t">Block</span>:
+    <span class="i">self</span>.<span class="i">consume</span>(<span class="s">&quot;LEFT_BRACE&quot;</span>, <span class="s">&quot;Expect &#39;{&#39; to open block.&quot;</span>)
+    <span class="i">statements</span>: <span class="t">list</span>[<span class="t">Stmt</span>] = []
+    <span class="k">while</span> <span class="k">not</span> <span class="i">self</span>.<span class="i">check</span>(<span class="s">&quot;RIGHT_BRACE&quot;</span>) <span class="k">and</span> <span class="k">not</span> <span class="i">self</span>.<span class="i">is_at_end</span>():
+        <span class="i">statements</span>.<span class="i">append</span>(<span class="i">self</span>.<span class="i">declaration</span>())
+    <span class="i">self</span>.<span class="i">consume</span>(<span class="s">&quot;RIGHT_BRACE&quot;</span>, <span class="s">&quot;Expect &#39;}&#39; after block.&quot;</span>)
+    <span class="k">return</span> <span class="t">Block</span>(<span class="i">statements</span>)
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, add after <em>expressionStatement</em>()</div>
-
 <p>We <span name="list">create</span> an empty list and then parse statements and
 add them to the list until we reach the end of the block, marked by the closing
-<code>}</code>. Note that the loop also has an explicit check for <code>isAtEnd()</code>. We have to
+<code>}</code>. Note that the loop also has an explicit check for <code>is_at_end()</code>. We have to
 be careful to avoid infinite loops, even when parsing invalid code. If the user
 forgets a closing <code>}</code>, the parser needs to not get stuck.</p>
-<aside name="list">
-<p>Having <code>block()</code> return the raw list of statements and leaving it to
-<code>statement()</code> to wrap the list in a Stmt.Block looks a little odd. I did it that
-way because we&rsquo;ll reuse <code>block()</code> later for parsing function bodies and we don&rsquo;t
-want that body wrapped in a Stmt.Block.</p>
-</aside>
-<p>That&rsquo;s it for syntax. For semantics, we add another visit method to Interpreter.</p>
-<div class="codehilite"><div class="source-file"><em>lox/Interpreter.java</em><br>
-add after <em>execute</em>()</div>
-<pre>  <span class="a">@Override</span>
-  <span class="k">public</span> <span class="t">Void</span> <span class="i">visitBlockStmt</span>(<span class="t">Stmt</span>.<span class="t">Block</span> <span class="i">stmt</span>) {
-    <span class="i">executeBlock</span>(<span class="i">stmt</span>.<span class="i">statements</span>, <span class="k">new</span> <span class="t">Environment</span>(<span class="i">environment</span>));
-    <span class="k">return</span> <span class="k">null</span>;
-  }
+<p>That&rsquo;s it for syntax. For semantics, we add another visit method to exec.</p>
+<div class="codehilite"><pre><span class="c"># lox/interpreter.py after exec()</span>
+<span class="a">@exec.register</span>
+<span class="k">def</span> <span class="i">_</span>(<span class="i">stmt</span>: <span class="t">Block</span>, <span class="i">env</span>: <span class="t">Env</span>) -&gt; <span class="t">None</span>:
+    <span class="i">inner_env</span> = <span class="i">env</span>.<span class="i">push</span>()
+    <span class="k">for</span> <span class="i">statement</span> <span class="k">in</span> <span class="i">stmt</span>.<span class="i">statements</span>:
+        <span class="k">exec</span>(<span class="i">statement</span>, <span class="i">inner_env</span>)
 </pre></div>
-<div class="source-file-narrow"><em>lox/Interpreter.java</em>, add after <em>execute</em>()</div>
-
-<p>To execute a block, we create a new environment for the block&rsquo;s scope and pass
-it off to this other method:</p>
-<div class="codehilite"><div class="source-file"><em>lox/Interpreter.java</em><br>
-add after <em>execute</em>()</div>
-<pre>  <span class="t">void</span> <span class="i">executeBlock</span>(<span class="t">List</span>&lt;<span class="t">Stmt</span>&gt; <span class="i">statements</span>,
-                    <span class="t">Environment</span> <span class="i">environment</span>) {
-    <span class="t">Environment</span> <span class="i">previous</span> = <span class="k">this</span>.<span class="i">environment</span>;
-    <span class="k">try</span> {
-      <span class="k">this</span>.<span class="i">environment</span> = <span class="i">environment</span>;
-
-      <span class="k">for</span> (<span class="t">Stmt</span> <span class="i">statement</span> : <span class="i">statements</span>) {
-        <span class="i">execute</span>(<span class="i">statement</span>);
-      }
-    } <span class="k">finally</span> {
-      <span class="k">this</span>.<span class="i">environment</span> = <span class="i">previous</span>;
-    }
-  }
-</pre></div>
-<div class="source-file-narrow"><em>lox/Interpreter.java</em>, add after <em>execute</em>()</div>
-
 <p>This new method executes a list of statements in the context of a given <span
-name="param">environment</span>. Up until now, the <code>environment</code> field in
-Interpreter always pointed to the same environment<span class="em">&mdash;</span>the global one. Now, that
-field represents the <em>current</em> environment. That&rsquo;s the environment that
-corresponds to the innermost scope containing the code to be executed.</p>
-<p>To execute code within a given scope, this method updates the interpreter&rsquo;s
-<code>environment</code> field, visits all of the statements, and then restores the
-previous value. As is always good practice in Java, it restores the previous
-environment using a finally clause. That way it gets restored even if an
-exception is thrown.</p>
-<aside name="param">
-<p>Manually changing and restoring a mutable <code>environment</code> field feels inelegant.
-Another classic approach is to explicitly pass the environment as a parameter to
-each visit method. To &ldquo;change&rdquo; the environment, you pass a different one as you
-recurse down the tree. You don&rsquo;t have to restore the old one, since the new one
-lives on the Java stack and is implicitly discarded when the interpreter returns
-from the block&rsquo;s visit method.</p>
-<p>I considered that for jlox, but it&rsquo;s kind of tedious and verbose adding an
-environment parameter to every single visit method. To keep the book a little
-simpler, I went with the mutable field.</p>
-</aside>
+name="param">env</span>. Up until now, the <code>env</code> argument always pointed to the
+same environment<span class="em">&mdash;</span>the global one. Now, that field represents the <em>current</em>
+environment. That&rsquo;s the environment that corresponds to the innermost scope
+containing the code to be executed.</p>
+<p>To execute code within a given scope, this method encloses the <code>env</code> passed to
+all inner statements and then discards the enclosing environment at the end of
+execution.</p>
 <p>Surprisingly, that&rsquo;s all we need to do in order to fully support local
 variables, nesting, and shadowing. Go ahead and try this out:</p>
 <div class="codehilite"><pre><span class="k">var</span> <span class="i">a</span> = <span class="s">&quot;global a&quot;</span>;

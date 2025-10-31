@@ -105,15 +105,15 @@ reward is surprisingly large.</p>
 <p>Right now, our interpreter is little more than a calculator. A Lox program can
 only do a fixed amount of work before completing. To make it run twice as long
 you have to make the source code twice as lengthy. We&rsquo;re about to fix that. In
-this chapter, our interpreter takes a big step towards the programming
-language major leagues: <em>Turing-completeness</em>.</p>
+this chapter, our interpreter takes a big step towards the programming language
+major leagues: <em>Turing-completeness</em>.</p>
 <h2><a href="#turing-machines-briefly" id="turing-machines-briefly"><small>9&#8202;.&#8202;1</small>Turing Machines (Briefly)</a></h2>
 <p>In the early part of last century, mathematicians stumbled into a series of
 confusing <span name="paradox">paradoxes</span> that led them to doubt the
 stability of the foundation they had built their work upon. To address that
 <a href="https://en.wikipedia.org/wiki/Foundations_of_mathematics#Foundational_crisis">crisis</a>, they went back to square one. Starting from a handful of axioms,
-logic, and set theory, they hoped to rebuild mathematics on top of an
-impervious foundation.</p>
+logic, and set theory, they hoped to rebuild mathematics on top of an impervious
+foundation.</p>
 <aside name="paradox">
 <p>The most famous is <a href="https://en.wikipedia.org/wiki/Russell%27s_paradox"><strong>Russell&rsquo;s paradox</strong></a>. Initially, set theory
 allowed you to define any sort of set. If you could describe it in English, it
@@ -164,8 +164,8 @@ extension, that means your language can too. All you need to do is translate the
 function into a Turing machine, and then run that on your simulator.</p>
 <p>If your language is expressive enough to do that, it&rsquo;s considered
 <strong>Turing-complete</strong>. Turing machines are pretty dang simple, so it doesn&rsquo;t take
-much power to do this. You basically need arithmetic, a little control flow,
-and the ability to allocate and use (theoretically) arbitrary amounts of memory.
+much power to do this. You basically need arithmetic, a little control flow, and
+the ability to allocate and use (theoretically) arbitrary amounts of memory.
 We&rsquo;ve got the first. By the end of this chapter, we&rsquo;ll have the <span
 name="memory">second</span>.</p>
 <aside name="memory">
@@ -178,15 +178,15 @@ to access parts of a string.</p>
 into two kinds:</p>
 <ul>
 <li>
-<p><strong>Conditional</strong> or <strong>branching control flow</strong> is used to <em>not</em> execute
-some piece of code. Imperatively, you can think of it as jumping <em>ahead</em>
-over a region of code.</p>
+<p><strong>Conditional</strong> or <strong>branching control flow</strong> is used to <em>not</em> execute some
+piece of code. Imperatively, you can think of it as jumping <em>ahead</em> over a
+region of code.</p>
 </li>
 <li>
 <p><strong>Looping control flow</strong> executes a chunk of code more than once. It jumps
 <em>back</em> so that you can do something again. Since you don&rsquo;t usually want
-<em>infinite</em> loops, it typically has some conditional logic to know when to
-stop looping as well.</p>
+<em>infinite</em> loops, it typically has some conditional logic to know when to stop
+looping as well.</p>
 </li>
 </ul>
 <p>Branching is simpler, so we&rsquo;ll start there. C-derived languages have two main
@@ -215,51 +215,36 @@ grammar metasyntax, not Lox&rsquo;s syntax. A block does not have a <code>;</cod
 an <code>if</code> statement doesn&rsquo;t either, unless the then or else statement happens to
 be one that ends in a semicolon.</p>
 </aside>
-<p>An <code>if</code> statement has an expression for the condition, then a statement to execute
-if the condition is truthy. Optionally, it may also have an <code>else</code> keyword and a
-statement to execute if the condition is falsey. The <span name="if-ast">syntax
-tree node</span> has fields for each of those three pieces.</p>
-<div class="codehilite"><pre class="insert-before">      &quot;Expression : Expr expression&quot;,
-</pre><div class="source-file"><em>tool/GenerateAst.java</em><br>
-in <em>main</em>()</div>
-<pre class="insert">      <span class="s">&quot;If         : Expr condition, Stmt thenBranch,&quot;</span> +
-                  <span class="s">&quot; Stmt elseBranch&quot;</span>,
-</pre><pre class="insert-after">      &quot;Print      : Expr expression&quot;,
+<p>An <code>if</code> statement has an expression for the condition, then a statement to
+execute if the condition is truthy. Optionally, it may also have an <code>else</code>
+keyword and a statement to execute if the condition is falsey. The syntax tree
+node has fields for each of those three pieces.</p>
+<div class="codehilite"><pre><span class="c"># lox/ast.py</span>
+<span class="a">@dataclass</span>
+<span class="k">class</span> <span class="t">If</span>(<span class="t">Stmt</span>):
+    <span class="i">condition</span>: <span class="t">Expr</span>
+    <span class="i">then_branch</span>: <span class="t">Stmt</span>
+    <span class="i">else_branch</span>: <span class="t">Stmt</span> | <span class="t">None</span>
 </pre></div>
-<div class="source-file-narrow"><em>tool/GenerateAst.java</em>, in <em>main</em>()</div>
-
-<aside name="if-ast">
-<p>The generated code for the new node is in <a href="appendix-ii.html#if-statement">Appendix II</a>.</p>
-</aside>
 <p>Like other statements, the parser recognizes an <code>if</code> statement by the leading
 <code>if</code> keyword.</p>
-<div class="codehilite"><pre class="insert-before">  private Stmt statement() {
-</pre><div class="source-file"><em>lox/Parser.java</em><br>
-in <em>statement</em>()</div>
-<pre class="insert">    <span class="k">if</span> (<span class="i">match</span>(<span class="i">IF</span>)) <span class="k">return</span> <span class="i">ifStatement</span>();
-</pre><pre class="insert-after">    if (match(PRINT)) return printStatement();
+<div class="codehilite"><pre><span class="c"># lox/parser.py case in Parser.statement()</span>
+<span class="i">case</span> <span class="s">&quot;IF&quot;</span>:
+    <span class="k">return</span> <span class="i">self</span>.<span class="i">if_statement</span>()
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, in <em>statement</em>()</div>
-
 <p>When it finds one, it calls this new method to parse the rest:</p>
-<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
-add after <em>statement</em>()</div>
-<pre>  <span class="k">private</span> <span class="t">Stmt</span> <span class="i">ifStatement</span>() {
-    <span class="i">consume</span>(<span class="i">LEFT_PAREN</span>, <span class="s">&quot;Expect &#39;(&#39; after &#39;if&#39;.&quot;</span>);
-    <span class="t">Expr</span> <span class="i">condition</span> = <span class="i">expression</span>();
-    <span class="i">consume</span>(<span class="i">RIGHT_PAREN</span>, <span class="s">&quot;Expect &#39;)&#39; after if condition.&quot;</span>);<span name="parens"> </span>
-
-    <span class="t">Stmt</span> <span class="i">thenBranch</span> = <span class="i">statement</span>();
-    <span class="t">Stmt</span> <span class="i">elseBranch</span> = <span class="k">null</span>;
-    <span class="k">if</span> (<span class="i">match</span>(<span class="i">ELSE</span>)) {
-      <span class="i">elseBranch</span> = <span class="i">statement</span>();
-    }
-
-    <span class="k">return</span> <span class="k">new</span> <span class="t">Stmt</span>.<span class="t">If</span>(<span class="i">condition</span>, <span class="i">thenBranch</span>, <span class="i">elseBranch</span>);
-  }
+<div class="codehilite"><pre><span class="c"># lox/parser.py method of the Parser class</span>
+<span class="k">def</span> <span class="i">if_statement</span>(<span class="i">self</span>) -&gt; <span class="t">If</span>:
+    <span class="i">self</span>.<span class="i">consume</span>(<span class="s">&quot;IF&quot;</span>, <span class="s">&quot;Expect &#39;if&#39;.&quot;</span>)
+    <span class="i">self</span>.<span class="i">consume</span>(<span class="s">&quot;LEFT_PAREN&quot;</span>, <span class="s">&quot;Expect &#39;(&#39; after &#39;if&#39;.&quot;</span>)
+    <span class="i">condition</span> = <span class="i">self</span>.<span class="i">expression</span>()
+    <span class="i">self</span>.<span class="i">consume</span>(<span class="s">&quot;RIGHT_PAREN&quot;</span>, <span class="s">&quot;Expect &#39;)&#39; after if condition.&quot;</span>)
+    <span class="i">then_branch</span> = <span class="i">self</span>.<span class="i">statement</span>()
+    <span class="i">else_branch</span> = <span class="t">None</span>
+    <span class="k">if</span> <span class="i">self</span>.<span class="i">match</span>(<span class="s">&quot;ELSE&quot;</span>):
+        <span class="i">else_branch</span> = <span class="i">self</span>.<span class="i">statement</span>()
+    <span class="k">return</span> <span class="t">If</span>(<span class="i">condition</span>, <span class="i">then_branch</span>, <span class="i">else_branch</span>)
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, add after <em>statement</em>()</div>
-
 <aside name="parens">
 <p>The parentheses around the condition are only half useful. You need some kind of
 delimiter <em>between</em> the condition and the then statement, otherwise the parser
@@ -270,11 +255,12 @@ parentheses.</p>
 <p>Other languages like Lua and some BASICs use a keyword like <code>then</code> as the ending
 delimiter and don&rsquo;t have anything before the condition. Go and Swift instead
 require the statement to be a braced block. That lets them use the <code>{</code> at the
-beginning of the statement to tell when the condition is done.</p>
+beginning of the statement to tell when the condition is done. Python uses the
+colon (<code>:</code>) at the end of the line to mark the end of the condition.</p>
 </aside>
 <p>As usual, the parsing code hews closely to the grammar. It detects an else
 clause by looking for the preceding <code>else</code> keyword. If there isn&rsquo;t one, the
-<code>elseBranch</code> field in the syntax tree is <code>null</code>.</p>
+<code>else_branch</code> field in the syntax tree is <code>None</code>.</p>
 <p>That seemingly innocuous optional else has, in fact, opened up an ambiguity in
 our grammar. Consider:</p>
 <div class="codehilite"><pre><span class="k">if</span> (<span class="i">first</span>) <span class="k">if</span> (<span class="i">second</span>) <span class="i">whenTrue</span>(); <span class="k">else</span> <span class="i">whenFalse</span>();
@@ -308,29 +294,21 @@ that allows an <code>if</code> with an <code>else</code> and one that doesn&rsqu
 matter what hack they use to get themselves out of the trouble, they always
 choose the same interpretation<span class="em">&mdash;</span>the <code>else</code> is bound to the nearest <code>if</code> that
 precedes it.</p>
-<p>Our parser conveniently does that already. Since <code>ifStatement()</code> eagerly looks
+<p>Our parser conveniently does that already. Since <code>if_statement()</code> eagerly looks
 for an <code>else</code> before returning, the innermost call to a nested series will claim
 the else clause for itself before returning to the outer <code>if</code> statements.</p>
 <p>Syntax in hand, we are ready to interpret.</p>
-<div class="codehilite"><div class="source-file"><em>lox/Interpreter.java</em><br>
-add after <em>visitExpressionStmt</em>()</div>
-<pre>  <span class="a">@Override</span>
-  <span class="k">public</span> <span class="t">Void</span> <span class="i">visitIfStmt</span>(<span class="t">Stmt</span>.<span class="t">If</span> <span class="i">stmt</span>) {
-    <span class="k">if</span> (<span class="i">isTruthy</span>(<span class="i">evaluate</span>(<span class="i">stmt</span>.<span class="i">condition</span>))) {
-      <span class="i">execute</span>(<span class="i">stmt</span>.<span class="i">thenBranch</span>);
-    } <span class="k">else</span> <span class="k">if</span> (<span class="i">stmt</span>.<span class="i">elseBranch</span> != <span class="k">null</span>) {
-      <span class="i">execute</span>(<span class="i">stmt</span>.<span class="i">elseBranch</span>);
-    }
-    <span class="k">return</span> <span class="k">null</span>;
-  }
+<div class="codehilite"><pre><span class="c"># lox/interpreter.py after exec()</span>
+<span class="a">@exec.register</span>
+<span class="k">def</span> <span class="i">_</span>(<span class="i">stmt</span>: <span class="t">If</span>, <span class="i">env</span>: <span class="t">Env</span>) -&gt; <span class="t">None</span>:
+    <span class="i">condition</span> = <span class="i">eval</span>(<span class="i">stmt</span>.<span class="i">condition</span>, <span class="i">env</span>)
+    <span class="k">if</span> <span class="i">is_truthy</span>(<span class="i">condition</span>):
+        <span class="k">exec</span>(<span class="i">stmt</span>.<span class="i">then_branch</span>, <span class="i">env</span>)
+    <span class="k">elif</span> <span class="i">stmt</span>.<span class="i">else_branch</span> <span class="k">is</span> <span class="k">not</span> <span class="t">None</span>:
+        <span class="k">exec</span>(<span class="i">stmt</span>.<span class="i">else_branch</span>, <span class="i">env</span>)
 </pre></div>
-<div class="source-file-narrow"><em>lox/Interpreter.java</em>, add after <em>visitExpressionStmt</em>()</div>
-
-<p>The interpreter implementation is a thin wrapper around the self-same Java code.
-It evaluates the condition. If truthy, it executes the then branch. Otherwise,
-if there is an else branch, it executes that.</p>
 <p>If you compare this code to how the interpreter handles other syntax we&rsquo;ve
-implemented, the part that makes control flow special is that Java <code>if</code>
+implemented, the part that makes control flow special is that Python <code>if</code>
 statement. Most other syntax trees always evaluate their subtrees. Here, we may
 not evaluate the then or else statement. If either of those has a side effect,
 the choice not to evaluate it becomes user visible.</p>
@@ -365,9 +343,9 @@ comparison or equality operators do.</p>
 </pre></div>
 <p>Instead of falling back to <code>equality</code>, <code>assignment</code> now cascades to <code>logic_or</code>.
 The two new rules, <code>logic_or</code> and <code>logic_and</code>, are <span
-name="same">similar</span> to other binary operators. Then <code>logic_and</code> calls
-out to <code>equality</code> for its operands, and we chain back to the rest of the
-expression rules.</p>
+name="same">similar</span> to other binary operators. Then <code>logic_and</code> calls out
+to <code>equality</code> for its operands, and we chain back to the rest of the expression
+rules.</p>
 <aside name="same">
 <p>The <em>syntax</em> doesn&rsquo;t care that they short-circuit. That&rsquo;s a semantic concern.</p>
 </aside>
@@ -377,87 +355,56 @@ check to see if the operator is one of the logical operators and use a different
 code path to handle the short circuiting. I think it&rsquo;s cleaner to define a <span
 name="logical-ast">new class</span> for these operators so that they get their
 own visit method.</p>
-<div class="codehilite"><pre class="insert-before">      &quot;Literal  : Object value&quot;,
-</pre><div class="source-file"><em>tool/GenerateAst.java</em><br>
-in <em>main</em>()</div>
-<pre class="insert">      <span class="s">&quot;Logical  : Expr left, Token operator, Expr right&quot;</span>,
-</pre><pre class="insert-after">      &quot;Unary    : Token operator, Expr right&quot;,
+<div class="codehilite"><pre><span class="c"># lox/ast.py</span>
+<span class="a">@dataclass</span>
+<span class="k">class</span> <span class="t">Logical</span>(<span class="t">Expr</span>):
+    <span class="i">left</span>: <span class="t">Expr</span>
+    <span class="i">operator</span>: <span class="t">Token</span>
+    <span class="i">right</span>: <span class="t">Expr</span>
 </pre></div>
-<div class="source-file-narrow"><em>tool/GenerateAst.java</em>, in <em>main</em>()</div>
-
-<aside name="logical-ast">
-<p>The generated code for the new node is in <a href="appendix-ii.html#logical-expression">Appendix II</a>.</p>
-</aside>
 <p>To weave the new expressions into the parser, we first change the parsing code
-for assignment to call <code>or()</code>.</p>
-<div class="codehilite"><pre class="insert-before">  private Expr assignment() {
-</pre><div class="source-file"><em>lox/Parser.java</em><br>
-in <em>assignment</em>()<br>
-replace 1 line</div>
-<pre class="insert">    <span class="t">Expr</span> <span class="i">expr</span> = <span class="i">or</span>();
-</pre><pre class="insert-after">
-
-    if (match(EQUAL)) {
+for assignment to call <code>logic_or()</code>.</p>
+<div class="codehilite"><pre><span class="c"># lox/parser.py modify Parser.assignment()</span>
+<span class="k">def</span> <span class="i">assignment</span>(<span class="i">self</span>) -&gt; <span class="t">Expr</span>:
+    <span class="i">expr</span> = <span class="i">self</span>.<span class="i">logic_or</span>() <span class="c"># instead of self.equality()</span>
+    ...
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, in <em>assignment</em>(), replace 1 line</div>
-
 <p>The code to parse a series of <code>or</code> expressions mirrors other binary operators.</p>
-<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
-add after <em>assignment</em>()</div>
-<pre>  <span class="k">private</span> <span class="t">Expr</span> <span class="i">or</span>() {
-    <span class="t">Expr</span> <span class="i">expr</span> = <span class="i">and</span>();
-
-    <span class="k">while</span> (<span class="i">match</span>(<span class="i">OR</span>)) {
-      <span class="t">Token</span> <span class="i">operator</span> = <span class="i">previous</span>();
-      <span class="t">Expr</span> <span class="i">right</span> = <span class="i">and</span>();
-      <span class="i">expr</span> = <span class="k">new</span> <span class="t">Expr</span>.<span class="t">Logical</span>(<span class="i">expr</span>, <span class="i">operator</span>, <span class="i">right</span>);
-    }
-
-    <span class="k">return</span> <span class="i">expr</span>;
-  }
+<div class="codehilite"><pre><span class="c"># lox/parser.py method of the Parser class</span>
+<span class="k">def</span> <span class="i">logic_or</span>(<span class="i">self</span>) -&gt; <span class="t">Expr</span>:
+    <span class="i">expr</span> = <span class="i">self</span>.<span class="i">logic_and</span>()
+    <span class="k">while</span> <span class="i">self</span>.<span class="i">match</span>(<span class="s">&quot;OR&quot;</span>):
+        <span class="i">operator</span> = <span class="i">self</span>.<span class="i">previous</span>()
+        <span class="i">right</span> = <span class="i">self</span>.<span class="i">logic_and</span>()
+        <span class="i">expr</span> = <span class="t">Logical</span>(<span class="i">expr</span>, <span class="i">operator</span>, <span class="i">right</span>)
+    <span class="k">return</span> <span class="i">expr</span>
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, add after <em>assignment</em>()</div>
-
-<p>Its operands are the next higher level of precedence, the new <code>and</code> expression.</p>
-<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
-add after <em>or</em>()</div>
-<pre>  <span class="k">private</span> <span class="t">Expr</span> <span class="i">and</span>() {
-    <span class="t">Expr</span> <span class="i">expr</span> = <span class="i">equality</span>();
-
-    <span class="k">while</span> (<span class="i">match</span>(<span class="i">AND</span>)) {
-      <span class="t">Token</span> <span class="i">operator</span> = <span class="i">previous</span>();
-      <span class="t">Expr</span> <span class="i">right</span> = <span class="i">equality</span>();
-      <span class="i">expr</span> = <span class="k">new</span> <span class="t">Expr</span>.<span class="t">Logical</span>(<span class="i">expr</span>, <span class="i">operator</span>, <span class="i">right</span>);
-    }
-
-    <span class="k">return</span> <span class="i">expr</span>;
-  }
+<p>Its operands are the next higher level of precedence, the new <code>logic_and()</code>
+expression.</p>
+<div class="codehilite"><pre><span class="c"># lox/parser.py method of Parser class</span>
+<span class="k">def</span> <span class="i">logic_and</span>(<span class="i">self</span>) -&gt; <span class="t">Expr</span>:
+    <span class="i">expr</span> = <span class="i">self</span>.<span class="i">equality</span>()
+    <span class="k">while</span> <span class="i">self</span>.<span class="i">match</span>(<span class="s">&quot;AND&quot;</span>):
+        <span class="i">operator</span> = <span class="i">self</span>.<span class="i">previous</span>()
+        <span class="i">right</span> = <span class="i">self</span>.<span class="i">equality</span>()
+        <span class="i">expr</span> = <span class="t">Logical</span>(<span class="i">expr</span>, <span class="i">operator</span>, <span class="i">right</span>)
+    <span class="k">return</span> <span class="i">expr</span>
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, add after <em>or</em>()</div>
-
 <p>That calls <code>equality()</code> for its operands, and with that, the expression parser
 is all tied back together again. We&rsquo;re ready to interpret.</p>
-<div class="codehilite"><div class="source-file"><em>lox/Interpreter.java</em><br>
-add after <em>visitLiteralExpr</em>()</div>
-<pre>  <span class="a">@Override</span>
-  <span class="k">public</span> <span class="t">Object</span> <span class="i">visitLogicalExpr</span>(<span class="t">Expr</span>.<span class="t">Logical</span> <span class="i">expr</span>) {
-    <span class="t">Object</span> <span class="i">left</span> = <span class="i">evaluate</span>(<span class="i">expr</span>.<span class="i">left</span>);
-
-    <span class="k">if</span> (<span class="i">expr</span>.<span class="i">operator</span>.<span class="i">type</span> == <span class="t">TokenType</span>.<span class="i">OR</span>) {
-      <span class="k">if</span> (<span class="i">isTruthy</span>(<span class="i">left</span>)) <span class="k">return</span> <span class="i">left</span>;
-    } <span class="k">else</span> {
-      <span class="k">if</span> (!<span class="i">isTruthy</span>(<span class="i">left</span>)) <span class="k">return</span> <span class="i">left</span>;
-    }
-
-    <span class="k">return</span> <span class="i">evaluate</span>(<span class="i">expr</span>.<span class="i">right</span>);
-  }
+<div class="codehilite"><pre><span class="c"># lox/interpreter.py method of the eval() function</span>
+<span class="a">@eval.register</span>
+<span class="k">def</span> <span class="i">_</span>(<span class="i">expr</span>: <span class="t">Logical</span>, <span class="i">env</span>: <span class="t">Env</span>) -&gt; <span class="t">Value</span>:
+    <span class="i">left</span> = <span class="i">eval</span>(<span class="i">expr</span>.<span class="i">left</span>, <span class="i">env</span>)
+    <span class="i">match</span> (<span class="i">expr</span>.<span class="i">operator</span>.<span class="k">type</span>, <span class="i">is_truthy</span>(<span class="i">left</span>)):
+        <span class="i">case</span> (<span class="s">&quot;OR&quot;</span>, <span class="t">True</span>) | (<span class="s">&quot;AND&quot;</span>, <span class="t">False</span>):
+            <span class="k">return</span> <span class="i">left</span>
+    <span class="k">return</span> <span class="i">eval</span>(<span class="i">expr</span>.<span class="i">right</span>, <span class="i">env</span>)
 </pre></div>
-<div class="source-file-narrow"><em>lox/Interpreter.java</em>, add after <em>visitLiteralExpr</em>()</div>
-
-<p>If you compare this to the <a href="evaluating-expressions.html">earlier chapter&rsquo;s</a> <code>visitBinaryExpr()</code>
-method, you can see the difference. Here, we evaluate the left operand first. We
-look at its value to see if we can short-circuit. If not, and only then, do we
-evaluate the right operand.</p>
+<p>If you compare this to the <a href="evaluating-expressions.html">earlier chapter&rsquo;s</a> <code>Binary</code> objects, you
+can see the difference. Here, we evaluate the left operand first. We look at its
+value to see if we can short-circuit. If not, and only then, do we evaluate the
+right operand.</p>
 <p>The other interesting piece here is deciding what actual value to return. Since
 Lox is dynamically typed, we allow operands of any type and use truthiness to
 determine what each operand represents. We apply similar reasoning to the
@@ -489,62 +436,42 @@ loop is the simpler one, so we&rsquo;ll start there. Its grammar is the same as 
 while. It takes a <code>while</code> keyword, followed by a parenthesized condition
 expression, then a statement for the body. That new grammar rule gets a <span
 name="while-ast">syntax tree node</span>.</p>
-<div class="codehilite"><pre class="insert-before">      &quot;Print      : Expr expression&quot;,
-</pre><pre class="insert-before">      <span class="s">&quot;Var        : Token name, Expr initializer&quot;</span><span class="insert-comma">,</span>
-</pre><div class="source-file"><em>tool/GenerateAst.java</em><br>
-in <em>main</em>()<br>
-add <em>&ldquo;,&rdquo;</em> to previous line</div>
-<pre class="insert">      <span class="s">&quot;While      : Expr condition, Stmt body&quot;</span>
-</pre><pre class="insert-after">    ));
+<div class="codehilite"><pre><span class="c"># lox/ast.py</span>
+<span class="a">@dataclass</span>
+<span class="k">class</span> <span class="t">While</span>(<span class="t">Stmt</span>):
+    <span class="i">condition</span>: <span class="t">Expr</span>
+    <span class="i">body</span>: <span class="t">Stmt</span>
 </pre></div>
-<div class="source-file-narrow"><em>tool/GenerateAst.java</em>, in <em>main</em>(), add <em>&ldquo;,&rdquo;</em> to previous line</div>
-
-<aside name="while-ast">
-<p>The generated code for the new node is in <a href="appendix-ii.html#while-statement">Appendix II</a>.</p>
-</aside>
 <p>The node stores the condition and body. Here you can see why it&rsquo;s nice to have
 separate base classes for expressions and statements. The field declarations
 make it clear that the condition is an expression and the body is a statement.</p>
 <p>Over in the parser, we follow the same process we used for <code>if</code> statements.
 First, we add another case in <code>statement()</code> to detect and match the leading
 keyword.</p>
-<div class="codehilite"><pre class="insert-before">    if (match(PRINT)) return printStatement();
-</pre><div class="source-file"><em>lox/Parser.java</em><br>
-in <em>statement</em>()</div>
-<pre class="insert">    <span class="k">if</span> (<span class="i">match</span>(<span class="i">WHILE</span>)) <span class="k">return</span> <span class="i">whileStatement</span>();
-</pre><pre class="insert-after">    if (match(LEFT_BRACE)) return new Stmt.Block(block());
+<div class="codehilite"><pre><span class="c"># lox/parser.py case in Parser.statement()</span>
+<span class="i">case</span> <span class="s">&quot;WHILE&quot;</span>:
+    <span class="k">return</span> <span class="i">self</span>.<span class="i">while_statement</span>()
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, in <em>statement</em>()</div>
-
 <p>That delegates the real work to this method:</p>
-<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
-add after <em>varDeclaration</em>()</div>
-<pre>  <span class="k">private</span> <span class="t">Stmt</span> <span class="i">whileStatement</span>() {
-    <span class="i">consume</span>(<span class="i">LEFT_PAREN</span>, <span class="s">&quot;Expect &#39;(&#39; after &#39;while&#39;.&quot;</span>);
-    <span class="t">Expr</span> <span class="i">condition</span> = <span class="i">expression</span>();
-    <span class="i">consume</span>(<span class="i">RIGHT_PAREN</span>, <span class="s">&quot;Expect &#39;)&#39; after condition.&quot;</span>);
-    <span class="t">Stmt</span> <span class="i">body</span> = <span class="i">statement</span>();
-
-    <span class="k">return</span> <span class="k">new</span> <span class="t">Stmt</span>.<span class="t">While</span>(<span class="i">condition</span>, <span class="i">body</span>);
-  }
+<div class="codehilite"><pre><span class="c"># lox/parser.py method of the Parser class</span>
+<span class="k">def</span> <span class="i">while_statement</span>(<span class="i">self</span>) -&gt; <span class="t">While</span>:
+    <span class="i">self</span>.<span class="i">consume</span>(<span class="s">&quot;WHILE&quot;</span>, <span class="s">&quot;Expect &#39;while&#39;.&quot;</span>)
+    <span class="i">self</span>.<span class="i">consume</span>(<span class="s">&quot;LEFT_PAREN&quot;</span>, <span class="s">&quot;Expect &#39;(&#39; after &#39;while&#39;.&quot;</span>)
+    <span class="i">condition</span> = <span class="i">self</span>.<span class="i">expression</span>()
+    <span class="i">self</span>.<span class="i">consume</span>(<span class="s">&quot;RIGHT_PAREN&quot;</span>, <span class="s">&quot;Expect &#39;)&#39; after condition.&quot;</span>)
+    <span class="i">body</span> = <span class="i">self</span>.<span class="i">statement</span>()
+    <span class="k">return</span> <span class="t">While</span>(<span class="i">condition</span>, <span class="i">body</span>)
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, add after <em>varDeclaration</em>()</div>
-
-<p>The grammar is dead simple and this is a straight translation of it to Java.
-Speaking of translating straight to Java, here&rsquo;s how we execute the new syntax:</p>
-<div class="codehilite"><div class="source-file"><em>lox/Interpreter.java</em><br>
-add after <em>visitVarStmt</em>()</div>
-<pre>  <span class="a">@Override</span>
-  <span class="k">public</span> <span class="t">Void</span> <span class="i">visitWhileStmt</span>(<span class="t">Stmt</span>.<span class="t">While</span> <span class="i">stmt</span>) {
-    <span class="k">while</span> (<span class="i">isTruthy</span>(<span class="i">evaluate</span>(<span class="i">stmt</span>.<span class="i">condition</span>))) {
-      <span class="i">execute</span>(<span class="i">stmt</span>.<span class="i">body</span>);
-    }
-    <span class="k">return</span> <span class="k">null</span>;
-  }
+<p>The grammar is dead simple and this is a straight translation of it to Python.
+Speaking of translating straight to Python, here&rsquo;s how we execute the new
+syntax:</p>
+<div class="codehilite"><pre><span class="c"># lox/exec.py implementation of exec()</span>
+<span class="a">@exec.register</span>
+<span class="k">def</span> <span class="i">_</span>(<span class="i">stmt</span>: <span class="t">While</span>, <span class="i">env</span>: <span class="t">Env</span>) -&gt; <span class="t">None</span>:
+    <span class="k">while</span> <span class="i">is_truthy</span>(<span class="i">eval</span>(<span class="i">stmt</span>.<span class="i">condition</span>, <span class="i">env</span>)):
+        <span class="k">exec</span>(<span class="i">stmt</span>.<span class="i">body</span>, <span class="i">env</span>)
 </pre></div>
-<div class="source-file-narrow"><em>lox/Interpreter.java</em>, add after <em>visitVarStmt</em>()</div>
-
-<p>Like the visit method for <code>if</code>, this visitor uses the corresponding Java
+<p>Like the visit method for <code>if</code>, this visitor uses the corresponding Python
 feature. This method isn&rsquo;t complex, but it makes Lox much more powerful. We can
 finally write a program whose running time isn&rsquo;t strictly bound by the length of
 the source code.</p>
@@ -567,10 +494,11 @@ C-style <code>for</code> loop. I probably don&rsquo;t need to remind you, but it
 </pre></div>
 <aside name="for">
 <p>Most modern languages have a higher-level looping statement for iterating over
-arbitrary user-defined sequences. C# has <code>foreach</code>, Java has &ldquo;enhanced for&rdquo;,
-even C++ has range-based <code>for</code> statements now. Those offer cleaner syntax than
-C&rsquo;s <code>for</code> statement by implicitly calling into an iteration protocol that the
-object being looped over supports.</p>
+arbitrary user-defined sequences. Python has a iterator based for, similar to
+C#&rsquo;s <code>foreach</code>, Java has &ldquo;enhanced for&rdquo;, even C++ has range-based <code>for</code>
+statements now. Those offer cleaner syntax than C&rsquo;s <code>for</code> statement by
+implicitly calling into an iteration protocol that the object being looped over
+supports.</p>
 <p>I love those. For Lox, though, we&rsquo;re limited by building up the interpreter a
 chapter at a time. We don&rsquo;t have objects and methods yet, so we have no way of
 defining an iteration protocol that the <code>for</code> loop could use. So we&rsquo;ll stick
@@ -640,54 +568,32 @@ metaphor if you aren&rsquo;t going to stick with it?</p>
 interpreter already handles. In our simple interpreter, desugaring really
 doesn&rsquo;t save us much work, but it does give me an excuse to introduce you to the
 technique. So, unlike the previous statements, we <em>won&rsquo;t</em> add a new syntax tree
-node. Instead, we go straight to parsing. First, add an import we&rsquo;ll need soon.</p>
-<div class="codehilite"><pre class="insert-before">import java.util.ArrayList;
-</pre><div class="source-file"><em>lox/Parser.java</em></div>
-<pre class="insert"><span class="k">import</span> <span class="i">java.util.Arrays</span>;
-</pre><pre class="insert-after">import java.util.List;
-</pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em></div>
-
+node. Instead, we go straight to parsing.</p>
 <p>Like every statement, we start parsing a <code>for</code> loop by matching its keyword.</p>
-<div class="codehilite"><pre class="insert-before">  private Stmt statement() {
-</pre><div class="source-file"><em>lox/Parser.java</em><br>
-in <em>statement</em>()</div>
-<pre class="insert">    <span class="k">if</span> (<span class="i">match</span>(<span class="i">FOR</span>)) <span class="k">return</span> <span class="i">forStatement</span>();
-</pre><pre class="insert-after">    if (match(IF)) return ifStatement();
+<div class="codehilite"><pre><span class="c"># lox/parser.py case in Parser.statement()</span>
+<span class="i">case</span> <span class="s">&quot;FOR&quot;</span>:
+    <span class="k">return</span> <span class="i">self</span>.<span class="i">for_statement</span>()
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, in <em>statement</em>()</div>
-
 <p>Here is where it gets interesting. The desugaring is going to happen here, so
 we&rsquo;ll build this method a piece at a time, starting with the opening parenthesis
 before the clauses.</p>
-<div class="codehilite"><div class="source-file"><em>lox/Parser.java</em><br>
-add after <em>statement</em>()</div>
-<pre>  <span class="k">private</span> <span class="t">Stmt</span> <span class="i">forStatement</span>() {
-    <span class="i">consume</span>(<span class="i">LEFT_PAREN</span>, <span class="s">&quot;Expect &#39;(&#39; after &#39;for&#39;.&quot;</span>);
-
-    <span class="c">// More here...</span>
-  }
+<div class="codehilite"><pre><span class="c"># lox/parser.py case in Parser.for_statement()</span>
+<span class="k">def</span> <span class="i">for_statement</span>(<span class="i">self</span>):
+    <span class="i">self</span>.<span class="i">consume</span>(<span class="s">&quot;FOR&quot;</span>, <span class="s">&quot;Expect &#39;for&#39;.&quot;</span>)
+    <span class="i">self</span>.<span class="i">consume</span>(<span class="s">&quot;LEFT_PAREN&quot;</span>, <span class="s">&quot;Expect &#39;(&#39; after &#39;for&#39;.&quot;</span>)
+    ...
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, add after <em>statement</em>()</div>
-
 <p>The first clause following that is the initializer.</p>
-<div class="codehilite"><pre class="insert-before">    consume(LEFT_PAREN, &quot;Expect '(' after 'for'.&quot;);
-
-</pre><div class="source-file"><em>lox/Parser.java</em><br>
-in <em>forStatement</em>()<br>
-replace 1 line</div>
-<pre class="insert">    <span class="t">Stmt</span> <span class="i">initializer</span>;
-    <span class="k">if</span> (<span class="i">match</span>(<span class="i">SEMICOLON</span>)) {
-      <span class="i">initializer</span> = <span class="k">null</span>;
-    } <span class="k">else</span> <span class="k">if</span> (<span class="i">match</span>(<span class="i">VAR</span>)) {
-      <span class="i">initializer</span> = <span class="i">varDeclaration</span>();
-    } <span class="k">else</span> {
-      <span class="i">initializer</span> = <span class="i">expressionStatement</span>();
-    }
-</pre><pre class="insert-after">  }
+<div class="codehilite"><pre><span class="c"># lox/parser.py continuation of Parser.for_statement()</span>
+    ...
+    <span class="k">if</span> <span class="i">self</span>.<span class="i">match</span>(<span class="s">&quot;SEMICOLON&quot;</span>):
+        <span class="i">initializer</span> = <span class="t">None</span>
+    <span class="k">elif</span> <span class="i">self</span>.<span class="i">check</span>(<span class="s">&quot;VAR&quot;</span>):
+        <span class="i">initializer</span> = <span class="i">self</span>.<span class="i">var_declaration</span>()
+    <span class="k">else</span>:
+        <span class="i">initializer</span> = <span class="i">self</span>.<span class="i">expression_statement</span>()
+    ...
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, in <em>forStatement</em>(), replace 1 line</div>
-
 <p>If the token following the <code>(</code> is a semicolon then the initializer has been
 omitted. Otherwise, we check for a <code>var</code> keyword to see if it&rsquo;s a <span
 name="variable">variable</span> declaration. If neither of those matched, it
@@ -700,52 +606,34 @@ grammar that allows both an expression and a statement. That wasn&rsquo;t <em>en
 true, I guess.</p>
 </aside>
 <p>Next up is the condition.</p>
-<div class="codehilite"><pre class="insert-before">      initializer = expressionStatement();
-    }
-</pre><div class="source-file"><em>lox/Parser.java</em><br>
-in <em>forStatement</em>()</div>
-<pre class="insert">
-
-    <span class="t">Expr</span> <span class="i">condition</span> = <span class="k">null</span>;
-    <span class="k">if</span> (!<span class="i">check</span>(<span class="i">SEMICOLON</span>)) {
-      <span class="i">condition</span> = <span class="i">expression</span>();
-    }
-    <span class="i">consume</span>(<span class="i">SEMICOLON</span>, <span class="s">&quot;Expect &#39;;&#39; after loop condition.&quot;</span>);
-</pre><pre class="insert-after">  }
+<div class="codehilite"><pre><span class="c"># lox/parser.py continuation of Parser.for_statement()</span>
+    ...
+    <span class="i">condition</span> = <span class="t">None</span>
+    <span class="k">if</span> <span class="k">not</span> <span class="i">self</span>.<span class="i">check</span>(<span class="s">&quot;SEMICOLON&quot;</span>):
+        <span class="i">condition</span> = <span class="i">self</span>.<span class="i">expression</span>()
+    <span class="i">self</span>.<span class="i">consume</span>(<span class="s">&quot;SEMICOLON&quot;</span>, <span class="s">&quot;Expect &#39;;&#39; after loop condition.&quot;</span>)
+    ...
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, in <em>forStatement</em>()</div>
-
 <p>Again, we look for a semicolon to see if the clause has been omitted. The last
 clause is the increment.</p>
-<div class="codehilite"><pre class="insert-before">    consume(SEMICOLON, &quot;Expect ';' after loop condition.&quot;);
-</pre><div class="source-file"><em>lox/Parser.java</em><br>
-in <em>forStatement</em>()</div>
-<pre class="insert">
-
-    <span class="t">Expr</span> <span class="i">increment</span> = <span class="k">null</span>;
-    <span class="k">if</span> (!<span class="i">check</span>(<span class="i">RIGHT_PAREN</span>)) {
-      <span class="i">increment</span> = <span class="i">expression</span>();
-    }
-    <span class="i">consume</span>(<span class="i">RIGHT_PAREN</span>, <span class="s">&quot;Expect &#39;)&#39; after for clauses.&quot;</span>);
-</pre><pre class="insert-after">  }
+<div class="codehilite"><pre><span class="c"># lox/parser.py continuation of Parser.for_statement()</span>
+    ...
+    <span class="i">increment</span> = <span class="t">None</span>
+    <span class="k">if</span> <span class="k">not</span> <span class="i">self</span>.<span class="i">check</span>(<span class="s">&quot;RIGHT_PAREN&quot;</span>):
+        <span class="i">increment</span> = <span class="i">self</span>.<span class="i">expression</span>()
+    <span class="i">self</span>.<span class="i">consume</span>(<span class="s">&quot;RIGHT_PAREN&quot;</span>, <span class="s">&quot;Expect &#39;)&#39; after for clauses.&quot;</span>)
+    ...
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, in <em>forStatement</em>()</div>
-
 <p>It&rsquo;s similar to the condition clause except this one is terminated by the
 closing parenthesis. All that remains is the <span name="body">body</span>.</p>
 <aside name="body">
 <p>Is it just me or does that sound morbid? &ldquo;All that remained<span class="ellipse">&thinsp;.&thinsp;.&thinsp;.&nbsp;</span>was the <em>body</em>&rdquo;.</p>
 </aside>
-<div class="codehilite"><pre class="insert-before">    consume(RIGHT_PAREN, &quot;Expect ')' after for clauses.&quot;);
-</pre><div class="source-file"><em>lox/Parser.java</em><br>
-in <em>forStatement</em>()</div>
-<pre class="insert">    <span class="t">Stmt</span> <span class="i">body</span> = <span class="i">statement</span>();
-
-    <span class="k">return</span> <span class="i">body</span>;
-</pre><pre class="insert-after">  }
+<div class="codehilite"><pre><span class="c"># lox/parser.py continuation of Parser.for_statement()</span>
+    ...
+    <span class="i">body</span> = <span class="i">self</span>.<span class="i">statement</span>()
+    ...
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, in <em>forStatement</em>()</div>
-
 <p>We&rsquo;ve parsed all of the various pieces of the <code>for</code> loop and the resulting AST
 nodes are sitting in a handful of Java local variables. This is where the
 desugaring comes in. We take those and use them to synthesize syntax tree nodes
@@ -753,59 +641,40 @@ that express the semantics of the <code>for</code> loop, like the hand-desugared
 showed you earlier.</p>
 <p>The code is a little simpler if we work backward, so we start with the increment
 clause.</p>
-<div class="codehilite"><pre class="insert-before">    Stmt body = statement();
-
-</pre><div class="source-file"><em>lox/Parser.java</em><br>
-in <em>forStatement</em>()</div>
-<pre class="insert">    <span class="k">if</span> (<span class="i">increment</span> != <span class="k">null</span>) {
-      <span class="i">body</span> = <span class="k">new</span> <span class="t">Stmt</span>.<span class="t">Block</span>(
-          <span class="t">Arrays</span>.<span class="i">asList</span>(
-              <span class="i">body</span>,
-              <span class="k">new</span> <span class="t">Stmt</span>.<span class="t">Expression</span>(<span class="i">increment</span>)));
-    }
-
-</pre><pre class="insert-after">    return body;
+<div class="codehilite"><pre><span class="c"># lox/parser.py continuation of Parser.for_statement()</span>
+    ...
+    <span class="k">if</span> <span class="i">increment</span> <span class="k">is</span> <span class="k">not</span> <span class="t">None</span>:
+        <span class="i">body</span> = <span class="t">Block</span>([<span class="i">body</span>, <span class="t">Expression</span>(<span class="i">increment</span>)])
+    ...
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, in <em>forStatement</em>()</div>
-
 <p>The increment, if there is one, executes after the body in each iteration of the
 loop. We do that by replacing the body with a little block that contains the
 original body followed by an expression statement that evaluates the increment.</p>
-<div class="codehilite"><pre class="insert-before">    }
-
-</pre><div class="source-file"><em>lox/Parser.java</em><br>
-in <em>forStatement</em>()</div>
-<pre class="insert">    <span class="k">if</span> (<span class="i">condition</span> == <span class="k">null</span>) <span class="i">condition</span> = <span class="k">new</span> <span class="t">Expr</span>.<span class="t">Literal</span>(<span class="k">true</span>);
-    <span class="i">body</span> = <span class="k">new</span> <span class="t">Stmt</span>.<span class="t">While</span>(<span class="i">condition</span>, <span class="i">body</span>);
-
-</pre><pre class="insert-after">    return body;
+<div class="codehilite"><pre><span class="c"># lox/parser.py continuation of Parser.for_statement()</span>
+    ...
+    <span class="k">if</span> <span class="i">condition</span> <span class="k">is</span> <span class="t">None</span>:
+        <span class="i">condition</span> = <span class="t">Literal</span>(<span class="t">True</span>)
+    <span class="i">body</span> = <span class="t">While</span>(<span class="i">condition</span>, <span class="i">body</span>)
+    ...
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, in <em>forStatement</em>()</div>
-
 <p>Next, we take the condition and the body and build the loop using a primitive
 <code>while</code> loop. If the condition is omitted, we jam in <code>true</code> to make an infinite
 loop.</p>
-<div class="codehilite"><pre class="insert-before">    body = new Stmt.While(condition, body);
+<div class="codehilite"><pre><span class="c"># lox/parser.py continuation of Parser.for_statement()</span>
+    ...
+    <span class="k">if</span> <span class="i">initializer</span> <span class="k">is</span> <span class="k">not</span> <span class="t">None</span>:
+        <span class="i">body</span> = <span class="t">Block</span>([<span class="i">initializer</span>, <span class="i">body</span>])
 
-</pre><div class="source-file"><em>lox/Parser.java</em><br>
-in <em>forStatement</em>()</div>
-<pre class="insert">    <span class="k">if</span> (<span class="i">initializer</span> != <span class="k">null</span>) {
-      <span class="i">body</span> = <span class="k">new</span> <span class="t">Stmt</span>.<span class="t">Block</span>(<span class="t">Arrays</span>.<span class="i">asList</span>(<span class="i">initializer</span>, <span class="i">body</span>));
-    }
-
-</pre><pre class="insert-after">    return body;
+    <span class="k">return</span> <span class="i">body</span>
 </pre></div>
-<div class="source-file-narrow"><em>lox/Parser.java</em>, in <em>forStatement</em>()</div>
-
 <p>Finally, if there is an initializer, it runs once before the entire loop. We do
 that by, again, replacing the whole statement with a block that runs the
 initializer and then executes the loop.</p>
 <p>That&rsquo;s it. Our interpreter now supports C-style <code>for</code> loops and we didn&rsquo;t have
-to touch the Interpreter class at all. Since we desugared to nodes the
-interpreter already knows how to visit, there is no more work to do.</p>
+to touch the <code>exec()</code> method at all. Since we desugared to nodes the interpreter
+already knows how to visit, there is no more work to do.</p>
 <p>Finally, Lox is powerful enough to entertain us, at least for a few minutes.
-Here&rsquo;s a tiny program to print the first 21 elements in the Fibonacci
-sequence:</p>
+Here&rsquo;s a tiny program to print the first 21 elements in the Fibonacci sequence:</p>
 <div class="codehilite"><pre><span class="k">var</span> <span class="i">a</span> = <span class="n">0</span>;
 <span class="k">var</span> <span class="i">temp</span>;
 
